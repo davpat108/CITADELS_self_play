@@ -59,7 +59,8 @@ class CFRNode:
 
         
     def update_regrets(self):
-        # Implement the logic to update regrets here
+        # backprops, checks all the other choices it could have made from the parent and calcs reward
+        # pay attention to player id
         pass
     
     def get_reward(self):
