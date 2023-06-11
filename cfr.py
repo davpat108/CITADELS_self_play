@@ -1,8 +1,8 @@
 import numpy as np
 
 class CFRNode:
-    def __init__(self, state, num_actions, player_id, parent=None, policy=None, cfr_strategy_func=None, action_choice_func=None):
-        self.state = state
+    def __init__(self, game, num_actions, player_id, parent=None, policy=None, cfr_strategy_func=None, action_choice_func=None):
+        self.game = game
         self.num_actions = num_actions
 
         self.parent = parent
@@ -30,6 +30,10 @@ class CFRNode:
         # returns a child node, so node and option
         pass
 
+    def is_terminal(self):
+        if self.game.is_terminal():
+            return True
+
     def cfr(self, max_iterations=1000):
         # If terminal end the game
         if self.is_terminal():
@@ -51,7 +55,6 @@ class CFRNode:
                 if node.children == []:
                     reward = node.get_reward()
                     node.backpropagate(reward) 
-                    node.update_regrets() #All the way up to root
                     node = self
         
         return self.action_choice()
