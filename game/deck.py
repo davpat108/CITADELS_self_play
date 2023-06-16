@@ -10,7 +10,7 @@ class Card:
 
     def __eq__(self, other:int) -> bool:
         if isinstance(other, Card):
-            return self.ID == other.ID
+            return self.type_ID == other.type_ID
         return False
 
 class Deck:

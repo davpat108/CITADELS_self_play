@@ -1,6 +1,6 @@
 class option():
-    def __init__(self, **kwargs):
-        self.name = kwargs['name']
+    def __init__(self, name, **kwargs):
+        self.name = name
         self.attributes = kwargs
 
 
