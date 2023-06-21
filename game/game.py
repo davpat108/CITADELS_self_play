@@ -71,7 +71,7 @@ class Game():
             
             self.turn_orders_for_roles = [0, 1, 2, 3, 4, 5]
 
-        elif avaible_roles is not None:
+        else:
             self.deck = Deck()
             self.player1 = Agent(id=0)
             self.player2 = Agent(id=1)
