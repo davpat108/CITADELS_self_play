@@ -1,6 +1,6 @@
 from game.deck import Deck, Card
 from game.option import option
-from itertools import combinations
+from itertools import combinations, permutations, combinations_with_replacement
 
 class Agent():
 
@@ -163,5 +163,91 @@ class Agent():
                 discard_possibilities = list(combinations(self.hand.cards, r))
                 for discard_possibility in discard_possibilities:
                     options.append(option(name="discard_and_draw", cards=discard_possibility))
+            
+        return options
+    
+    def wizard_look_at_hand_options(self, game):
+        options = []
+        if self.role == "Wizard":
+            for player in game.players:
+                if player.id != self.id:
+                    options.append(option(name="look_at_hand", target_player= player.id))
+        return options
+    
+    def wizard_take_from_hand_options(self, target_player):
+        # TODO can build immediatly and can be the same building
+        options = []
+        if self.role == "Wizard":
+            for card in target_player.hand.cards:
+                options.append(option(name="take_from_hand", card=card))
+        return options
+    
+    def seer_give_back_card(self, players_with_taken_cards):
+        options = []
+        if self.role == "Seer":
+            for permutation in permutations(self.hand.cards, len(players_with_taken_cards)):
+                card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(players_with_taken_cards, permutation)}
+                options.append(option(name="give_back_card", card_handouts=card_handouts))
+        return options
+
+    # ID 3
+    def king_options(self, game):
+        # Nothing you just take the crown
+        pass
+
+    def emperor_options(self, game):
+        options = []
+        if self.role == "Emperor":
+            for player in game.players:
+                if player.id != self.id:
+                    if len(player.hand.cards):
+                        options.append(option(name="give_crown", target=player, gold_or_card="card"))
+                    if player.gold:
+                        options.append(option(name="give_crown", target=player, gold_or_card="gold"))
+                    if not player.gold and not len(player.hand.cards):
+                        options.append(option(name="give_crown", target=player, gold_or_card="nothing"))
+                    
+        return options
+    
+    def patrician_options(self, game):
+        # Nothing you just take the crown
+        pass
+
+    # ID 4
+    def bishop_options(self, game):
+        # Nothing you just can't be warlorded
+        pass
+
+    def cardinal_options(self, game):
+        options = []
+        if self.role == "Cardinal":
+
+            for player in game.players:
+                # Check each card in our hand
+                for card in self.hand:
+                    # If the card cost is less than the player's gold
+                    if card.cost <= player.gold:
+                        # Calculate how many cards we need to give in exchange
+                        exchange_cards_count = player.gold - card.cost
+
+                        # If we have enough cards to give (excluding the current card)
+                        if len(self.hand) - 1 >= exchange_cards_count:
+                            # Get all combinations of exchange_cards_count cards (excluding the current card)
+                            other_cards = [c for c in self.hand if c != card]
+                            exchange_combinations = combinations(other_cards, exchange_cards_count)
+
+                            # Each combination of exchange cards is a possible trade
+                            for exchange_cards in exchange_combinations:
+                                options.append(option(name="cardinal_exchange", target_player=player, built_card=card, cards_to_give=exchange_cards))
+
+        return options
+    
+    def abbot_options(self, game):
+        options = []
+        if self.role == "Abbot":
+            total_religious_districts = sum([1 if card.suit == "religion" else 0 for card in self.hand])
+            gold_or_card_combinations = combinations_with_replacement(["gold", "card"], total_religious_districts)
+            for gold_or_card_combination in gold_or_card_combinations:
+                options.append(option(name="abbot_gold_or_card", gold_or_card_combination=list(gold_or_card_combination)))
             
         return options

@@ -1,8 +1,14 @@
 from game.game import Game
+from itertools import combinations
 
-game = Game(debug=False)
+#ame = Game(debug=False)
+#
+#ef empty():
+#   return
+#
+#rint([1,2,3]+empty())
 
-def empty():
-    return
+combs = combinations([1,2], 10)
 
-print([1,2,3]+empty())
+for comb in combs:
+    print(comb)

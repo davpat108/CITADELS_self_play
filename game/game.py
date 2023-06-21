@@ -70,7 +70,6 @@ class Game():
                      7: "Warlord"}
             
             self.turn_orders_for_roles = [0, 1, 2, 3, 4, 5]
-            self.visible_face_up_role = None
 
         else:
             
@@ -104,8 +103,12 @@ class Game():
                 if player.id == crown_player:
                     player.crown = True
             
-            # Dictionary with 1 item
-            self.visible_face_up_role = None
+
+        self.players = [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]
+        # Dictionary with 1 item
+        self.visible_face_up_role = None
+
+        
 
 
 
