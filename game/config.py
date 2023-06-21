@@ -80,7 +80,7 @@ unique_building_cards = [{"suit":"unique", "type_ID":16, "cost": 5},
                   {"suit":"unique", "type_ID":39, "cost": 5},]
 
 
-roles = {0: ["Assasin", "Witch", "Magistrate"],
+roles = {0: ["Assassin", "Witch", "Magistrate"],
          1: ["Thief", "Spy", "Blackmailer"],
          2: ["Magician", "Wizard", "Seer"],
          3: ["King", "Emperor", "Patrician"],

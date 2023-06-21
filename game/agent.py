@@ -1,5 +1,6 @@
-from deck import Deck, Card
-from option import option
+from game.deck import Deck, Card
+from game.option import option
+from itertools import combinations
 
 class Agent():
 
@@ -84,3 +85,83 @@ class Agent():
         return options + [option(name="empty_option")]
     
     
+    def character_options(self, game):
+        pass
+    
+    # ID 0
+    def assasin_options(self, game):
+        options = []
+        if self.role == "Assassin":
+            for role_ID in game.roles:
+                if role_ID > 0 and role_ID != next(iter(game.visible_face_up_role.keys())):
+                    options.append(option(name="assassination", target=role_ID))
+        return options
+        
+    def magistrate_options(self, game):
+        options = []
+        if self.role == "Magistrate":
+            # [1:] to remove the magistrate itself
+            target_possibilities = list(game.roles.keys())[1:]
+            # Remove the visible left out role
+            target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
+
+            for real_target in target_possibilities:
+                for fake_tagets in combinations(target_possibilities, 2):
+                    if real_target not in fake_tagets:
+                        options.append(option(name="magistrate_warrant", real_target=real_target, fake_targets=list(fake_tagets)))
+        return options
+
+    def witch_options(self, game):
+        options = []
+        if self.role == "Witch":
+            for role_ID in game.roles:
+                if role_ID > 0 and role_ID != next(iter(game.visible_face_up_role.keys())):
+                    options.append(option(name="bewitching", target=role_ID))
+        return options
+    
+    # ID 1
+    def thief_options(self, game):
+        options = []
+        if self.role == "Thief":
+            for role_ID in game.roles:
+                if role_ID > 1 and role_ID != next(iter(game.visible_face_up_role.keys())):
+                    options.append(option(name="steal", target=role_ID))
+        return options
+    
+    def blackmail_options(self, game):
+        options = []
+        if self.role == "Blackmailer":
+            # [2:] to remove the blackmailer and the ID 0 character (assassin and the like)
+            target_possibilities = list(game.roles.keys())[2:]
+            # Remove the visible face up role
+            target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
+            
+            for targets in combinations(target_possibilities, 2):
+                options.append(option(name="blackmail", real_target=targets[0], fake_target=targets[1]))
+                options.append(option(name="blackmail", real_target=targets[1], fake_target=targets[0]))
+        return options
+    
+    def spy_options(self, game):
+        options = []
+        if self.role == "Spy":
+            for role_ID in game.roles:
+                for suit in ["trade", "war", "religion", "lord", "unique"]:
+                    if role_ID > 1 and role_ID != next(iter(game.visible_face_up_role.keys())):
+                        options.append(option(name="spy", target=role_ID, suit=suit))
+        return options
+    
+    # ID 2
+    def magician_options(self, game):
+        options = []
+        if self.role == "Magician":
+            for role_ID in game.roles:
+                if role_ID != 2 and role_ID != next(iter(game.visible_face_up_role.keys())):
+                    options.append(option(name="magic_hand_change", target=role_ID))
+                    
+            for r in range(1, len(self.hand.cards)+1):
+                # list of cards
+                discard_possibilities = list(combinations(self.hand.cards, r))
+                for discard_possibility in discard_possibilities:
+                    options.append(option(name="discard_and_draw", cards=discard_possibility))
+            
+        return options

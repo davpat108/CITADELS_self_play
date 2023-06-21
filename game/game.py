@@ -1,6 +1,6 @@
-from agent import Agent
-from deck import Deck
-from config import building_cards, unique_building_cards, roles
+from game.agent import Agent
+from game.deck import Deck, Card
+from game.config import building_cards, unique_building_cards, roles
 import random
 class Game():
     def __init__(self, avaible_roles=None, debug=False) -> None:
@@ -11,67 +11,69 @@ class Game():
 
             # For debug purpuses 6 card per hand, 4 in general, this to test every unique building
             self.player1 = Agent(id=0)
-            self.player1.hand.add_card(self.deck.get_a_card_like_it(0))
-            self.player1.hand.add_card(self.deck.get_a_card_like_it(0))
-            self.player1.hand.add_card(self.deck.get_a_card_like_it(16))
-            self.player1.hand.add_card(self.deck.get_a_card_like_it(17))
-            self.player1.hand.add_card(self.deck.get_a_card_like_it(18))
-            self.player1.hand.add_card(self.deck.get_a_card_like_it(19))
+            self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[0])))
+            self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[0])))
+            self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[0])))
+            self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[1])))
+            self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[3])))
+            self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[4])))
 
             self.player2 = Agent(id=1)
-            self.player2.hand.add_card(self.deck.get_a_card_like_it(6))
-            self.player2.hand.add_card(self.deck.get_a_card_like_it(7))
-            self.player2.hand.add_card(self.deck.get_a_card_like_it(20))
-            self.player2.hand.add_card(self.deck.get_a_card_like_it(21))
-            self.player2.hand.add_card(self.deck.get_a_card_like_it(22))
-            self.player2.hand.add_card(self.deck.get_a_card_like_it(23))
+            self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[6])))
+            self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[7])))
+            self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[5])))
+            self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[6])))
+            self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[7])))
+            self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[8])))
 
             self.player3 = Agent(id=2)
-            self.player3.hand.add_card(self.deck.get_a_card_like_it(10))
-            self.player3.hand.add_card(self.deck.get_a_card_like_it(12))
-            self.player3.hand.add_card(self.deck.get_a_card_like_it(24))
-            self.player3.hand.add_card(self.deck.get_a_card_like_it(25))
-            self.player3.hand.add_card(self.deck.get_a_card_like_it(26))
-            self.player3.hand.add_card(self.deck.get_a_card_like_it(27))
+            self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[10])))
+            self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[12])))
+            self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[9])))
+            self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[10])))
+            self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[11])))
+            self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[12])))
 
             self.player4 = Agent(id=3)
-            self.player4.hand.add_card(self.deck.get_a_card_like_it(14))
-            self.player4.hand.add_card(self.deck.get_a_card_like_it(15))
-            self.player4.hand.add_card(self.deck.get_a_card_like_it(28))
-            self.player4.hand.add_card(self.deck.get_a_card_like_it(29))
-            self.player4.hand.add_card(self.deck.get_a_card_like_it(30))
-            self.player4.hand.add_card(self.deck.get_a_card_like_it(31))
+            self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[14])))
+            self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[15])))
+            self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[13])))
+            self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[14])))
+            self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[15])))
+            self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[16])))
 
             self.player5 = Agent(id=4)
-            self.player5.hand.add_card(self.deck.get_a_card_like_it(15))
-            self.player5.hand.add_card(self.deck.get_a_card_like_it(15))
-            self.player5.hand.add_card(self.deck.get_a_card_like_it(32))
-            self.player5.hand.add_card(self.deck.get_a_card_like_it(33))
-            self.player5.hand.add_card(self.deck.get_a_card_like_it(34))
-            self.player5.hand.add_card(self.deck.get_a_card_like_it(35))
+            self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[15])))
+            self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[15])))
+            self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[17])))
+            self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[18])))
+            self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[19])))
+            self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[20])))
 
             self.player6 = Agent(id=5)
-            self.player6.hand.add_card(self.deck.get_a_card_like_it(4))
-            self.player6.hand.add_card(self.deck.get_a_card_like_it(5))
-            self.player6.hand.add_card(self.deck.get_a_card_like_it(36))
-            self.player6.hand.add_card(self.deck.get_a_card_like_it(37))
-            self.player6.hand.add_card(self.deck.get_a_card_like_it(38))
-            self.player6.hand.add_card(self.deck.get_a_card_like_it(39))
+            self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[3])))
+            self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[5])))
+            self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[21])))
+            self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[22])))
+            self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[23])))
+            self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[24])))
 
             self.player4.crown = True
 
-            self.roles = {0: ["Witch"],
-                     1: ["Thief"],
-                     2: ["Magician"],
-                     3: ["King"],
-                     4: ["Abbot"],
-                     5: ["Alchemist"],
-                     6: ["Navigator"],
-                     7: ["Warlord"]}
+            self.roles = {0: "Witch",
+                     1: "Thief",
+                     2: "Magician",
+                     3: "King",
+                     4: "Abbot",
+                     5: "Alchemist",
+                     6: "Navigator",
+                     7: "Warlord"}
             
             self.turn_orders_for_roles = [0, 1, 2, 3, 4, 5]
+            self.visible_face_up_role = None
 
         else:
+            
             self.deck = Deck()
             self.player1 = Agent(id=0)
             self.player2 = Agent(id=1)
@@ -101,6 +103,9 @@ class Game():
             for player in [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]:
                 if player.id == crown_player:
                     player.crown = True
+            
+            # Dictionary with 1 item
+            self.visible_face_up_role = None
 
 
 

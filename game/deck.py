@@ -1,6 +1,5 @@
-from random import shuffle
-from config import building_cards
-import numpy as np
+from random import shuffle, sample
+from game.config import building_cards, unique_building_cards
 
 class Card:
     def __init__(self, type_ID:int, suit: str,  cost:int):
@@ -16,9 +15,15 @@ class Card:
 class Deck:
     def __init__(self, used_cards=None, empty = False):
         if not empty:
-            self.cards = []
-            for card_info in used_cards:
-                self.cards.append(Card(**card_info))
+            if not used_cards:
+                used_cards = building_cards + sample(unique_building_cards, 14)
+                self.cards = []
+                for card_info in used_cards:
+                    self.cards.append(Card(**card_info))
+            else:
+                self.cards = []
+                for card_info in used_cards:
+                    self.cards.append(Card(**card_info))
         
         else:
             self.cards = []
@@ -26,9 +31,9 @@ class Deck:
         self.shuffle_deck()
 
     
-    def get_a_card_like_it(self, type_ID:int):
+    def get_a_card_like_it(self, card_to_get:Card):
         for card in self.cards:
-            if card.type_ID == type_ID:
+            if card.type_ID == card_to_get.type_ID:
                 self.cards.remove(card)
                 return card
         raise Exception("No card like that in the deck")
