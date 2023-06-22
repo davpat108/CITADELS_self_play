@@ -87,8 +87,77 @@ class Agent():
     
     
     def character_options(self, game):
-        pass
-    
+        options = []
+        # ID 0
+        if self.role == "Assassin":
+            options += self.assasin_options(game)
+        elif self.role == "Magistrate":
+            options += self.magistrate_options(game)
+        elif self.role == "Witch":
+            options += self.witch_options(game)
+
+        #ID 1
+        elif self.role == "Thief":
+            options += self.thief_options(game)
+        elif self.role == "Blackmailer":
+            options += self.blackmailer_options(game)
+        elif self.role == "Spy":
+            options += self.spy_options(game)
+
+        #ID 2
+        elif self.role == "Magician":
+            options += self.magician_options(game)
+        elif self.role == "Wizard":
+            options += self.wizard_look_at_hand_options(game)
+        elif self.role == "Seer":
+            options += self.seer_options(game)
+
+        #ID 3
+        elif self.role == "King":
+            options += self.king_options(game)
+        elif self.role == "Emperor":
+            options += self.emperor_options(game)
+        elif self.role == "Patrician":
+            options += self.patrician_options(game)
+
+        #ID 4
+        elif self.role == "Bishop":
+            options += self.bishop_options(game)
+        elif self.role == "Cardinal":
+            options += self.cardinal_options(game)
+        elif self.role == "Abbot":
+            options += self.abbot_options(game)
+
+        #ID 5
+        elif self.role == "Merchant":
+            options += self.merchant_options(game)
+        elif self.role == "Alchemist":
+            options += self.alchemist_options(game)
+        elif self.role == "Trader":
+            options += self.trader_options(game)
+        
+        #ID 6
+        elif self.role == "Architect":
+            options += self.architect_options(game)
+        elif self.role == "Navigator":
+            options += self.navigator_options(game)
+        elif self.role == "Scholar":
+            options += self.scholar_options(game)
+
+        #ID 7
+        elif self.role == "Warlord":
+            options += self.warlord_options(game)
+        elif self.role == "Marshal":
+            options += self.marshal_options(game)
+        elif self.role == "Diplomat":
+            options += self.diplomat_options(game)
+
+        #ID 8
+        # Not yet
+
+        return options
+
+
     # ID 0
     def assasin_options(self, game):
         options = []
@@ -183,6 +252,11 @@ class Agent():
                 options.append(option(name="take_from_hand", card=card))
         return options
     
+    def seer_options(self, game):
+        # NO options at the start
+        return []
+    
+
     def seer_give_back_card(self, players_with_taken_cards):
         options = []
         if self.role == "Seer":
