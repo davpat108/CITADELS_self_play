@@ -1,6 +1,7 @@
 from game.deck import Deck, Card
 from game.option import option
 from itertools import combinations, permutations, combinations_with_replacement
+from copy import copy
 
 class Agent():
 
@@ -193,7 +194,7 @@ class Agent():
     # ID 3
     def king_options(self, game):
         # Nothing you just take the crown
-        pass
+        return []
 
     def emperor_options(self, game):
         options = []
@@ -211,12 +212,12 @@ class Agent():
     
     def patrician_options(self, game):
         # Nothing you just take the crown
-        pass
+        return []
 
     # ID 4
     def bishop_options(self, game):
         # Nothing you just can't be warlorded
-        pass
+        return []
 
     def cardinal_options(self, game):
         options = []
@@ -251,3 +252,71 @@ class Agent():
                 options.append(option(name="abbot_gold_or_card", gold_or_card_combination=list(gold_or_card_combination)))
             
         return options
+    
+    #ID 5
+    def merchant_options(self, game):
+        # Nothing to choose
+        return []
+    
+    def alchemist_options(self, game):
+        # Nothing to choose
+        return []
+    
+    def trader_options(self, game):
+        # Nothing to choose
+        return []
+    
+    # ID 6
+    def architect_options(self, game):
+        # Nothing to choose
+        return []
+    
+    def navigator_options(self, game):
+        return [option(name="navigator_gold_card", choice="4gold"), option(name="navigator_gold_card", choice="4card")]
+
+    def scholar_options(self, seven_drawn_cards):
+        options = []
+        if self.role == "Scholar":
+            for card in seven_drawn_cards:
+                unchosen_cards = copy(seven_drawn_cards)
+                unchosen_cards.remove(card)
+                options.append(option(name="scholar_card_pick", choice=card, unchosen_cards=unchosen_cards))
+            return options
+        
+    # ID 7
+    def warlord_options(self, game):
+        options = []
+        if self.role == "Warlord":
+            for player in game.players:
+                if len(player.buildings.cards) < 7:
+                    for building in player.buildings.cards:
+                        if building.cost-1 <= self.gold:
+                            if option(name="warlord_desctruction", target=player, choice=building) not in options:
+                                options.append(option(name="warlord_desctruction", target=player, choice=building))
+                            
+        return options
+    
+    def marshal_options(self, game):
+        options = []
+        if self.role == "Marshal":
+            for player in game.players:
+                if len(player.buildings.cards) < 7 and player.id != self.id:
+                    for building in player.buildings.cards:
+                        if building.cost <= self.gold and building.cost <= 3:
+                            if option(name="marshal_steal", target=player, choice=building) not in options:
+                                options.append(option(name="marshal_steal", target=player, choice=building))
+                                
+    def diplomat_options(self, game):
+        options = []
+        if self.role == "Diplomat":
+            for player in game.players:
+                if len(player.buildings.cards) < 7 and player.id != self.id:
+                    for enemy_building in player.buildings.cards:
+                        for own_building in self.buildings.cards:
+                            if enemy_building.cost-own_building.cost <= self.gold:
+                                if option(name="diplomat_exchange", target=player, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
+                                    options.append(option(name="diplomat_exchange", target=player, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
+                                    
+    # ID 8 later for more players
+        
+

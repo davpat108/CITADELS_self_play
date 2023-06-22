@@ -109,9 +109,6 @@ class Game():
         self.visible_face_up_role = None
 
         
-
-
-
     def sample_roles(self, avaible_roles, number_of_used_roles):
         roles = {}
 
