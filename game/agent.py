@@ -14,6 +14,7 @@ class Agent():
         self.warrant_true = False
         self.blackmail_fake = False
         self.blackmail_true = False
+        self.dead = False
         self.crown = False
         self.money = 2
         self.id = id
@@ -211,6 +212,7 @@ class Agent():
                 options.append(option(name="blackmail", real_target=targets[1], fake_target=targets[0]))
         return options
     
+    # TODO player
     def spy_options(self, game):
         options = []
         if self.role == "Spy":

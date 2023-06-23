@@ -7,8 +7,33 @@ class option():
     def carry_out_action(self, game):
         pass
 
+    # ID 0
     def carry_out_assasination(self, game):
-        pass
+        game.role_properties[self.attributes['target']].dead = True
+        
+    def carry_out_warranting(self, game):
+        game.role_properties[self.attributes['real_target']].warrant = "real"
+        game.role_properties[self.attributes['fake_targets'][0]].warrant = "fake"
+        game.role_properties[self.attributes['fake_targets'][1]].warrant = "fake"
+        
+    def carry_out_bewitching(self, game):
+        game.role_properties[self.attributes['target']].possessed = True
+        
+    # ID 1
+    def carry_out_stealing(self, game):
+        game.role_properties[self.attributes['target']].robbed = True
+    
+    def carry_out_blackmail(self, game):
+        game.role_properties[self.attributes['real_target']].blackmail = "Real"
+        game.role_properties[self.attributes['fake_target']].blackmail = "Fake"
+        
+    def carry_out_spying(self, game):
+        
+    
+
+        
+        
+        
 
 
 def get_player_from_role(self, role_id, game):

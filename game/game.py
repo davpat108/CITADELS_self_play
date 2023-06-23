@@ -2,6 +2,22 @@ from game.agent import Agent
 from game.deck import Deck, Card
 from game.config import building_cards, unique_building_cards, roles
 import random
+
+class RolePropery():
+    def __init__(self) -> None:
+        self.dead = False
+        self.warrant = None
+        self.possessed = False
+        self.robbed = False
+        self.blackmail = None
+        
+    def reset_at_turn_end(self):
+        self.dead = False
+        self.warrant = None
+        self.possessed = False
+        self.robbed = False
+        self.blackmail = None
+
 class Game():
     def __init__(self, avaible_roles=None, debug=False) -> None:
         if debug:
@@ -44,7 +60,7 @@ class Game():
 
             self.player5 = Agent(id=4)
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[15])))
-            self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[15])))
+            self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[0])))
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[17])))
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[18])))
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[19])))
@@ -60,7 +76,7 @@ class Game():
 
             self.player4.crown = True
 
-            self.roles = {0: "Witch",
+            self.roles = {0: "Assassin",
                      1: "Thief",
                      2: "Magician",
                      3: "King",
@@ -69,6 +85,7 @@ class Game():
                      6: "Navigator",
                      7: "Warlord"}
             
+
             self.turn_orders_for_roles = [0, 1, 2, 3, 4, 5]
 
         else:
@@ -107,6 +124,16 @@ class Game():
         self.players = [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]
         # Dictionary with 1 item
         self.visible_face_up_role = None
+        self.role_properties ={
+            0 : RolePropery(),
+            1 : RolePropery(),
+            2 : RolePropery(),
+            3 : RolePropery(),
+            4 : RolePropery(),
+            5 : RolePropery(),
+            6 : RolePropery(),
+            7 : RolePropery()
+            }
 
         
     def sample_roles(self, avaible_roles, number_of_used_roles):

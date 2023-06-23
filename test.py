@@ -1,14 +1,11 @@
 from game.game import Game
 from itertools import combinations
 
-#ame = Game(debug=False)
-#
-#ef empty():
-#   return
-#
-#rint([1,2,3]+empty())
+game = Game(debug=True)
 
-combs = combinations([1,2], 10)
+game.player1.role = "Assassin"
+game.visible_face_up_role = {1:"Thief"}
+options = game.player1.character_options(game)
 
-for comb in combs:
-    print(comb)
+options[0].carry_out_assasination(game)
+x = 0
