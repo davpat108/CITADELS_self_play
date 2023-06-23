@@ -10,13 +10,16 @@ class Agent():
         self.hand = Deck(empty=True)
         self.role = None
         self.buildings = Deck(empty=True)
+
         self.warrant_fake = False
         self.warrant_true = False
         self.blackmail_fake = False
         self.blackmail_true = False
         self.dead = False
+        
+
         self.crown = False
-        self.money = 2
+        self.gold = 2
         self.id = id
 
         self.already_used_smithy = False
@@ -44,7 +47,7 @@ class Agent():
         return [option(name="empty_option")]
         
     def smithy_options(self) -> list:
-        if Card(**{"suit":"unique", "type_ID":21, "cost": 5}) in self.buildings.cards and self.money >= 2 and not self.already_used_smithy:
+        if Card(**{"suit":"unique", "type_ID":21, "cost": 5}) in self.buildings.cards and self.gold >= 2 and not self.already_used_smithy:
             return [option(name="empty_option"), option(name="smithy_choice")]
         return []
     
@@ -212,14 +215,13 @@ class Agent():
                 options.append(option(name="blackmail", real_target=targets[1], fake_target=targets[0]))
         return options
     
-    # TODO player
     def spy_options(self, game):
         options = []
         if self.role == "Spy":
-            for role_ID in game.roles:
-                for suit in ["trade", "war", "religion", "lord", "unique"]:
-                    if role_ID > 1 and role_ID != next(iter(game.visible_face_up_role.keys())):
-                        options.append(option(name="spy", target=role_ID, suit=suit))
+            for player in game.players:
+                if player.id != self.id:
+                    for suit in ["trade", "war", "religion", "lord", "unique"]:
+                        options.append(option(name="spy", perpetrator=self, target=player, suit=suit))
         return options
     
     # ID 2

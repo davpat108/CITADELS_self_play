@@ -77,7 +77,7 @@ class Game():
             self.player4.crown = True
 
             self.roles = {0: "Assassin",
-                     1: "Thief",
+                     1: "Spy",
                      2: "Magician",
                      3: "King",
                      4: "Abbot",

@@ -28,7 +28,17 @@ class option():
         game.role_properties[self.attributes['fake_target']].blackmail = "Fake"
         
     def carry_out_spying(self, game):
-        
+        cards_to_draw = sum([1 if building.suit == self.attributes['suit'] else 0 for building in self.attributes['target'].hand.cards])
+        gold_to_steal = min(cards_to_draw, self.attributes['target'].gold)
+
+        self.attributes['perpetrator'].gold += gold_to_steal
+        self.attributes['target'].gold -= gold_to_steal
+
+        self.attributes['perpetrator'].hand.add_card(game.deck.draw_card())
+
+    # ID 2
+
+
     
 
         
