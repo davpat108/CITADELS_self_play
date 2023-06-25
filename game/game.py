@@ -24,6 +24,7 @@ class Game():
             # For debug purpuses all the unique cards are used
             used_cards = building_cards + unique_building_cards
             self.deck = Deck(used_cards=used_cards)
+            self.discard_deck = Deck(empty=True)
 
             # For debug purpuses 6 card per hand, 4 in general, this to test every unique building
             self.player1 = Agent(id=0)
@@ -91,6 +92,7 @@ class Game():
         else:
             
             self.deck = Deck()
+            self.discard_deck = Deck(empty=True)
             self.player1 = Agent(id=0)
             self.player2 = Agent(id=1)
             self.player3 = Agent(id=2)

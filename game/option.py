@@ -37,14 +37,20 @@ class option():
         self.attributes['perpetrator'].hand.add_card(game.deck.draw_card())
 
     # ID 2
+    def carry_out_magicking(self, game):
+        if self.name == "magic_hand_change":
+            self.perpetrator.hand.cards, self.target.hand.cards = self.target.hand.cards, self.perpetrator.hand.cards
 
+        if self.name == "discard_and_draw":
+            for card in self.cards:
+                game.deck.add_card(self.perpetrator.hand.get_a_card_like_it(card))
+            for _ in range(len(self.cards)):
+                self.perpetrator.hand.add_card(game.deck.draw_card())
+
+    def carry_out_wizard_hand_looking(self, game):
+        pass
 
     
-
-        
-        
-        
-
 
 def get_player_from_role(self, role_id, game):
     for player in game.players:

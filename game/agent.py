@@ -228,15 +228,15 @@ class Agent():
     def magician_options(self, game):
         options = []
         if self.role == "Magician":
-            for role_ID in game.roles:
-                if role_ID != 2 and role_ID != next(iter(game.visible_face_up_role.keys())):
-                    options.append(option(name="magic_hand_change", target=role_ID))
+            for player in game.players:
+                if player.id != self.id:
+                    options.append(option(name="magic_hand_change", perpetrator=self, target=player))
                     
             for r in range(1, len(self.hand.cards)+1):
                 # list of cards
                 discard_possibilities = list(combinations(self.hand.cards, r))
                 for discard_possibility in discard_possibilities:
-                    options.append(option(name="discard_and_draw", cards=discard_possibility))
+                    options.append(option(name="discard_and_draw", perpetrator=self, cards=discard_possibility))
             
         return options
     
@@ -245,7 +245,7 @@ class Agent():
         if self.role == "Wizard":
             for player in game.players:
                 if player.id != self.id:
-                    options.append(option(name="look_at_hand", target_player= player.id))
+                    options.append(option(name="look_at_hand", perpetrator=self, target_player= player.id))
         return options
     
     def wizard_take_from_hand_options(self, target_player):
