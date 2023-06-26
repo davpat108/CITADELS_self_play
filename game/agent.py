@@ -245,7 +245,7 @@ class Agent():
         if self.role == "Wizard":
             for player in game.players:
                 if player.id != self.id:
-                    options.append(option(name="look_at_hand", perpetrator=self, target_player= player.id))
+                    options.append(option(name="look_at_hand", perpetrator=self, target_player= player))
         return options
     
     def wizard_take_from_hand_options(self, target_player):
@@ -253,12 +253,13 @@ class Agent():
         options = []
         if self.role == "Wizard":
             for card in target_player.hand.cards:
-                options.append(option(name="take_from_hand", card=card))
+                options.append(option(name="take_from_hand", card=card, build=False, perpetrator=self, target_player=target_player))
+                if self.gold >= card.cost:
+                    options.append(option(name="take_from_hand", card=card, build=True, perpetrator=self, target_player=target_player))
         return options
     
     def seer_options(self, game):
-        # NO options at the start
-        return []
+        return [option(name="seer", perpetrator=self)]
     
 
     def seer_give_back_card(self, players_with_taken_cards):
@@ -266,13 +267,13 @@ class Agent():
         if self.role == "Seer":
             for permutation in permutations(self.hand.cards, len(players_with_taken_cards)):
                 card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(players_with_taken_cards, permutation)}
-                options.append(option(name="give_back_card", card_handouts=card_handouts))
+                options.append(option(name="give_back_card", perpetrator=self, card_handouts=card_handouts))
         return options
 
     # ID 3
     def king_options(self, game):
         # Nothing you just take the crown
-        return []
+        return [option(name="take_crown", perpetrator=self)]
 
     def emperor_options(self, game):
         options = []
@@ -280,34 +281,33 @@ class Agent():
             for player in game.players:
                 if player.id != self.id:
                     if len(player.hand.cards):
-                        options.append(option(name="give_crown", target=player, gold_or_card="card"))
+                        options.append(option(name="give_crown", perpetrator=self, target=player, gold_or_card="card"))
                     if player.gold:
-                        options.append(option(name="give_crown", target=player, gold_or_card="gold"))
+                        options.append(option(name="give_crown", perpetrator=self, target=player, gold_or_card="gold"))
                     if not player.gold and not len(player.hand.cards):
-                        options.append(option(name="give_crown", target=player, gold_or_card="nothing"))
+                        options.append(option(name="give_crown", perpetrator=self,  target=player, gold_or_card="nothing"))
                     
         return options
     
     def patrician_options(self, game):
         # Nothing you just take the crown
-        return []
+        return [option(name="take_crown", perpetrator=self)]
 
     # ID 4
     def bishop_options(self, game):
         # Nothing you just can't be warlorded
-        return []
+        return [option(name="bishop", perpetrator=self)]
 
     def cardinal_options(self, game):
         options = []
         if self.role == "Cardinal":
-
             for player in game.players:
                 # Check each card in our hand
                 for card in self.hand:
                     # If the card cost is less than the player's gold
                     if card.cost <= player.gold:
                         # Calculate how many cards we need to give in exchange
-                        exchange_cards_count = player.gold - card.cost
+                        exchange_cards_count = max(player.gold - card.cost, 0)
 
                         # If we have enough cards to give (excluding the current card)
                         if len(self.hand) - 1 >= exchange_cards_count:
@@ -317,7 +317,7 @@ class Agent():
 
                             # Each combination of exchange cards is a possible trade
                             for exchange_cards in exchange_combinations:
-                                options.append(option(name="cardinal_exchange", target_player=player, built_card=card, cards_to_give=exchange_cards))
+                                options.append(option(name="cardinal_exchange", perpetrator=self, target_player=player, built_card=card, cards_to_give=exchange_cards))
 
         return options
     
@@ -334,25 +334,27 @@ class Agent():
     #ID 5
     def merchant_options(self, game):
         # Nothing to choose
-        return []
+        return [option(name="merchant", perpetrator=self)]
     
     def alchemist_options(self, game):
         # Nothing to choose
-        return []
+        return [option(name="alchemist", perpetrator=self)]
     
     def trader_options(self, game):
         # Nothing to choose
-        return []
+        return [option(name="trader", perpetrator=self)]
     
     # ID 6
     def architect_options(self, game):
-        # Nothing to choose
-        return []
+        return [option(name="architect", perpetrator=self)]
     
     def navigator_options(self, game):
         return [option(name="navigator_gold_card", choice="4gold"), option(name="navigator_gold_card", choice="4card")]
 
-    def scholar_options(self, seven_drawn_cards):
+    def scholar_options(self, game):
+        return [option(name="scholar", perpetrator=self)]
+
+    def scholar_give_back_options(self, seven_drawn_cards):
         options = []
         if self.role == "Scholar":
             for card in seven_drawn_cards:
@@ -380,7 +382,7 @@ class Agent():
             for player in game.players:
                 if len(player.buildings.cards) < 7 and player.id != self.id:
                     for building in player.buildings.cards:
-                        if building.cost <= self.gold and building.cost <= 3:
+                        if building.cost <= self.gold and building.cost <= 3 and building not in self.buildings.cards:
                             if option(name="marshal_steal", target=player, choice=building) not in options:
                                 options.append(option(name="marshal_steal", target=player, choice=building))
                                 
