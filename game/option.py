@@ -9,7 +9,34 @@ class option():
     def __eq__(self, other):
         return self.name == other.name and self.attributes == other.attributes
 
-    def carry_out_caracter_actior(self, game):
+
+        # others
+    def carry_out_role_pick(self, game):
+        self.attributes['perpetrator'].role = self.attributes['role']
+
+    def carry_out_gold_or_card(self, game):
+        if self.attributes['choice'] == "gold":
+            self.attributes['perpetrator'].gold += 2
+        else:
+            for _ in range(2):
+                reshuffle_deck_if_empty(game)
+                self.attributes['perpetrator'].hand.add_card(game.deck.draw_card())
+
+    def carry_out_respond_to_blackmail(self, game):
+        # Victims response
+        if self.attributes['choice'] == "pay":
+            self.attributes['perpetrator'].gold -= int(self.attributes['perpetrator'].gold/2)
+            self.attributes['target'].gold += int(self.attributes['perpetrator'].gold/2)
+        else:
+            "game goes to a different state"
+
+    def carry_out_responding_to_blackmail_response(self, game):
+        # Its reversed as its the blackmailers response
+        if self.attributes['choice'] == "reveal" and self.attributes['target'].blackmail_true:
+            self.attributes['perpetrator'].gold += self.attributes['target'].gold
+            self.attributes['target'].gold = 0
+
+    def carry_out_role(self, game):
         options = []
         # ID 0
         if self.name == "assassination":
@@ -277,7 +304,7 @@ class option():
             for card in self.attributes['unchosen_cards']:
                 game.deck.add_card(self.attributes['perpetrator'].hand.get_a_card_like_it(card))
 
-    
+    # ID 7
     def carry_out_marshal(self, game):
         if not game.role_properties[7].dead and not game.role_properties[7].possessed:
             self.attributes['perpetrator'].gold -= self.attributes['choice'].cost
@@ -298,13 +325,15 @@ class option():
             self.attributes['target'].buildings.add_card(self.attributes['perpetrator'].buildings.get_a_card_like_it(self.attributes['give']))
 
 
+
+
 def reshuffle_deck_if_empty(game):
     if not len(game.deck.cards):
         game.discard_deck.shuffle_deck()
         game.deck = deepcopy(game.discard_deck)
         game.discard_deck = Deck(empty=True)
 
-def get_player_from_role(self, role_id, game):
+def get_player_from_role(role_id, game):
     for player in game.players:
         if player.role == game.roles[role_id]:
             return player

@@ -26,18 +26,20 @@ class Agent():
         self.already_used_lab = False
         self.already_used_museum = False
 
-    def choose_role_options(self, avaible_roles:list) -> list:
-        options = [option(choice=role, name="Role") for role in avaible_roles]
-        return options
+    # Others
+    def pick_role_options(self, game, avaible_roles):
+        return [option(name="role_pick", perpetrator=self, choice=role) for role in avaible_roles]
+
+    def gold_or_card_options(self, game):
+        return [option(name="gold_or_card", perpetrator=self, choice="gold"), option(name="gold_or_card", perpetrator=self, choice="card")]
     
-    def gold_or_card(self) -> list:
-        options = [option(choice="gold", name="gold_or_card"), option(choice="gold", name="gold_or_card")]
-        return options
-    
-    def blackmail_response_options(self, ) -> list:
+    def blackmail_response_options(self, game) -> list:
         if self.blackmail_fake or self.blackmail_true:
-            return [option(choice="pay", name="blackmail_response"), option(choice="not_pay", name="blackmail_response")]
+            return [option(choice="pay", perpetrator=self, name="blackmail_response"), option(choice="not_pay", perpetrator=self, name="blackmail_response")]
         return [option(name="empty_option")]
+    
+    def reveal_blackmail_as_blackmailer_options(self, game) -> list:
+        return [option(choice="reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
     
     def ghost_town_color_choice_options(self) -> list:
         # Async
@@ -46,17 +48,17 @@ class Agent():
                      option(choice="religion", name="ghost_town_color_choice"), option(choice="lord", name="ghost_town_color_choice"), option(choice="unique", name="ghost_town_color_choice")]
         return [option(name="empty_option")]
         
-    def smithy_options(self) -> list:
+    def smithy_options(self, game) -> list:
         if Card(**{"suit":"unique", "type_ID":21, "cost": 5}) in self.buildings.cards and self.gold >= 2 and not self.already_used_smithy:
             return [option(name="empty_option"), option(name="smithy_choice")]
         return []
     
-    def laboratory_options(self) -> list:
+    def laboratory_options(self, game) -> list:
         if Card(**{"suit":"unique", "type_ID":22, "cost": 5}) in self.buildings.cards and len(self.hand.cards) >= 1 and not self.already_used_lab:
             return [option(name="empty_option"), option(name="laboratory_choice")]
         return []
     
-    def magic_school_options(self) -> list:
+    def magic_school_options(self, game) -> list:
         # Every round
         # used before character ability
         if Card(**{"suit":"unique", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"trade", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"war", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"religion", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"lord", "type_ID":23, "cost": 6}) in self.buildings.cards:
@@ -64,10 +66,10 @@ class Agent():
                      option(choice="religion", name="magic_school_choice"), option(choice="lord", name="magic_school_choice"), option(choice="unique", name="magic_school_choice")]
         return [option(name="empty_option")]
     
-    def weapon_storage_options(self, players) -> list:
+    def weapon_storage_options(self, game) -> list:
         options = []
         if Card(**{"suit":"unique", "type_ID":27, "cost": 3}) in self.buildings.cards:
-            for player in players:
+            for player in game.players:
                 if player.id != self.id:
                     for card in player.buildings.cards:
                         options.append(option(who=player.id, choice = card.type_ID, name="weapon_storage_choice"))
@@ -89,7 +91,7 @@ class Agent():
                 options.append(option(choice=card.type_ID, name="museum_choice"))
         return options + [option(name="empty_option")]
     
-    
+
     def character_options(self, game):
         options = []
         # ID 0
@@ -349,7 +351,7 @@ class Agent():
         return [option(name="architect", perpetrator=self)]
     
     def navigator_options(self, game):
-        return [option(name="navigator_gold_card", choice="4gold"), option(name="navigator_gold_card", choice="4card")]
+        return [option(name="navigator_gold_card", perpetrator=self, choice="4gold"), option(name="navigator_gold_card", perpetrator=self, choice="4card")]
 
     def scholar_options(self, game):
         return [option(name="scholar", perpetrator=self)]
@@ -360,7 +362,7 @@ class Agent():
             for card in seven_drawn_cards:
                 unchosen_cards = copy(seven_drawn_cards)
                 unchosen_cards.remove(card)
-                options.append(option(name="scholar_card_pick", choice=card, unchosen_cards=unchosen_cards))
+                options.append(option(name="scholar_card_pick", choice=card, perpetrator=self,  unchosen_cards=unchosen_cards))
             return options
         
     # ID 7
@@ -371,8 +373,8 @@ class Agent():
                 if len(player.buildings.cards) < 7:
                     for building in player.buildings.cards:
                         if building.cost-1 <= self.gold:
-                            if option(name="warlord_desctruction", target=player, choice=building) not in options:
-                                options.append(option(name="warlord_desctruction", target=player, choice=building))
+                            if option(name="warlord_desctruction", target=player, perpetrator=self, choice=building) not in options:
+                                options.append(option(name="warlord_desctruction", target=player, perpetrator=self, choice=building))
                             
         return options
     
@@ -383,8 +385,8 @@ class Agent():
                 if len(player.buildings.cards) < 7 and player.id != self.id:
                     for building in player.buildings.cards:
                         if building.cost <= self.gold and building.cost <= 3 and building not in self.buildings.cards:
-                            if option(name="marshal_steal", target=player, choice=building) not in options:
-                                options.append(option(name="marshal_steal", target=player, choice=building))
+                            if option(name="marshal_steal", target=player, perpetrator=self, choice=building) not in options:
+                                options.append(option(name="marshal_steal", target=player, perpetrator=self, choice=building))
                                 
     def diplomat_options(self, game):
         options = []
@@ -394,9 +396,8 @@ class Agent():
                     for enemy_building in player.buildings.cards:
                         for own_building in self.buildings.cards:
                             if enemy_building.cost-own_building.cost <= self.gold:
-                                if option(name="diplomat_exchange", target=player, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
-                                    options.append(option(name="diplomat_exchange", target=player, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
+                                if option(name="diplomat_exchange", target=player, perpetrator=self, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
+                                    options.append(option(name="diplomat_exchange", target=player, perpetrator=self, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
                                     
     # ID 8 later for more players
-        
-
+    
