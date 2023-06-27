@@ -9,8 +9,82 @@ class option():
     def __eq__(self, other):
         return self.name == other.name and self.attributes == other.attributes
 
-    def carry_out_action(self, game):
-        pass
+    def carry_out_caracter_actior(self, game):
+        options = []
+        # ID 0
+        if self.name == "assassination":
+            self.carry_out_assasination(game)
+        elif self.name == "magistrate_warrant":
+            self.carry_out_warranting(game)
+        elif self.name == "bewitching":
+            self.carry_out_bewitching(game)
+
+        #ID 1
+        elif self.name == "steal":
+            self.carry_out_stealing(game)
+        elif self.name == "blackmail":
+            self.carry_out_blackmail(game)
+        elif self.name == "spy":
+            self.carry_out_spying(game)
+
+        #ID 2
+        elif self.name == "magic_hand_change" or self.name == "discard_and_draw": # TODO make it 2 different options
+            self.carry_out_magicking(game)
+        elif self.name == "look_at_hand":
+            self.carry_out_wizard_hand_looking(game)
+        elif self.name == "take_from_hand":
+            self.carry_out_wizard_take_from_hand(game)
+        elif self.name == "seer":
+            self.carry_out_seer_take_a_card(game)
+        elif self.name == "give_back_card":
+            self.carry_out_give_back_cards(game)
+
+        #ID 3
+        elif self.name == "take_crown_king":
+            self.carry_out_take_crown_king(game)
+        elif self.name == "give_crown":
+            self.carry_out_emperor(game)
+        elif self.name == "take_crown_pat":
+            self.carry_out_take_crown_patrician(game)
+
+        #ID 4
+        elif self.name == "bishop":
+            self.carry_out_bishop(game)
+        elif self.name == "cardinal_exchange":
+            self.carry_out_cardinal(game)
+        elif self.name == "abbot_gold_or_card":
+            self.carry_out_abbot(game)
+
+        #ID 5
+        elif self.name == "merchant":
+            self.carry_out_merchant(game)
+        elif self.name == "alchemist":
+            self.carry_out_alchemist(game)
+        elif self.name == "trader":
+            self.carry_out_trader(game)
+        
+        #ID 6
+        elif self.name == "architect":
+            self.carry_out_architect(game)
+        elif self.name == "navigator_gold_card":
+            self.carry_out_navigator(game)
+        elif self.name == "scholar":
+            self.carry_out_scholar_draw(game)
+        elif self.name == "scholar_card_pick":
+            self.carry_out_scholar_put_back(game)
+
+        #ID 7
+        elif self.name == "warlord_desctruction":
+            self.carry_out_warlord(game)
+        elif self.name == "marshal_steal":
+            self.carry_out_marshal(game)
+        elif self.name == "diplomat_exchange":
+            self.carry_out_diplomat(game)
+
+        #ID 8
+        # Not yet
+
+        return options
 
     # ID 0
     def carry_out_assasination(self, game):

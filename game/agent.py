@@ -273,7 +273,7 @@ class Agent():
     # ID 3
     def king_options(self, game):
         # Nothing you just take the crown
-        return [option(name="take_crown", perpetrator=self)]
+        return [option(name="take_crown_king", perpetrator=self)]
 
     def emperor_options(self, game):
         options = []
@@ -291,7 +291,7 @@ class Agent():
     
     def patrician_options(self, game):
         # Nothing you just take the crown
-        return [option(name="take_crown", perpetrator=self)]
+        return [option(name="take_crown_pat", perpetrator=self)]
 
     # ID 4
     def bishop_options(self, game):
