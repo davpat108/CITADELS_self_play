@@ -1,5 +1,6 @@
 from game.deck import Deck, Card
 from game.option import option
+from game.config import role_to_role_id
 from itertools import combinations, permutations, combinations_with_replacement
 from copy import copy
 
@@ -34,7 +35,7 @@ class Agent():
         return [option(name="gold_or_card", perpetrator=self, choice="gold"), option(name="gold_or_card", perpetrator=self, choice="card")]
     
     def blackmail_response_options(self, game) -> list:
-        if self.blackmail_fake or self.blackmail_true:
+        if game.role_properties[role_to_role_id[self.role]].blackmail:
             return [option(choice="pay", perpetrator=self, name="blackmail_response"), option(choice="not_pay", perpetrator=self, name="blackmail_response")]
         return [option(name="empty_option")]
     
@@ -247,7 +248,7 @@ class Agent():
         if self.role == "Wizard":
             for player in game.players:
                 if player.id != self.id:
-                    options.append(option(name="look_at_hand", perpetrator=self, target_player= player))
+                    options.append(option(name="look_at_hand", perpetrator=self, target_player=player))
         return options
     
     def wizard_take_from_hand_options(self, target_player):

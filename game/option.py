@@ -1,5 +1,6 @@
 from copy import deepcopy
 from game.deck import Deck
+from game.game import GameState
 
 class option():
     def __init__(self, name, **kwargs):
@@ -28,7 +29,9 @@ class option():
             self.attributes['perpetrator'].gold -= int(self.attributes['perpetrator'].gold/2)
             self.attributes['target'].gold += int(self.attributes['perpetrator'].gold/2)
         else:
-            "game goes to a different state"
+            game.gamestate.state = 3
+            game.gamestate.player = get_player_from_role_id[2, game]
+            game.gamestate.next_game_state = GameState(state=4, current_player=self.attributes['perpetrator'])
 
     def carry_out_responding_to_blackmail_response(self, game):
         # Its reversed as its the blackmailers response
@@ -333,7 +336,7 @@ def reshuffle_deck_if_empty(game):
         game.deck = deepcopy(game.discard_deck)
         game.discard_deck = Deck(empty=True)
 
-def get_player_from_role(role_id, game):
+def get_player_from_role_id(role_id, game):
     for player in game.players:
         if player.role == game.roles[role_id]:
             return player

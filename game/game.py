@@ -1,6 +1,6 @@
 from game.agent import Agent
 from game.deck import Deck, Card
-from game.config import building_cards, unique_building_cards, roles
+from game.config import building_cards, unique_building_cards, roles, role_to_role_id
 import random
 
 class RolePropery():
@@ -17,6 +17,16 @@ class RolePropery():
         self.possessed = False
         self.robbed = False
         self.blackmail = None
+
+class GameState():
+    def __init__(self, current_player=None, state = 0, already_done_moves=[], next_game_state= None) -> None:
+        self.current_player = None
+        self.state = 0
+        # Moves such that can be described as "You can do it anytime x times."
+        self.already_done_moves = []
+        # For gamestate where just from the state is unclear whats next,
+        # like reaction decisions, for example reaveal or not as blackmailer
+        self.next_game_state = None
 
 class Game():
     def __init__(self, avaible_roles=None, debug=False) -> None:
@@ -136,6 +146,8 @@ class Game():
             6 : RolePropery(),
             7 : RolePropery()
             }
+        
+        game_state = GameState()
 
         
     def sample_roles(self, avaible_roles, number_of_used_roles):

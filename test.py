@@ -10,9 +10,9 @@ game = Game(debug=True)
 #options[0].carry_out_assasination(game)
 #x = 0
 
-game.player1.role = "Spy"
-game.visible_face_up_role = {0:"Assassin"}
-options = game.player1.character_options(game)
+#game.player1.role = "Spy"
+#game.visible_face_up_role = {0:"Assassin"}
+#options = game.player1.character_options(game)
 
-options[0].carry_out_spying(game)
-x = 0
+#options[0].carry_out_spying(game)
+#x = 0
