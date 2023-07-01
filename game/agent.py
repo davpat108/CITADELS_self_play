@@ -27,6 +27,19 @@ class Agent():
         self.already_used_lab = False
         self.already_used_museum = False
 
+    # Helper functions for agent
+    def get_build_limit(self):
+        if self.role == "Architect":
+            build_limit = 3
+        elif self.role == "Scholar":
+            build_limit = 2
+        elif self.role == "Bishop":
+            build_limit = 0
+        elif self.role == "Navigator":
+            build_limit = 0
+        else:
+            build_limit = 1
+        return build_limit
     # Others
     def pick_role_options(self, game, avaible_roles):
         return [option(name="role_pick", perpetrator=self, choice=role) for role in avaible_roles]
@@ -92,6 +105,19 @@ class Agent():
                 options.append(option(choice=card.type_ID, name="museum_choice"))
         return options + [option(name="empty_option")]
     
+    def build_options(self, game):
+        options = []
+        build_limit = self.get_build_limit()
+        if self.role != "Trader":
+            if game.game_state.already_done_moves.count("trade_building") + game.game_state.already_done_moves.count("non_trade_building") < build_limit:
+                pass
+        else:
+            if game.game_state.already_done_moves.count("non_trade_building") < build_limit:
+                pass
+        
+    
+    def main_round_options(self, game):
+        build_limit = self.get_build_limit()
 
     def character_options(self, game):
         options = []

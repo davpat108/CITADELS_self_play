@@ -238,7 +238,6 @@ class option():
             for building in self.attributes['perpetrator'].buildings.cards:
                 if building.suit == "religion":
                     self.attributes['perpetrator'].gold += 1
-
     
     def carry_out_abbot(self, game):
         if not game.role_properties[4].dead and not game.role_properties[4].possessed:
@@ -246,7 +245,13 @@ class option():
             for _ in range(self.attributes['gold_or_card_combination'].count("card")):
                 reshuffle_deck_if_empty(game)
                 self.attributes['perpetrator'].hand.add_card(game.deck.draw_card())
-
+                
+    def carry_out_abbot_beg(self, game):
+        if not game.role_properties[4].dead and not game.role_properties[4].possessed:
+            max_gold_player_index = max(enumerate([player.gold for player in game.players]), key=lambda x: x[1])[0]
+            game.players[max_gold_player_index].gold -= 1
+            get_player_from_role_id(4, game).gold += 1
+            
     def carry_out_cardinal(self, game):
         # Special way of building
 
