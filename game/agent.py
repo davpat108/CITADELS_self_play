@@ -19,16 +19,13 @@ class Agent():
         self.dead = False
 
         self.just_drawn_cards = Deck(empty=True)
-
+        self.has_replica = False
         
 
         self.crown = False
         self.gold = 2
         self.id = id
 
-        self.already_used_smithy = False
-        self.already_used_lab = False
-        self.already_used_museum = False
 
     # Helper functions for agent
     def get_build_limit(self):
@@ -52,9 +49,16 @@ class Agent():
                 points += 2
             if Card(**{"suit":"unique", "type_ID":31, "cost": 5}) in self.buildings.cards and card.suit == "unique":
                 points += 1
+            
+        if Card(**{"suit":"unique", "type_ID":37, "cost": 4}) in self.buildings.cards:
+            points += self.gold
+
+        if Card(**{"suit":"unique", "type_ID":39, "cost": 5}) in self.buildings.cards:
+            points += len(self.hand.cards)
 
 
     # Others
+
     def pick_role_options(self, game, avaible_roles):
         return [option(name="role_pick", perpetrator=self, choice=role) for role in avaible_roles]
 
@@ -78,6 +82,9 @@ class Agent():
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
         return [option(choice="reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
     
+    def in_hospital_options(self, game) -> list:
+        pass
+
     def ghost_town_color_choice_options(self) -> list:
         # Async
         if Card(**{"suit":"unique", "type_ID":19, "cost": 2}) in self.buildings.cards:
@@ -86,12 +93,12 @@ class Agent():
         return [option(name="empty_option")]
         
     def smithy_options(self, game) -> list:
-        if Card(**{"suit":"unique", "type_ID":21, "cost": 5}) in self.buildings.cards and self.gold >= 2 and not self.already_used_smithy:
+        if Card(**{"suit":"unique", "type_ID":21, "cost": 5}) in self.buildings.cards and self.gold >= 2 and not "smithy" in game.game_state.already_done_moves:
             return [option(name="empty_option"), option(name="smithy_choice")]
         return []
     
     def laboratory_options(self, game) -> list:
-        if Card(**{"suit":"unique", "type_ID":22, "cost": 5}) in self.buildings.cards and len(self.hand.cards) >= 1 and not self.already_used_lab:
+        if Card(**{"suit":"unique", "type_ID":22, "cost": 5}) in self.buildings.cards and len(self.hand.cards) >= 1 and not "sab" in game.game_state.already_done_moves:
             return [option(name="empty_option"), option(name="laboratory_choice")]
         return []
     
@@ -357,9 +364,16 @@ class Agent():
                 # Check each card in our hand
                 for card in self.hand:
                     # If the card cost is less than the player's gold
-                    if card.cost <= player.gold:
+                    cost = card.cost
+                    factory = False
+                    if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
+                        cost -= -1
+                        factory = True
+                    if card in self.buildings.cards and Card(**{"suit":"unique", "type_ID":36, "cost": 5}) and not self.has_replica: 
+                        replica = True
+                    if cost <= player.gold:
                         # Calculate how many cards we need to give in exchange
-                        exchange_cards_count = max(player.gold - card.cost, 0)
+                        exchange_cards_count = max(player.gold - cost, 0)
 
                         # If we have enough cards to give (excluding the current card)
                         if len(self.hand) - 1 >= exchange_cards_count:
@@ -369,7 +383,7 @@ class Agent():
 
                             # Each combination of exchange cards is a possible trade
                             for exchange_cards in exchange_combinations:
-                                options.append(option(name="cardinal_exchange", perpetrator=self, target_player=player, built_card=card, cards_to_give=exchange_cards))
+                                options.append(option(name="cardinal_exchange", perpetrator=self, target_player=player, built_card=card, cards_to_give=exchange_cards, replica=replica, factory=factory))
 
         return options
     

@@ -1,6 +1,6 @@
 from copy import deepcopy
 from game.deck import Deck, Card
-from game.game import GameState
+from game.helper_classes import GameState
 
 class option():
     def __init__(self, name, **kwargs):
@@ -300,15 +300,19 @@ class option():
         # Special way of building
 
         if not game.role_properties[4].dead and not game.role_properties[4].possessed:
+            # Regular building
             self.attributes['perpetrator'].buildings.add_card(self.attributes['perpetrator'].hand.get_a_card_like_it(self.attributes['built_card']))
-            self.attributes['perpetrator'].gold -= self.attributes['built_card'].cost
+            self.attributes['perpetrator'].gold -= self.attributes['built_card'].cost-self.attributes['factory']
             self.attributes['perpetrator'].gold = max(0, self.attributes['perpetrator'].gold)
-
+            if self.attributes['replica']:
+                self.attributes['perpetrator'].has_replica = True
+    
+            # Cardinal card take
             if self.attributes['cards_to_give']:
                 self.attributes['target'].gold -= len(self.attributes['cards_to_give'])
                 for card in self.attributes['cards_to_give']:
                     self.attributes['target'].hand.add_card(self.attributes['perpetrator'].hand.get_a_card_like_it(card))
-    
+
     # ID 5
     def carry_out_merchant(self, game):
         if not game.role_properties[5].dead and not game.role_properties[5].possessed:
@@ -319,7 +323,7 @@ class option():
     
     def carry_out_alchemist(self, game):
         pass
-        # TODO: Implement alchemist after regular build implemented
+        # Cost is zero
 
     def carry_out_trader(self, game):
         if not game.role_properties[5].dead and not game.role_properties[5].possessed:
@@ -362,12 +366,17 @@ class option():
             self.attributes['perpetrator'].gold -= self.attributes['choice'].cost
             self.attributes['target'].gold += self.attributes['choice'].cost
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['choice']))
+            if check_if_building_is_replica(self.attributes['target'], game.self.attributes['choice']):
+                self.attributes['perpetrator'].has_replica = False
+
 
     def carry_out_warlord(self, game):
         if not game.role_properties[7].dead and not game.role_properties[7].possessed:
             self.attributes['perpetrator'].gold -= self.attributes['choice'].cost-1
             self.attributes['target'].gold += self.attributes['choice'].cost-1
             game.discard_deck.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['choice']))
+            if check_if_building_is_replica(self.attributes['target'], game.self.attributes['choice']):
+                self.attributes['perpetrator'].has_replica = False
 
     def carry_out_diplomat(self, game):
         if not game.role_properties[7].dead and not game.role_properties[7].possessed:
@@ -375,6 +384,8 @@ class option():
             self.attributes['target'].gold += self.attributes['money_owed'].cost
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['take']))
             self.attributes['target'].buildings.add_card(self.attributes['perpetrator'].buildings.get_a_card_like_it(self.attributes['give']))
+            if check_if_building_is_replica(self.attributes['target'], game.self.attributes['choice']):
+                self.attributes['perpetrator'].has_replica = False
 
 
 
@@ -399,3 +410,8 @@ def troneroom_owner_gold(game):
             break
     if trone_room_owner:
         trone_room_owner.gold += 1
+
+def check_if_building_is_replica(target_player, building):
+    if building in target_player.buildings.cards and target_player.buildings.cards.count(building) > 1:
+        return True
+    return False
