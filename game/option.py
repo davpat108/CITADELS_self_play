@@ -1,5 +1,5 @@
 from copy import deepcopy
-from game.deck import Deck
+from game.deck import Deck, Card
 from game.game import GameState
 
 class option():
@@ -14,14 +14,38 @@ class option():
         # others
     def carry_out_role_pick(self, game):
         self.attributes['perpetrator'].role = self.attributes['role']
+        game.gamestate.state = 1
+        game.gamestate.player = self.attributes['perpetrator']
 
     def carry_out_gold_or_card(self, game):
         if self.attributes['choice'] == "gold":
             self.attributes['perpetrator'].gold += 2
+            game.gamestate.state = 3
+            game.gamestate.player = self.attributes['perpetrator']
         else:
-            for _ in range(2):
-                reshuffle_deck_if_empty(game)
-                self.attributes['perpetrator'].hand.add_card(game.deck.draw_card())
+            # Astrology tower
+            if Card(**{"suit":"unique", "type_ID":16, "cost": 5}) in self.attributes['perpetrator'].buildings.cards:
+                for _ in range(3):
+                    reshuffle_deck_if_empty(game)
+                    self.attributes['perpetrator'].just_drawn_cards.add_card(game.deck.draw_card())
+            else:
+                for _ in range(2):
+                    reshuffle_deck_if_empty(game)
+                    self.attributes['perpetrator'].just_drawn_cards.add_card(game.deck.draw_card())
+            game.gamestate.state = 2
+            game.gamestate.player = self.attributes['perpetrator']
+
+
+    def carry_out_put_back_card(self, game):
+        for card in self.attributes['choice']:
+            self.attributes['perpetrator'].hand.add_card(self.attributes['perpetrator'].just_drawn_cards.get_a_card_like_it(card))
+        for card in self.attributes['perpetrator'].just_drawn_cards.cards:
+            game.deck.add_card(card)
+        self.attributes['perpetrator'].just_drawn_cards.cards = []
+
+        game.gamestate.state = 3
+        game.gamestate.player = self.attributes['perpetrator']
+
 
     def carry_out_respond_to_blackmail(self, game):
         # Victims response
@@ -30,15 +54,31 @@ class option():
             self.attributes['target'].gold += int(self.attributes['perpetrator'].gold/2)
         else:
             game.gamestate.state = 3
-            game.gamestate.player = get_player_from_role_id[2, game]
+            game.gamestate.player = get_player_from_role_id[1, game]
             game.gamestate.next_game_state = GameState(state=4, current_player=self.attributes['perpetrator'])
+
 
     def carry_out_responding_to_blackmail_response(self, game):
         # Its reversed as its the blackmailers response
+        # TODO public informations
         if self.attributes['choice'] == "reveal" and self.attributes['target'].blackmail_true:
             self.attributes['perpetrator'].gold += self.attributes['target'].gold
             self.attributes['target'].gold = 0
+        game.gamestate.state = game.gamestate.next_game_state
 
+    def finnish_main_seuqnce_actions(self, game):
+        # Deciding that I did enough in my turn
+        # Park
+        if Card(**{"suit":"unique", "type_ID":28, "cost": 6}) in self.attributes['perpetrator'].buildings.cards:
+            if len(self.attributes['perpetrator'].hand.cards) == 0:
+                for _ in range(2):
+                    reshuffle_deck_if_empty(game)
+                    self.attributes['perpetrator'].just_drawn_cards.add_card(game.deck.draw_card())            
+        # Poorhouse    
+        if Card(**{"suit":"unique", "type_ID":30, "cost": 5}) in self.attributes['perpetrator'].buildings.cards:
+            if len(self.attributes['perpetrator'].hand.cards) == 0:
+                self.attributes['perpetrator'].gold += 1
+                
     def carry_out_role(self, game):
         options = []
         # ID 0
@@ -200,6 +240,7 @@ class option():
                     self.attributes['perpetrator'].gold += 1
 
         self.attributes['perpetrator'].crown = True
+        troneroom_owner_gold(game)
 
     def carry_out_take_crown_patrician(self, game):
         if not game.role_properties[3].dead and not game.role_properties[3].possessed:
@@ -213,6 +254,7 @@ class option():
                     self.attributes['perpetrator'].hand.add_card(game.deck.draw_card())
                 
         self.attributes['perpetrator'].crown = True
+        troneroom_owner_gold(game)
 
     def carry_out_emperor(self, game):
         if not game.role_properties[3].dead and not game.role_properties[3].possessed:
@@ -231,6 +273,8 @@ class option():
         if not game.role_properties[3].possessed:
             self.attributes['perpetrator'].crown = False
             self.attributes['target'].crown = True
+            troneroom_owner_gold(game)
+            
 
     # ID 4
     def carry_out_bishop(self, game):
@@ -346,3 +390,12 @@ def get_player_from_role_id(role_id, game):
         if player.role == game.roles[role_id]:
             return player
     return None
+
+def troneroom_owner_gold(game):
+    trone_room_owner = None
+    for player in game.players:
+        if Card(**{"suit":"unique", "type_ID":32, "cost": 6}) in player.buildings.cards:
+            trone_room_owner = player
+            break
+    if trone_room_owner:
+        trone_room_owner.gold += 1
