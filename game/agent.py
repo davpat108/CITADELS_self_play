@@ -47,12 +47,15 @@ class Agent():
             points += card.cost
             if card.type_ID == 18 or card.type_ID == 23:
                 points += 2
+            # Whishing well
             if Card(**{"suit":"unique", "type_ID":31, "cost": 5}) in self.buildings.cards and card.suit == "unique":
                 points += 1
-            
+        
+        # Imp teasury
         if Card(**{"suit":"unique", "type_ID":37, "cost": 4}) in self.buildings.cards:
             points += self.gold
-
+        
+        # Maproom
         if Card(**{"suit":"unique", "type_ID":39, "cost": 5}) in self.buildings.cards:
             points += len(self.hand.cards)
 
@@ -77,13 +80,11 @@ class Agent():
     def blackmail_response_options(self, game) -> list:
         if game.role_properties[role_to_role_id[self.role]].blackmail:
             return [option(choice="pay", perpetrator=self, name="blackmail_response"), option(choice="not_pay", perpetrator=self, name="blackmail_response")]
-        return [option(name="empty_option")]
+        return [option(name="empty_option", next_gamestate=4, next_player=self)]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
         return [option(choice="reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
     
-    def in_hospital_options(self, game) -> list:
-        pass
 
     def ghost_town_color_choice_options(self) -> list:
         # Async
@@ -126,28 +127,44 @@ class Agent():
         if Card(**{"suit":"unique", "type_ID":29, "cost": 3}) in self.buildings.cards:
             for card in game.deck.cards:
                 options.append(option(choice=card.type_ID, name="lighthouse_choice"))
-        return options + [option(name="empty_option")]
+        return options
     
     def museum_options(self, game) -> list:
         options = []
         if Card(**{"suit":"unique", "type_ID":34, "cost": 4}) in self.buildings.cards and not "museum" in game.game_state.already_done_moves:
             for card in self.hand.cards:
                 options.append(option(choice=card.type_ID, name="museum_choice"))
-        return options + [option(name="empty_option")]
-    
+        return options
+
+
+    def get_builds(self, options) -> list:
+        # Returns buildable cards from hand by cost
+        for card in self.hand:
+            cost = card.cost
+            factory = False
+            if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
+                cost -= -1
+                factory = True
+            if card in self.buildings.cards and Card(**{"suit":"unique", "type_ID":36, "cost": 5}) and not self.has_replica: 
+                replica = True
+            if cost <= self.gold and option(name="build", perpetrator=self, built_card=card, replica=replica, factory=factory) not in options:
+                options.append(option(name="build", perpetrator=self, built_card=card, replica=replica, factory=factory))
+
+
     def build_options(self, game):
         options = []
         build_limit = self.get_build_limit()
         if self.role != "Trader":
             if game.game_state.already_done_moves.count("trade_building") + game.game_state.already_done_moves.count("non_trade_building") < build_limit:
-                pass
+                self.get_builds(options)
         else:
             if game.game_state.already_done_moves.count("non_trade_building") < build_limit:
-                pass
+                self.get_builds(options)
+        return options
         
     
     def main_round_options(self, game):
-        build_limit = self.get_build_limit()
+        pass
 
     def character_options(self, game):
         options = []

@@ -10,8 +10,17 @@ class option():
     def __eq__(self, other):
         return self.name == other.name and self.attributes == other.attributes
 
+    # gamestates:	0 - choose role -> 1
+	#1 2 gold or 2 cards -> 2 or 3
+	#2 Which card to put back -> 3
+	#3 Blackmail response -> 4 different character
+	#4 Respond to response -> 5 different character
+	#5 Character ability/build/smithy/museum/lab/magic_school/weapon_storage -> next player 1 or 0 or end
+	#6 Ghost_town-> 5
+	#7 graveyard -> 5 different character (warlord)
+    #8 lighthouse -> 5
 
-        # others
+    # others
     def carry_out_role_pick(self, game):
         self.attributes['perpetrator'].role = self.attributes['role']
         game.gamestate.state = 1
@@ -46,16 +55,21 @@ class option():
         game.gamestate.state = 3
         game.gamestate.player = self.attributes['perpetrator']
 
+    def carry_out_empty(self, game):
+        game.gamestate.state = self.attributes['next_gamestate']
+        game.gamestate.player = self.attributes['next_player']
 
     def carry_out_respond_to_blackmail(self, game):
         # Victims response
         if self.attributes['choice'] == "pay":
             self.attributes['perpetrator'].gold -= int(self.attributes['perpetrator'].gold/2)
             self.attributes['target'].gold += int(self.attributes['perpetrator'].gold/2)
+            game.gamestate.state = 5
+            game.gamestate.player = self.attributes['perpetrator']
         else:
-            game.gamestate.state = 3
+            game.gamestate.state = 4
             game.gamestate.player = get_player_from_role_id[1, game]
-            game.gamestate.next_game_state = GameState(state=4, current_player=self.attributes['perpetrator'])
+            game.gamestate.next_game_state = GameState(state=5, current_player=self.attributes['perpetrator'])
 
 
     def carry_out_responding_to_blackmail_response(self, game):
@@ -65,6 +79,20 @@ class option():
             self.attributes['perpetrator'].gold += self.attributes['target'].gold
             self.attributes['target'].gold = 0
         game.gamestate.state = game.gamestate.next_game_state
+
+    def carry_out_building(self, game):
+        self.attributes['perpetrator'].buildings.add_card(self.attributes['built_card'])
+        if not self.attributes['perpetrator'].role == "Alchemist":
+            self.attributes['perpetrator'].gold -= self.attributes['choice'].cost
+        
+        if self.attributes['replica']:
+            self.attributes['perpetrator'].has_replica = True
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        if self.attributes['built_card'].suit == "trade":
+            game.gamestate.already_done_moves.append("trade_building")
+        else:
+            game.gamestate.already_done_moves.append("non_trade_building")
 
     def finnish_main_seuqnce_actions(self, game):
         # Deciding that I did enough in my turn
@@ -78,9 +106,11 @@ class option():
         if Card(**{"suit":"unique", "type_ID":30, "cost": 5}) in self.attributes['perpetrator'].buildings.cards:
             if len(self.attributes['perpetrator'].hand.cards) == 0:
                 self.attributes['perpetrator'].gold += 1
+
+        game.gamestate = get_next_game_state(game)
+
                 
-    def carry_out_role(self, game):
-        options = []
+    def carry_out(self, game):
         # ID 0
         if self.name == "assassination":
             self.carry_out_assasination(game)
@@ -154,17 +184,21 @@ class option():
         #ID 8
         # Not yet
 
-        return options
-
     # ID 0
     def carry_out_assasination(self, game):
         game.role_properties[self.attributes['target']].dead = True
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("character_ability")
         
     def carry_out_warranting(self, game):
         game.role_properties[self.attributes['real_target']].warrant = "real"
         game.role_properties[self.attributes['fake_targets'][0]].warrant = "fake"
         game.role_properties[self.attributes['fake_targets'][1]].warrant = "fake"
-        
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("character_ability")
+
     def carry_out_bewitching(self, game):
         game.role_properties[self.attributes['target']].possessed = True
         
@@ -172,11 +206,17 @@ class option():
     def carry_out_stealing(self, game):
         if not game.role_properties[1].dead and not game.role_properties[1].possessed:
             game.role_properties[self.attributes['target']].robbed = True
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("character_ability")
     
     def carry_out_blackmail(self, game):
         if not game.role_properties[1].dead and not game.role_properties[1].possessed:
             game.role_properties[self.attributes['real_target']].blackmail = "Real"
             game.role_properties[self.attributes['fake_target']].blackmail = "Fake"
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("character_ability")
         
     def carry_out_spying(self, game):
         if not game.role_properties[1].dead and not game.role_properties[1].possessed:
@@ -189,6 +229,9 @@ class option():
 
             reshuffle_deck_if_empty(game)
             self.attributes['perpetrator'].hand.add_card(game.deck.draw_card())
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("character_ability")
 
     # ID 2
     def carry_out_magicking(self, game):
@@ -202,6 +245,9 @@ class option():
                 for _ in range(len(self.attributes['perpetrator'].cards)):
                     reshuffle_deck_if_empty(game)
                     self.attributes['perpetrator'].hand.add_card(game.deck.draw_card())
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_wizard_hand_looking(self, game):
         pass
