@@ -52,6 +52,8 @@ class Agent():
             if Card(**{"suit":"unique", "type_ID":31, "cost": 5}) in self.buildings.cards and card.suit == "unique":
                 points += 1
         
+        points += len(self.museum_cards)
+
         # Imp teasury
         if Card(**{"suit":"unique", "type_ID":37, "cost": 4}) in self.buildings.cards:
             points += self.gold

@@ -492,17 +492,22 @@ class option():
             self.attributes['perpetrator'].gold -= self.attributes['choice'].cost
             self.attributes['target'].gold += self.attributes['choice'].cost
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['choice']))
-            if check_if_building_is_replica(self.attributes['target'], game.self.attributes['choice']):
+            if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
                 self.attributes['perpetrator'].has_replica = False
-
+            if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
+                for _ in range(len(self.attributes['target'].museum_cards.cards)):
+                    self.attributes['perpetrator'].museum_cards.add_card(self.attributes['target'].museum_cards.draw_card())
 
     def carry_out_warlord(self, game):
         if not game.role_properties[7].dead and not game.role_properties[7].possessed:
             self.attributes['perpetrator'].gold -= self.attributes['choice'].cost-1
             self.attributes['target'].gold += self.attributes['choice'].cost-1
             game.discard_deck.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['choice']))
-            if check_if_building_is_replica(self.attributes['target'], game.self.attributes['choice']):
+            if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
                 self.attributes['perpetrator'].has_replica = False
+            if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
+                for _ in range(len(self.attributes['target'].museum_cards.cards)):
+                    game.discard_deck.add_card(self.attributes['target'].museum_cards.draw_card())
 
     def carry_out_diplomat(self, game):
         if not game.role_properties[7].dead and not game.role_properties[7].possessed:
@@ -510,8 +515,11 @@ class option():
             self.attributes['target'].gold += self.attributes['money_owed'].cost
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['take']))
             self.attributes['target'].buildings.add_card(self.attributes['perpetrator'].buildings.get_a_card_like_it(self.attributes['give']))
-            if check_if_building_is_replica(self.attributes['target'], game.self.attributes['choice']):
+            if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
                 self.attributes['perpetrator'].has_replica = False
+            if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
+                for _ in range(len(self.attributes['target'].museum_cards.cards)):
+                    self.attributes['perpetrator'].museum_cards.add_card(self.attributes['target'].museum_cards.draw_card())
 
 
 
@@ -540,6 +548,8 @@ def check_if_building_is_replica(target_player, building):
     if building in target_player.buildings.cards and target_player.buildings.cards.count(building) > 1:
         return True
     return False
+
+            
 
 def refresh_used_roles(game):
     for player in game.players:
