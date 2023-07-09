@@ -96,14 +96,46 @@ class option():
         
         if self.attributes['replica']:
             self.attributes['perpetrator'].has_replica = True
-        game.gamestate.state = 5
-        game.gamestate.player = self.attributes['perpetrator']
+
         if self.attributes['built_card'].suit == "trade":
             game.gamestate.already_done_moves.append("trade_building")
         else:
             game.gamestate.already_done_moves.append("non_trade_building")
 
-    def finnish_main_seuqnce_actions(self, game):
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+
+    def carry_out_smithy(self, game):
+        self.attributes['perpetrator'].gold -= 2
+        for _ in range(3):
+            reshuffle_deck_if_empty(game)
+            self.attributes['perpetrator'].just_drawn_cards.add_card(game.deck.draw_card())
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append('smithy')
+    
+    def carry_out_laboratory(self, game):
+        game.discard_deck.add_card(self.attributes['perpetrator'].hand.get_a_card_like_it(self.attributes['choice']))
+        self.attributes['perpetrator'].gold += 1
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append('lab')
+
+    def carry_out_magic_school(self, game):
+        current_magic_school_suit = [card.suit for card in self.attributes['perpetrator'].buildings.cards if card.type_ID == 25]
+        self.attributes['perpetrator'].buildings.get_a_card_like_it(Card(**{"suit":current_magic_school_suit, "type_ID":25, "cost": 6}))
+        self.attributes['perpetrator'].buildings.add_card(Card(**{"suit":self.attributes['choice'], "type_ID":25, "cost": 6}))
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append('magic_school')
+
+    def carry_out_museum(self, game):
+        self.attributes['perpetrator'].museum_cards.add_card(self.hand.get_a_card_like_it(self.attributes['choice']))
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append('museum')
+
+    def finnish_main_sequnce_actions(self, game):
         # Deciding that I did enough in my turn
         # Park
         if Card(**{"suit":"unique", "type_ID":28, "cost": 6}) in self.attributes['perpetrator'].buildings.cards:
@@ -127,6 +159,37 @@ class option():
     def carry_out(self, game):
         if self.name == "role_pick":
             self.carry_out_role_pick(game)
+        elif self.name == "gold_or_card":
+            self.carry_out_gold_or_card(game)
+        elif self.name == "which_card_to_keep":
+            self.carry_out_put_back_card(game)
+        elif self.name == "blackmail_response":
+            self.carry_out_respond_to_blackmail(game)
+        elif self.name == "reveal_blackmail_as_blackmailer":
+            self.carry_out_responding_to_blackmail_response(game)
+        elif self.name == "build":
+            self.carry_out_building(game)
+        elif self.name == "empty_option":
+            self.carry_out_empty(game)
+        elif self.name == "finish_round":
+            self.finnish_main_sequnce_actions(game)
+
+        elif self.name == "ghost_town_color_choice":
+            self.carry_out_ghost_town(game)
+        elif self.name == "smithy_choice":
+            self.carry_out_smithy(game)
+        elif self.name == "laboratory_choice":
+            self.carry_out_laboratory(game)
+        elif self.name == "magic_school":
+            self.carry_out_magic_school(game)
+        elif self.name == "weapon_storage_choice":
+            self.carry_out_weapon_storage(game)
+        elif self.name == "lighthouse_choice":
+            self.carry_out_lighthouse(game)
+        elif self.name == "museum_choice":
+            self.carry_out_museum(game)
+        
+
         # roles
         # ID 0
         if self.name == "assassination":
