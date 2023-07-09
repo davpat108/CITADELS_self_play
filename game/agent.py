@@ -62,8 +62,8 @@ class Agent():
 
     # Others
 
-    def pick_role_options(self, game, avaible_roles):
-        return [option(name="role_pick", perpetrator=self, choice=role) for role in avaible_roles]
+    def pick_role_options(self, game):
+        return [option(name="role_pick", perpetrator=self, choice=role) for role in game.roles_to_choose_from.values()]
 
     def gold_or_card_options(self, game):
         return [option(name="gold_or_card", perpetrator=self, choice="gold"), option(name="gold_or_card", perpetrator=self, choice="card")]
@@ -243,7 +243,7 @@ class Agent():
         options = []
         if self.role == "Assassin":
             for role_ID in game.roles:
-                if role_ID > 0 and role_ID != next(iter(game.visible_face_up_role.keys())):
+                if not (game.visible_face_up_role and role_ID > 0) and role_ID != next(iter(game.visible_face_up_role.keys())):
                     options.append(option(name="assassination", target=role_ID))
         return options
         
@@ -253,7 +253,8 @@ class Agent():
             # [1:] to remove the magistrate itself
             target_possibilities = list(game.roles.keys())[1:]
             # Remove the visible left out role
-            target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
+            if game.visible_face_up_role:
+                target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
 
             for real_target in target_possibilities:
                 for fake_tagets in combinations(target_possibilities, 2):
@@ -265,7 +266,7 @@ class Agent():
         options = []
         if self.role == "Witch":
             for role_ID in game.roles:
-                if role_ID > 0 and role_ID != next(iter(game.visible_face_up_role.keys())):
+                if not (game.visible_face_up_role and role_ID > 0) and role_ID != next(iter(game.visible_face_up_role.keys())):
                     options.append(option(name="bewitching", target=role_ID))
         return options
     
@@ -274,7 +275,7 @@ class Agent():
         options = []
         if self.role == "Thief":
             for role_ID in game.roles:
-                if role_ID > 1 and role_ID != next(iter(game.visible_face_up_role.keys())):
+                if not (game.visible_face_up_role and role_ID > 1) and role_ID != next(iter(game.visible_face_up_role.keys())):
                     options.append(option(name="steal", target=role_ID))
         return options
     
@@ -284,7 +285,8 @@ class Agent():
             # [2:] to remove the blackmailer and the ID 0 character (assassin and the like)
             target_possibilities = list(game.roles.keys())[2:]
             # Remove the visible face up role
-            target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
+            if game.visible_face_up_role:
+                target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
             
             for targets in combinations(target_possibilities, 2):
                 options.append(option(name="blackmail", real_target=targets[0], fake_target=targets[1]))

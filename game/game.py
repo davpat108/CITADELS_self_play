@@ -61,6 +61,7 @@ class Game():
             self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[23])))
             self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[24])))
 
+            self.players = [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]
             self.player4.crown = True
 
             self.roles = {0: "Assassin",
@@ -94,7 +95,7 @@ class Game():
                 self.player5.hand.add_card(self.deck.draw_card())
                 self.player6.hand.add_card(self.deck.draw_card())
 
-            # All roles if not specified
+            # All roles from config if not specified
             if avaible_roles is None:
                 avaible_roles = roles
             self.roles = self.sample_roles(avaible_roles, 8)
@@ -103,13 +104,13 @@ class Game():
             random.shuffle(self.turn_orders_for_roles)
 
             crown_player = random.randint(0, 5)
-
-            for player in [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]:
+            self.players = [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]
+            for player in self.players:
                 if player.id == crown_player:
                     player.crown = True
             
 
-        self.players = [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]
+
         # Dictionary with 1 item
         self.visible_face_up_role = None
         self.role_properties ={
@@ -133,3 +134,28 @@ class Game():
             roles[i] = random.choice(avaible_roles[i])
         
         return roles
+    
+    def setup_round(self):
+        self.used_roles = []
+        # setup roles
+        roles_to_choose_from = list(self.roles.items())
+        random.shuffle(roles_to_choose_from)
+        # Not taking into account < 4 players and 7 players
+        if len(self.players) < 6:
+            for _ in range(6-len(self.players)):
+                self.visible_face_up_role = roles_to_choose_from.pop()
+        else:
+            self.visible_face_up_role = None
+        # Facedown role card
+        roles_to_choose_from.pop()
+
+        self.roles_to_choose_from = dict(roles_to_choose_from.sort())
+        crowned_player_index = next((player.id for player in self.players if player.crown), None)
+        if crowned_player_index is None:
+            raise Exception("No player with crown")
+        self.turn_orders_for_roles = self.turn_orders_for_roles[crowned_player_index:] + self.turn_orders_for_roles[:crowned_player_index]
+
+        self.gamestate.state = 0
+        self.gamestate.player = self.turn_orders_for_roles[0]
+
+        

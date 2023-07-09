@@ -1,6 +1,7 @@
 from copy import deepcopy
 from game.deck import Deck, Card
 from game.helper_classes import GameState
+from game.config import role_to_role_id, get_player_from_role_id, reshuffle_deck_if_empty
 
 class option():
     def __init__(self, name, **kwargs):
@@ -23,8 +24,16 @@ class option():
     # others
     def carry_out_role_pick(self, game):
         self.attributes['perpetrator'].role = self.attributes['role']
-        game.gamestate.state = 1
-        game.gamestate.player = self.attributes['perpetrator']
+        game.roles_to_choose_from.pop(role_to_role_id[self.attributes['role']])
+
+        if self.attributes['perpetrator'].id != game.turn_orders_for_roles[-1]:
+            game.gamestate.state = 0
+            game.gamestate.player = game.players[game.turn_orders_for_roles.index(self.attributes['perpetrator'].id) + 1]
+        else:
+            refresh_used_roles(game)
+            game.gamestate.state = 1
+            game.gamestate.player = get_player_from_role_id(game.used_roles[0], game)
+
 
     def carry_out_gold_or_card(self, game):
         if self.attributes['choice'] == "gold":
@@ -107,10 +116,18 @@ class option():
             if len(self.attributes['perpetrator'].hand.cards) == 0:
                 self.attributes['perpetrator'].gold += 1
 
-        #game.gamestate = get_next_game_state(game)
-
+        # I was the last player in the round
+        if game.used_roles[-1] == role_to_role_id[self.attributes['perpetrator'].role]:
+            game.setup_round()
+        # Not the last player
+        else:
+            game.gamestate.state = 1
+            game.gamestate.player = get_player_from_role_id(game.used_roles[game.used_roles.index(role_to_role_id[self.attributes['perpetrator'].role])+1], game)
                 
     def carry_out(self, game):
+        if self.name == "role_pick":
+            self.carry_out_role_pick(game)
+        # roles
         # ID 0
         if self.name == "assassination":
             self.carry_out_assasination(game)
@@ -435,9 +452,6 @@ class option():
 
 
 
-def get_next_game_state(game):
-    #use get_player_from_role_id
-
 def reshuffle_deck_if_empty(game):
     if not len(game.deck.cards):
         game.discard_deck.shuffle_deck()
@@ -463,3 +477,8 @@ def check_if_building_is_replica(target_player, building):
     if building in target_player.buildings.cards and target_player.buildings.cards.count(building) > 1:
         return True
     return False
+
+def refresh_used_roles(game):
+    for player in game.players:
+        game.used_roles.append(role_to_role_id(player.role))
+    game.used_roles.sort()
