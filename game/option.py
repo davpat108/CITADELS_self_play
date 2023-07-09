@@ -107,7 +107,7 @@ class option():
             if len(self.attributes['perpetrator'].hand.cards) == 0:
                 self.attributes['perpetrator'].gold += 1
 
-        game.gamestate = get_next_game_state(game)
+        #game.gamestate = get_next_game_state(game)
 
                 
     def carry_out(self, game):
@@ -435,6 +435,8 @@ class option():
 
 
 
+def get_next_game_state(game):
+    #use get_player_from_role_id
 
 def reshuffle_deck_if_empty(game):
     if not len(game.deck.cards):
