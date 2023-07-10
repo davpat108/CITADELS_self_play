@@ -6,7 +6,7 @@ class RolePropery():
         self.robbed = False
         self.blackmail = None
         
-    def reset_at_turn_end(self):
+    def reset_role_properties(self):
         self.dead = False
         self.warrant = None
         self.possessed = False

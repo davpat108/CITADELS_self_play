@@ -28,6 +28,22 @@ class Agent():
         self.id = id
 
 
+    def get_options(self, game):
+        if game.game_state.state == 0:
+            return self.pick_role_options(game)
+        elif game.game_state.state == 1:
+            return self.gold_or_card_options(game)
+        elif game.game_state.state == 2:
+            return self.which_card_to_keep_options(game)
+        elif game.game_state.state == 3:
+            return self.blackmail_response_options(game)
+        elif game.game_state.state == 4:
+            return self.reveal_blackmail_as_blackmailer_options(game)
+        elif game.game_state.state == 5:
+            return self.main_round_options(game)
+        elif game.game_state.state == 6:
+            return self.graveyard_options(game)
+
     # Helper functions for agent
     def get_build_limit(self):
         if self.role == "Architect":
@@ -63,8 +79,7 @@ class Agent():
             points += len(self.hand.cards)
 
 
-    # Others
-
+    # Options from gamestates
     def pick_role_options(self, game):
         return [option(name="role_pick", perpetrator=self, choice=role) for role in game.roles_to_choose_from.values()]
 
@@ -111,7 +126,7 @@ class Agent():
     def magic_school_options(self, game) -> list:
         # Every round
         # used before character ability
-        if "magic_school" in game.game_state.already_done_moves:
+        if not "magic_school" in game.game_state.already_done_moves:
             if Card(**{"suit":"unique", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"trade", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"war", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"religion", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"lord", "type_ID":23, "cost": 6}) in self.buildings.cards:
                 return [option(choice="trade", perpetrator=self, name="magic_school_choice"), option(choice="war", perpetrator=self, name="magic_school_choice"),
                          option(choice="religion", perpetrator=self, name="magic_school_choice"), option(choice="lord", perpetrator=self, name="magic_school_choice"), option(choice="unique", perpetrator=self, name="magic_school_choice")]
@@ -123,7 +138,7 @@ class Agent():
             for player in game.players:
                 if player.id != self.id:
                     for card in player.buildings.cards:
-                        options.append(option(perpetrator=self, choice = card.type_ID, name="weapon_storage_choice"))
+                        options.append(option(perpetrator=self,target=player, choice = card, name="weapon_storage_choice"))
         return options
     
     def lighthouse_options(self, game) -> list:
@@ -142,7 +157,7 @@ class Agent():
                 options.append(option(choice=card, perpetrator=self, name="museum_choice"))
         return options
 
-
+    # Main stuff
     def get_builds(self, options) -> list:
         # Returns buildable cards from hand by cost
         for card in self.hand:
@@ -172,6 +187,19 @@ class Agent():
     def main_round_options(self, game):
         options = []
         options += self.build_options(game)
+        options += self.character_options(game)
+        options += self.smithy_options(game)
+        options += self.laboratory_options(game)
+        options += self.magic_school_options(game)
+        options += self.weapon_storage_options(game)
+        options += self.lighthouse_options(game)
+        options += self.museum_options(game)
+        return options
+    
+    def graveyard_options(self, game):
+        if self.gold > 0:
+            return [option(name="graveyard", perpetrator=self)]
+        return []
 
     def character_options(self, game):
         options = []
@@ -422,6 +450,11 @@ class Agent():
                 options.append(option(name="abbot_gold_or_card", gold_or_card_combination=list(gold_or_card_combination)))
             
         return options
+    
+    def abbot_beg(self, game):
+        if not "begged" in game.game_state.already_done_moves:
+            return [option(name="abbot_beg", perpetrator=self)]
+        return []
     
     #ID 5
     def merchant_options(self, game):
