@@ -13,7 +13,7 @@ class Game():
             self.discard_deck = Deck(empty=True)
 
             # For debug purpuses 6 card per hand, 4 in general, this to test every unique building
-            self.player1 = Agent(id=0)
+            self.player1 = Agent(id=0, playercount=6)
             self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[0])))
             self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[0])))
             self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[0])))
@@ -21,7 +21,7 @@ class Game():
             self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[3])))
             self.player1.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[4])))
 
-            self.player2 = Agent(id=1)
+            self.player2 = Agent(id=1, playercount=6)
             self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[6])))
             self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[7])))
             self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[5])))
@@ -29,7 +29,7 @@ class Game():
             self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[7])))
             self.player2.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[8])))
 
-            self.player3 = Agent(id=2)
+            self.player3 = Agent(id=2, playercount=6)
             self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[10])))
             self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[12])))
             self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[9])))
@@ -37,7 +37,7 @@ class Game():
             self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[11])))
             self.player3.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[12])))
 
-            self.player4 = Agent(id=3)
+            self.player4 = Agent(id=3, playercount=6)
             self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[14])))
             self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[15])))
             self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[13])))
@@ -45,7 +45,7 @@ class Game():
             self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[15])))
             self.player4.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[16])))
 
-            self.player5 = Agent(id=4)
+            self.player5 = Agent(id=4, playercount=6)
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[15])))
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[0])))
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[17])))
@@ -53,7 +53,7 @@ class Game():
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[19])))
             self.player5.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[20])))
 
-            self.player6 = Agent(id=5)
+            self.player6 = Agent(id=5, playercount=6)
             self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[3])))
             self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[5])))
             self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[21])))
@@ -80,12 +80,12 @@ class Game():
             
             self.deck = Deck()
             self.discard_deck = Deck(empty=True)
-            self.player1 = Agent(id=0)
-            self.player2 = Agent(id=1)
-            self.player3 = Agent(id=2)
-            self.player4 = Agent(id=3)
-            self.player5 = Agent(id=4)
-            self.player6 = Agent(id=5)
+            self.player1 = Agent(id=0, playercount=6)
+            self.player2 = Agent(id=1, playercount=6)
+            self.player3 = Agent(id=2, playercount=6)
+            self.player4 = Agent(id=3, playercount=6)
+            self.player5 = Agent(id=4, playercount=6)
+            self.player6 = Agent(id=5, playercount=6)
 
             for _ in range(4):
                 self.player1.hand.add_card(self.deck.draw_card())
@@ -158,4 +158,7 @@ class Game():
         self.gamestate.state = 0
         self.gamestate.player = self.turn_orders_for_roles[0]
 
-        
+        for player in self.players:
+            player.substract_from_known_hand_confidences()
+
+

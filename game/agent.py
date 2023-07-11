@@ -3,30 +3,25 @@ from game.option import option
 from game.config import role_to_role_id
 from itertools import combinations, permutations, combinations_with_replacement
 from copy import copy
+from helper_classes import HandKnowlage
 
 class Agent():
 
-    def __init__(self, id:int) -> None:
+    def __init__(self, id:int, playercount) -> None:
         # Game start
         self.hand = Deck(empty=True)
         self.role = None
         self.buildings = Deck(empty=True)
 
-        self.warrant_fake = False
-        self.warrant_true = False
-        self.blackmail_fake = False
-        self.blackmail_true = False
-        self.dead = False
-
         self.just_drawn_cards = Deck(empty=True)
-        self.has_replica = False
+        self.replicas = False
         
         self.museum_cards = Deck(empty=True)
 
         self.crown = False
         self.gold = 2
         self.id = id
-
+        self.known_hands = []
 
     def get_options(self, game):
         if game.game_state.state == 0:
@@ -43,6 +38,8 @@ class Agent():
             return self.main_round_options(game)
         elif game.game_state.state == 6:
             return self.graveyard_options(game)
+        elif game.game_state.state == 7:
+            return self.reveal_warrant_as_magistrate_options(game)
 
     # Helper functions for agent
     def get_build_limit(self):
@@ -58,6 +55,12 @@ class Agent():
             build_limit = 1
         return build_limit
     
+    def substract_from_known_hand_confidences(self):
+        for hand_knowlage in self.known_hands:
+            hand_knowlage.confidence -= 1
+            if hand_knowlage.confidence == 0:
+                self.known_hands.remove(hand_knowlage)
+
     def count_points(self, game):
         points = 0
         for card in self.buildings.cards:
@@ -101,8 +104,11 @@ class Agent():
         return [option(name="empty_option", perpetrator=self, next_gamestate=4, next_player=self)]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
+        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_game_state.current_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
     
+    def reveal_warrant_as_magistrate_options(self, game) -> list:
+        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_game_state.current_player, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self, target=game.warranted_player, name="reveal_warrant_as_magistrate")]
+
 
     def ghost_town_color_choice_options(self) -> list:
         # Async
@@ -165,11 +171,10 @@ class Agent():
             factory = False
             if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
                 cost -= -1
-                factory = True
-            if card in self.buildings.cards and Card(**{"suit":"unique", "type_ID":36, "cost": 5}) and not self.has_replica: 
-                replica = True
-            if cost <= self.gold and option(name="build", perpetrator=self, built_card=card, replica=replica, factory=factory) not in options:
-                options.append(option(name="build", perpetrator=self, built_card=card, replica=replica, factory=factory))
+            if card in self.buildings.cards and Card(**{"suit":"unique", "type_ID":36, "cost": 5}) and not self.replicas: 
+                replica = self.replicas + 1
+            if cost <= self.gold and option(name="build", perpetrator=self, built_card=card, replica=replica) not in options:
+                options.append(option(name="build", perpetrator=self, built_card=card, replica=replica))
 
 
     def build_options(self, game):
@@ -204,69 +209,76 @@ class Agent():
     def character_options(self, game):
         options = []
         # ID 0
-        if self.role == "Assassin":
-            options += self.assasin_options(game)
-        elif self.role == "Magistrate":
-            options += self.magistrate_options(game)
-        elif self.role == "Witch":
-            options += self.witch_options(game)
+        if "character_ability" not in game.game_state.already_done_moves:
+            if self.role == "Assassin":
+                options += self.assasin_options(game)
+            elif self.role == "Magistrate":
+                options += self.magistrate_options(game)
+            elif self.role == "Witch":
+                options += self.witch_options(game)
 
-        #ID 1
-        elif self.role == "Thief":
-            options += self.thief_options(game)
-        elif self.role == "Blackmailer":
-            options += self.blackmail_options(game)
-        elif self.role == "Spy":
-            options += self.spy_options(game)
+            #ID 1
+            elif self.role == "Thief":
+                options += self.thief_options(game)
+            elif self.role == "Blackmailer":
+                options += self.blackmail_options(game)
+            elif self.role == "Spy":
+                options += self.spy_options(game)
 
-        #ID 2
-        elif self.role == "Magician":
-            options += self.magician_options(game)
-        elif self.role == "Wizard":
-            options += self.wizard_look_at_hand_options(game)
-        elif self.role == "Seer":
-            options += self.seer_options(game)
+            #ID 2
+            elif self.role == "Magician":
+                options += self.magician_options(game)
+            elif self.role == "Wizard":
+                options += self.wizard_look_at_hand_options(game)
+            elif self.role == "Seer":
+                options += self.seer_options(game)
 
-        #ID 3
-        elif self.role == "King":
-            options += self.king_options(game)
-        elif self.role == "Emperor":
-            options += self.emperor_options(game)
-        elif self.role == "Patrician":
-            options += self.patrician_options(game)
+            #ID 3
+            elif self.role == "King":
+                options += self.king_options(game)
+            elif self.role == "Emperor":
+                options += self.emperor_options(game)
+            elif self.role == "Patrician":
+                options += self.patrician_options(game)
 
-        #ID 4
-        elif self.role == "Bishop":
-            options += self.bishop_options(game)
-        elif self.role == "Cardinal":
-            options += self.cardinal_options(game)
-        elif self.role == "Abbot":
-            options += self.abbot_options(game)
+            #ID 4
+            elif self.role == "Bishop":
+                options += self.bishop_options(game)
+            elif self.role == "Cardinal":
+                options += self.cardinal_options(game)
+            elif self.role == "Abbot":
+                options += self.abbot_options(game)
 
-        #ID 5
-        elif self.role == "Merchant":
-            options += self.merchant_options(game)
-        elif self.role == "Alchemist":
-            options += self.alchemist_options(game)
-        elif self.role == "Trader":
-            options += self.trader_options(game)
+            #ID 5
+            elif self.role == "Merchant":
+                options += self.merchant_options(game)
+            elif self.role == "Alchemist":
+                options += self.alchemist_options(game)
+            elif self.role == "Trader":
+                options += self.trader_options(game)
+
+            #ID 6
+            elif self.role == "Architect":
+                options += self.architect_options(game)
+            elif self.role == "Navigator":
+                options += self.navigator_options(game)
+            elif self.role == "Scholar":
+                options += self.scholar_options(game)
+
+            #ID 7
+            elif self.role == "Warlord":
+                options += self.warlord_options(game)
+            elif self.role == "Marshal":
+                options += self.marshal_options(game)
+            elif self.role == "Diplomat":
+                options += self.diplomat_options(game)
         
-        #ID 6
-        elif self.role == "Architect":
-            options += self.architect_options(game)
-        elif self.role == "Navigator":
-            options += self.navigator_options(game)
-        elif self.role == "Scholar":
-            options += self.scholar_options(game)
-
-        #ID 7
-        elif self.role == "Warlord":
-            options += self.warlord_options(game)
-        elif self.role == "Marshal":
-            options += self.marshal_options(game)
-        elif self.role == "Diplomat":
-            options += self.diplomat_options(game)
-
+        elif self.role == "Warlord" or self.role == "Marshal" or self.role == "Diplomat":
+            options += self.take_gold_for_war_options(game)
+        elif self.role == "Abbot":
+            options += self.abbot_beg(game)
+        elif self.role == "Wizard":
+            options += self.wizard_take_from_hand_options(game)
         #ID 8
         # Not yet
 
@@ -276,100 +288,99 @@ class Agent():
     # ID 0
     def assasin_options(self, game):
         options = []
-        if self.role == "Assassin":
-            for role_ID in game.roles:
-                if not (game.visible_face_up_role and role_ID > 0) and role_ID != next(iter(game.visible_face_up_role.keys())):
-                    options.append(option(name="assassination", target=role_ID))
+        for role_ID in game.roles:
+            if not (game.visible_face_up_role and role_ID > 0) and role_ID != next(iter(game.visible_face_up_role.keys())):
+                options.append(option(name="assassination", target=role_ID))
         return options
         
     def magistrate_options(self, game):
         options = []
-        if self.role == "Magistrate":
-            # [1:] to remove the magistrate itself
-            target_possibilities = list(game.roles.keys())[1:]
-            # Remove the visible left out role
-            if game.visible_face_up_role:
-                target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
+        # [1:] to remove the magistrate itself
+        target_possibilities = list(game.roles.keys())[1:]
+        # Remove the visible left out role
+        if game.visible_face_up_role:
+            target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
 
-            for real_target in target_possibilities:
-                for fake_tagets in combinations(target_possibilities, 2):
-                    if real_target not in fake_tagets:
-                        options.append(option(name="magistrate_warrant", real_target=real_target, fake_targets=list(fake_tagets)))
+        for real_target in target_possibilities:
+            for fake_tagets in combinations(target_possibilities, 2):
+                if real_target not in fake_tagets:
+                    options.append(option(name="magistrate_warrant", real_target=real_target, fake_targets=list(fake_tagets)))
         return options
 
     def witch_options(self, game):
         options = []
-        if self.role == "Witch":
-            for role_ID in game.roles:
-                if not (game.visible_face_up_role and role_ID > 0) and role_ID != next(iter(game.visible_face_up_role.keys())):
-                    options.append(option(name="bewitching", perpetrator=self, target=role_ID))
+        for role_ID in game.roles:
+            if not (game.visible_face_up_role and role_ID > 0) and role_ID != next(iter(game.visible_face_up_role.keys())):
+                options.append(option(name="bewitching", perpetrator=self, target=role_ID))
         return options
     
     # ID 1
     def thief_options(self, game):
         options = []
-        if self.role == "Thief":
-            for role_ID in game.roles:
-                if not (game.visible_face_up_role and role_ID > 1) and role_ID != next(iter(game.visible_face_up_role.keys())):
-                    options.append(option(name="steal", perpetrator=self, target=role_ID))
+        for role_ID in game.roles:
+            if not (game.visible_face_up_role and role_ID > 1) and role_ID != next(iter(game.visible_face_up_role.keys())):
+                options.append(option(name="steal", perpetrator=self, target=role_ID))
         return options
     
     def blackmail_options(self, game):
         options = []
-        if self.role == "Blackmailer":
-            # [2:] to remove the blackmailer and the ID 0 character (assassin and the like)
-            target_possibilities = list(game.roles.keys())[2:]
-            # Remove the visible face up role
-            if game.visible_face_up_role:
-                target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
-            
-            for targets in combinations(target_possibilities, 2):
-                options.append(option(name="blackmail", perpetrator=self, real_target=targets[0], fake_target=targets[1]))
-                options.append(option(name="blackmail", perpetrator=self, real_target=targets[1], fake_target=targets[0]))
+        # [2:] to remove the blackmailer and the ID 0 character (assassin and the like)
+        target_possibilities = list(game.roles.keys())[2:]
+        # Remove the visible face up role
+        if game.visible_face_up_role:
+            target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
+        
+        for targets in combinations(target_possibilities, 2):
+            options.append(option(name="blackmail", perpetrator=self, real_target=targets[0], fake_target=targets[1]))
+            options.append(option(name="blackmail", perpetrator=self, real_target=targets[1], fake_target=targets[0]))
         return options
     
     def spy_options(self, game):
         options = []
-        if self.role == "Spy":
-            for player in game.players:
-                if player.id != self.id:
-                    for suit in ["trade", "war", "religion", "lord", "unique"]:
-                        options.append(option(name="spy", perpetrator=self, target=player, suit=suit))
+        for player in game.players:
+            if player.id != self.id:
+                for suit in ["trade", "war", "religion", "lord", "unique"]:
+                    options.append(option(name="spy", perpetrator=self, target=player, suit=suit))
         return options
     
     # ID 2
     def magician_options(self, game):
         options = []
-        if self.role == "Magician":
-            for player in game.players:
-                if player.id != self.id:
-                    options.append(option(name="magic_hand_change", perpetrator=self, target=player))
-                    
-            for r in range(1, len(self.hand.cards)+1):
-                # list of cards
-                discard_possibilities = list(combinations(self.hand.cards, r))
-                for discard_possibility in discard_possibilities:
-                    options.append(option(name="discard_and_draw", perpetrator=self, cards=discard_possibility))
+        for player in game.players:
+            if player.id != self.id:
+                options.append(option(name="magic_hand_change", perpetrator=self, target=player))
+                
+        for r in range(1, len(self.hand.cards)+1):
+            # list of cards
+            discard_possibilities = list(combinations(self.hand.cards, r))
+            for discard_possibility in discard_possibilities:
+                options.append(option(name="discard_and_draw", perpetrator=self, cards=discard_possibility))
             
         return options
     
     def wizard_look_at_hand_options(self, game):
         options = []
-        if self.role == "Wizard":
-            for player in game.players:
-                if player.id != self.id:
-                    options.append(option(name="look_at_hand", perpetrator=self, target_player=player))
+        for player in game.players:
+            if player.id != self.id:
+                options.append(option(name="look_at_hand", perpetrator=self, target_player=player))
         return options
     
-    def wizard_take_from_hand_options(self, target_player):
-        # TODO can build immediatly and can be the same building
-        options = []
-        if self.role == "Wizard":
+    def wizard_take_from_hand_options(self, game):
+        if "character_ability" in game.game_state.already_done_moves and "took_from_hand" not in game.game_state.already_done_moves:
+            target_player = next((hand for hand in self.known_hands if hand.confidence == 5 and hand.id != -1), None)
+            options = []
             for card in target_player.hand.cards:
-                options.append(option(name="take_from_hand", card=card, build=False, perpetrator=self, target_player=target_player))
-                if self.gold >= card.cost:
-                    options.append(option(name="take_from_hand", card=card, build=True, perpetrator=self, target_player=target_player))
-        return options
+                if option(name="take_from_hand", card=card, build=False, perpetrator=self, target=target_player) not in options:
+                    options.append(option(name="take_from_hand", card=card, build=False, perpetrator=self, target=target_player))
+                cost = card.cost
+                if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
+                    cost -= -1
+                if card in self.buildings.cards: 
+                    replica = self.replicas + 1
+                if cost <= self.gold and option(name="take_from_hand", built_card=card, build=True, perpetrator=self, target=target_player, replica=replica) not in options:
+                    options.append(option(name="take_from_hand", built_card=card, build=True, perpetrator=self, target=target_player, replica=replica))
+
+            return options
     
     def seer_options(self, game):
         return [option(name="seer", perpetrator=self)]
@@ -377,10 +388,9 @@ class Agent():
 
     def seer_give_back_card(self, players_with_taken_cards):
         options = []
-        if self.role == "Seer":
-            for permutation in permutations(self.hand.cards, len(players_with_taken_cards)):
-                card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(players_with_taken_cards, permutation)}
-                options.append(option(name="give_back_card", perpetrator=self, card_handouts=card_handouts))
+        for permutation in permutations(self.hand.cards, len(players_with_taken_cards)):
+            card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(players_with_taken_cards, permutation)}
+            options.append(option(name="give_back_card", perpetrator=self, card_handouts=card_handouts))
         return options
 
     # ID 3
@@ -390,15 +400,14 @@ class Agent():
 
     def emperor_options(self, game):
         options = []
-        if self.role == "Emperor":
-            for player in game.players:
-                if player.id != self.id:
-                    if len(player.hand.cards):
-                        options.append(option(name="give_crown", perpetrator=self, target=player, gold_or_card="card"))
-                    if player.gold:
-                        options.append(option(name="give_crown", perpetrator=self, target=player, gold_or_card="gold"))
-                    if not player.gold and not len(player.hand.cards):
-                        options.append(option(name="give_crown", perpetrator=self,  target=player, gold_or_card="nothing"))
+        for player in game.players:
+            if player.id != self.id:
+                if len(player.hand.cards):
+                    options.append(option(name="give_crown", perpetrator=self, target=player, gold_or_card="card"))
+                if player.gold:
+                    options.append(option(name="give_crown", perpetrator=self, target=player, gold_or_card="gold"))
+                if not player.gold and not len(player.hand.cards):
+                    options.append(option(name="give_crown", perpetrator=self,  target=player, gold_or_card="nothing"))
                     
         return options
     
@@ -413,41 +422,37 @@ class Agent():
 
     def cardinal_options(self, game):
         options = []
-        if self.role == "Cardinal":
-            for player in game.players:
-                # Check each card in our hand
-                for card in self.hand:
-                    # If the card cost is less than the player's gold
-                    cost = card.cost
-                    factory = False
-                    if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
-                        cost -= -1
-                        factory = True
-                    if card in self.buildings.cards and Card(**{"suit":"unique", "type_ID":36, "cost": 5}) and not self.has_replica: 
-                        replica = True
-                    if cost <= player.gold:
-                        # Calculate how many cards we need to give in exchange
-                        exchange_cards_count = max(player.gold - cost, 0)
-
-                        # If we have enough cards to give (excluding the current card)
-                        if len(self.hand) - 1 >= exchange_cards_count:
-                            # Get all combinations of exchange_cards_count cards (excluding the current card)
-                            other_cards = [c for c in self.hand if c != card]
-                            exchange_combinations = combinations(other_cards, exchange_cards_count)
-
-                            # Each combination of exchange cards is a possible trade
-                            for exchange_cards in exchange_combinations:
-                                options.append(option(name="cardinal_exchange", perpetrator=self, target_player=player, built_card=card, cards_to_give=exchange_cards, replica=replica, factory=factory))
+        for player in game.players:
+            # Check each card in our hand
+            for card in self.hand:
+                # If the card cost is less than the player's gold
+                cost = card.cost
+                factory = False
+                if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
+                    cost -= -1
+                    factory = True
+                if card in self.buildings.cards and Card(**{"suit":"unique", "type_ID":36, "cost": 5}) and not self.replicas: 
+                    replica = self.replicas+1
+                if cost <= player.gold:
+                    # Calculate how many cards we need to give in exchange
+                    exchange_cards_count = max(player.gold - cost, 0)
+                    # If we have enough cards to give (excluding the current card)
+                    if len(self.hand) - 1 >= exchange_cards_count:
+                        # Get all combinations of exchange_cards_count cards (excluding the current card)
+                        other_cards = [c for c in self.hand if c != card]
+                        exchange_combinations = combinations(other_cards, exchange_cards_count)
+                        # Each combination of exchange cards is a possible trade
+                        for exchange_cards in exchange_combinations:
+                            options.append(option(name="cardinal_exchange", perpetrator=self, target_player=player, built_card=card, cards_to_give=exchange_cards, replica=replica, factory=factory))
 
         return options
     
     def abbot_options(self, game):
         options = []
-        if self.role == "Abbot":
-            total_religious_districts = sum([1 if card.suit == "religion" else 0 for card in self.hand])
-            gold_or_card_combinations = combinations_with_replacement(["gold", "card"], total_religious_districts)
-            for gold_or_card_combination in gold_or_card_combinations:
-                options.append(option(name="abbot_gold_or_card", gold_or_card_combination=list(gold_or_card_combination)))
+        total_religious_districts = sum([1 if card.suit == "religion" else 0 for card in self.hand])
+        gold_or_card_combinations = combinations_with_replacement(["gold", "card"], total_religious_districts)
+        for gold_or_card_combination in gold_or_card_combinations:
+            options.append(option(name="abbot_gold_or_card", gold_or_card_combination=list(gold_or_card_combination)))
             
         return options
     
@@ -481,46 +486,48 @@ class Agent():
 
     def scholar_give_back_options(self, seven_drawn_cards):
         options = []
-        if self.role == "Scholar":
-            for card in seven_drawn_cards:
-                unchosen_cards = copy(seven_drawn_cards)
-                unchosen_cards.remove(card)
-                options.append(option(name="scholar_card_pick", choice=card, perpetrator=self,  unchosen_cards=unchosen_cards))
-            return options
+        for card in seven_drawn_cards:
+            unchosen_cards = copy(seven_drawn_cards)
+            unchosen_cards.remove(card)
+            options.append(option(name="scholar_card_pick", choice=card, perpetrator=self,  unchosen_cards=unchosen_cards))
+        return options
         
     # ID 7
     def warlord_options(self, game):
         options = []
-        if self.role == "Warlord":
-            for player in game.players:
-                if len(player.buildings.cards) < 7:
-                    for building in player.buildings.cards:
-                        if building.cost-1 <= self.gold and building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}):
-                            if option(name="warlord_desctruction", target=player, perpetrator=self, choice=building) not in options:
-                                options.append(option(name="warlord_desctruction", target=player, perpetrator=self, choice=building))
+        for player in game.players:
+            if len(player.buildings.cards) < 7:
+                for building in player.buildings.cards:
+                    if building.cost-1 <= self.gold and building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}) and player.role != "Bishop":
+                        if option(name="warlord_desctruction", target=player, perpetrator=self, choice=building) not in options:
+                            options.append(option(name="warlord_desctruction", target=player, perpetrator=self, choice=building))
                             
         return options
     
     def marshal_options(self, game):
         options = []
-        if self.role == "Marshal":
-            for player in game.players:
-                if len(player.buildings.cards) < 7 and player.id != self.id:
-                    for building in player.buildings.cards:
-                        if building.cost <= self.gold and building.cost <= 3 and building not in self.buildings.cards and building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}):
-                            if option(name="marshal_steal", target=player, perpetrator=self, choice=building) not in options:
-                                options.append(option(name="marshal_steal", target=player, perpetrator=self, choice=building))
-                                
+        for player in game.players:
+            if len(player.buildings.cards) < 7 and player.id != self.id:
+                for building in player.buildings.cards:
+                    if building.cost <= self.gold and building.cost <= 3 and building not in self.buildings.cards and building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}) and player.role != "Bishop":
+                        if option(name="marshal_steal", target=player, perpetrator=self, choice=building) not in options:
+                            options.append(option(name="marshal_steal", target=player, perpetrator=self, choice=building))
+        return options    
+                
     def diplomat_options(self, game):
         options = []
-        if self.role == "Diplomat":
-            for player in game.players:
-                if len(player.buildings.cards) < 7 and player.id != self.id:
-                    for enemy_building in player.buildings.cards:
-                        for own_building in self.buildings.cards:
-                            if enemy_building.cost-own_building.cost <= self.gold and enemy_building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}):
-                                if option(name="diplomat_exchange", target=player, perpetrator=self, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
-                                    options.append(option(name="diplomat_exchange", target=player, perpetrator=self, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
-                                    
+        for player in game.players:
+            if len(player.buildings.cards) < 7 and player.id != self.id:
+                for enemy_building in player.buildings.cards:
+                    for own_building in self.buildings.cards:
+                        if enemy_building.cost-own_building.cost <= self.gold and enemy_building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}) and player.role != "Bishop" and enemy_building not in self.buildings.cards:
+                            if option(name="diplomat_exchange", target=player, perpetrator=self, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
+                                options.append(option(name="diplomat_exchange", target=player, perpetrator=self, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
+        return options  
+    
+    def take_gold_for_war_options(self, game):
+        if "take_gold" not in game.game_state.already_done_moves:
+            return [option(name="take_gold_for_war", perpetrator=self)]
+        return []
     # ID 8 later for more players
     

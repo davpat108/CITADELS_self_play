@@ -1,6 +1,6 @@
 from copy import deepcopy
 from game.deck import Deck, Card
-from game.helper_classes import GameState
+from game.helper_classes import GameState, HandKnowlage, RolePropery
 from game.config import role_to_role_id, get_player_from_role_id, reshuffle_deck_if_empty
 
 class option():
@@ -77,35 +77,49 @@ class option():
             game.gamestate.player = self.attributes['perpetrator']
         else:
             game.gamestate.state = 4
-            game.gamestate.player = get_player_from_role_id[1, game]
+            game.gamestate.player = get_player_from_role_id(1, game)
             game.gamestate.next_game_state = GameState(state=5, current_player=self.attributes['perpetrator'])
 
 
     def carry_out_responding_to_blackmail_response(self, game):
         # Its reversed as its the blackmailers response
         # TODO public informations
-        if self.attributes['choice'] == "reveal" and self.attributes['target'].blackmail_true:
+        if self.attributes['choice'] == "reveal" and game.role_properties[self.attributes['real_target']].blackmail == "Real":
             self.attributes['perpetrator'].gold += self.attributes['target'].gold
             self.attributes['target'].gold = 0
         game.gamestate.state = game.gamestate.next_game_state
 
+    def carry_out_magistrate_reaveal(self, game):
+        if self.attributes['choice'] == "reveal" and self.attributes['target'].blackmail_true:
+            self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(game.warrant_building))
+            self.attributes['target'].gold += game.warrant_building.cost
+        game.gamestate.state = game.gamestate.next_game_state
+
     def carry_out_building(self, game):
-        # TODO 
-        # Magistrate
         self.attributes['perpetrator'].buildings.add_card(self.attributes['built_card'])
         if not self.attributes['perpetrator'].role == "Alchemist":
-            self.attributes['perpetrator'].gold -= self.attributes['choice'].cost
-        
+            self.attributes['perpetrator'].gold -= self.attributes['built_card'].cost
+
         if self.attributes['replica']:
-            self.attributes['perpetrator'].has_replica = True
+            self.attributes['perpetrator'].replicas = self.attributes['replica']
 
         if self.attributes['built_card'].suit == "trade":
             game.gamestate.already_done_moves.append("trade_building")
         else:
             game.gamestate.already_done_moves.append("non_trade_building")
 
-        game.gamestate.state = 5
-        game.gamestate.player = self.attributes['perpetrator']
+        # No warrant
+        if game.role_properties[role_to_role_id[self.perpetrator.role]].warrant is None:
+            game.gamestate.state = 5
+            game.gamestate.player = self.attributes['perpetrator']
+        # Warrant
+        else:
+            game.warrant_building = self.attributes['built_card']
+            game.gamestate.state = 7
+            game.gamestate.player = get_player_from_role_id(0, game)
+            game.gamestate.next_game_state = GameState(state=5, current_player=self.attributes['perpetrator'], already_done_moves=game.gamestate.already_done_moves)
+
+
 
     def carry_out_smithy(self, game):
         self.attributes['perpetrator'].gold -= 2
@@ -172,6 +186,7 @@ class option():
         if Card(**{"suit":"unique", "type_ID":30, "cost": 5}) in self.attributes['perpetrator'].buildings.cards:
             if len(self.attributes['perpetrator'].hand.cards) == 0:
                 self.attributes['perpetrator'].gold += 1
+            
 
         # I was the last player in the round
         if game.used_roles[-1] == role_to_role_id[self.attributes['perpetrator'].role]:
@@ -194,6 +209,8 @@ class option():
             self.carry_out_respond_to_blackmail(game)
         elif self.name == "reveal_blackmail_as_blackmailer":
             self.carry_out_responding_to_blackmail_response(game)
+        elif self.name == "reveal":
+            self.carry_out_magistrate_reaveal(game)
         elif self.name == "build":
             self.carry_out_building(game)
         elif self.name == "empty_option":
@@ -359,16 +376,24 @@ class option():
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_wizard_hand_looking(self, game):
-        pass
+        if not game.role_properties[2].dead and not game.role_properties[2].possessed:
+            self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=self.attributes['target'].id, hand=self.attributes['target'].hand.cards, confidence=5))
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_wizard_take_from_hand(self, game):
         if not game.role_properties[2].dead and not game.role_properties[2].possessed:
             # Can be the same building you already have, unlike with regualr building
             if self.attributes['build']:
-                self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].hand.get_a_card_like_it(self.attributes['card']))
-                self.attributes['perpetrator'].gold -= self.attributes['card'].cost
+                self.carry_out_building(game)
             else:
                 self.attributes['perpetrator'].hand.add_card(self.attributes['target'].hand.get_a_card_like_it(self.attributes['card']))
+            # It has to be the last one in this position
+            self.attributes["perpetrator"].known_hands[-1].hand.get_a_card_like_it(self.attributes['card'])
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("took_from_hand")
 
     def carry_out_seer_take_a_card(self, game):
         if not game.role_properties[2].dead and not game.role_properties[2].possessed:
@@ -436,7 +461,7 @@ class option():
             self.attributes['target'].crown = True
             troneroom_owner_gold(game)
         game.gamestate.state = 5
-        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.player = self.attribrdinalutes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
             
 
@@ -478,7 +503,7 @@ class option():
             self.attributes['perpetrator'].gold -= self.attributes['built_card'].cost-self.attributes['factory']
             self.attributes['perpetrator'].gold = max(0, self.attributes['perpetrator'].gold)
             if self.attributes['replica']:
-                self.attributes['perpetrator'].has_replica = True
+                self.attributes['perpetrator'].replicas = self.attributes['replica']
     
             # Cardinal card take
             if self.attributes['cards_to_give']:
@@ -553,7 +578,7 @@ class option():
             self.attributes['target'].gold += self.attributes['choice'].cost
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['choice']))
             if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
-                self.attributes['perpetrator'].has_replica = False
+                self.attributes['target'].replicas -= 1
             if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
                 for _ in range(len(self.attributes['target'].museum_cards.cards)):
                     self.attributes['perpetrator'].museum_cards.add_card(self.attributes['target'].museum_cards.draw_card())
@@ -567,7 +592,7 @@ class option():
             game.discard_deck.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['choice']))
 
             if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
-                self.attributes['perpetrator'].has_replica = False
+                self.attributes['target'].replicas -= 1
 
             if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
                 for _ in range(len(self.attributes['target'].museum_cards.cards)):
@@ -589,13 +614,21 @@ class option():
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['take']))
             self.attributes['target'].buildings.add_card(self.attributes['perpetrator'].buildings.get_a_card_like_it(self.attributes['give']))
             if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
-                self.attributes['perpetrator'].has_replica = False
+                self.attributes['target'].replicas -= 1
             if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
                 for _ in range(len(self.attributes['target'].museum_cards.cards)):
                     self.attributes['perpetrator'].museum_cards.add_card(self.attributes['target'].museum_cards.draw_card())
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
+
+    def carry_out_take_gold_for_war(self, game):
+        for building in self.attributes['perpetrator'].buildings.cards:
+            if building.suit == "war":
+                self.attributes['perpetrator'].gold += 1
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("take_gold")
 
 
 
