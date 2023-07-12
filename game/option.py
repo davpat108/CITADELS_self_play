@@ -15,11 +15,11 @@ class option():
 	#1 2 gold or 2 cards -> 2 or 3
 	#2 Which card to put back -> 3
 	#3 Blackmail response -> 4 different character
-	#4 Respond to response -> 5 different character
+	#4 Respond to response reveal -> 5 different character
 	#5 Character ability/build/smithy/museum/lab/magic_school/weapon_storage -> next player 1 or 0 or end
-	#6 Ghost_town-> 5
-	#7 graveyard -> 5 different character (warlord)
-    #8 lighthouse -> 5
+	#6 graveyard -> 5 different character (warlord)
+    #7 Magistrate reveal -> 5 different character
+    #8 seer give back card
 
     # others
     def carry_out_role_pick(self, game):
@@ -83,16 +83,18 @@ class option():
 
     def carry_out_responding_to_blackmail_response(self, game):
         # Its reversed as its the blackmailers response
-        # TODO public informations
         if self.attributes['choice'] == "reveal" and game.role_properties[self.attributes['real_target']].blackmail == "Real":
             self.attributes['perpetrator'].gold += self.attributes['target'].gold
             self.attributes['target'].gold = 0
+            game.role_properties[self.attributes['fake_target']].blackmail = None
         game.gamestate.state = game.gamestate.next_game_state
 
     def carry_out_magistrate_reaveal(self, game):
-        if self.attributes['choice'] == "reveal" and self.attributes['target'].blackmail_true:
+        if self.attributes['choice'] == "reveal" and game.role_properties[self.attributes['real_target']].warrant == "Real":
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(game.warrant_building))
             self.attributes['target'].gold += game.warrant_building.cost
+            game.role_properties[self.attributes['fake_targets'][0]].warrant = None
+            game.role_properties[self.attributes['fake_targets'][1]].warrant = None
         game.gamestate.state = game.gamestate.next_game_state
 
     def carry_out_building(self, game):
@@ -164,9 +166,14 @@ class option():
         game.gamestate.player = self.attributes['perpetrator']
 
     def carry_out_lighthouse(self, game):
-        # With wizard
-        # Dont forget to make it impossible to use again
-        pass
+        self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=-1, hand=game.deck.cards, confidence=5))
+        self.attributes['perpetrator'].hand.add_card(game.deck.get_a_card_like_it(self.attributes['choice']))
+        self.attributes['perpetrator'].can_use_lighthouse = False
+        game.deck.shuffle_deck()
+
+        game.gamestate.state = 5
+        game.gamestate.player = self.attributes['perpetrator']
+
 
     def carry_out_graveyard(self, game):
         # The destroyed building is appended to the discard deck so pop(-1) gets it
@@ -177,27 +184,31 @@ class option():
     def finnish_main_sequnce_actions(self, game):
         # Deciding that I did enough in my turn
         # Park
-        if Card(**{"suit":"unique", "type_ID":28, "cost": 6}) in self.attributes['perpetrator'].buildings.cards:
-            if len(self.attributes['perpetrator'].hand.cards) == 0:
-                for _ in range(2):
-                    reshuffle_deck_if_empty(game)
-                    self.attributes['perpetrator'].just_drawn_cards.add_card(game.deck.draw_card())            
-        # Poorhouse    
-        if Card(**{"suit":"unique", "type_ID":30, "cost": 5}) in self.attributes['perpetrator'].buildings.cards:
-            if len(self.attributes['perpetrator'].hand.cards) == 0:
-                self.attributes['perpetrator'].gold += 1
-            
-
+        if not game.role_properties[role_to_role_id[self.attributes['perpetrator'].role]].dead:
+            if Card(**{"suit":"unique", "type_ID":28, "cost": 6}) in self.attributes['perpetrator'].buildings.cards:
+                if len(self.attributes['perpetrator'].hand.cards) == 0:
+                    for _ in range(2):
+                        reshuffle_deck_if_empty(game)
+                        self.attributes['perpetrator'].just_drawn_cards.add_card(game.deck.draw_card())            
+            # Poorhouse    
+            if Card(**{"suit":"unique", "type_ID":30, "cost": 5}) in self.attributes['perpetrator'].buildings.cards:
+                if len(self.attributes['perpetrator'].hand.cards) == 0:
+                    self.attributes['perpetrator'].gold += 1
+        # witch
+        if self.attributes['next_witch']:
+            game.gamestate.state = 5
+            game.gamestate.player = get_player_from_role_id(game.used_roles[0], game)
+            game.gamestate.player.role = self.attributes['perpetrator'].role
+            return
+        
         # I was the last player in the round
         if game.used_roles[-1] == role_to_role_id[self.attributes['perpetrator'].role]:
-            for role_property in game.role_properties:
-                role_property.reset_role_properties() 
             game.setup_round()
         # Not the last player
         else:
             game.gamestate.state = 1
             game.gamestate.player = get_player_from_role_id(game.used_roles[game.used_roles.index(role_to_role_id[self.attributes['perpetrator'].role])+1], game)
-                
+
     def carry_out(self, game):
         if self.name == "role_pick":
             self.carry_out_role_pick(game)
@@ -263,7 +274,7 @@ class option():
         elif self.name == "seer":
             self.carry_out_seer_take_a_card(game)
         elif self.name == "give_back_card":
-            self.carry_out_give_back_cards(game)
+            self.carry_out_seer_give_back_cards(game)
 
         #ID 3
         elif self.name == "take_crown_king":
@@ -327,6 +338,8 @@ class option():
 
     def carry_out_bewitching(self, game):
         game.role_properties[self.attributes['target']].possessed = True
+        game.gamestate.state = 1
+        game.gamestate.player = get_player_from_role_id(game.used_roles[game.used_roles.index(role_to_role_id[self.attributes['perpetrator'].role])+1], game)
         
     # ID 1
     def carry_out_stealing(self, game):
@@ -398,15 +411,23 @@ class option():
     def carry_out_seer_take_a_card(self, game):
         if not game.role_properties[2].dead and not game.role_properties[2].possessed:
             for player in game.players:
-                if player.id != self.attributes['perpetrator'].id:
+                if player.id != self.attributes['perpetrator'].id and player.hand.cards:
                     player.hand.shuffle_deck()
                     reshuffle_deck_if_empty(game)
                     self.hand.add_card(player.hand.draw_card())
+                    game.seer_taken_card.append(player)
+        game.gamestate.state = 8
+        game.gamestate.player = self.attributes['perpetrator']
+        game.gamestate.already_done_moves.append("character_ability")
+        game.gamestate.next_game_state = GameState(state=5, current_player=self.attributes['perpetrator'], already_done_moves=game.gamestate.already_done_moves)
 
-    def carry_out_give_back_cards(self, game):
+    def carry_out_seer_give_back_cards(self, game):
         if not game.role_properties[2].dead and not game.role_properties[2].possessed:
             for handout in self.attributes['card_handouts'].items():
                 handout[0].hand.add_card(self.attributes['perpetrator'].hand.get_a_card_like_it(handout[1]))
+                self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=self.attributes['target'].id, hand=[handout[1]], confidence=5))
+        game.gamestate = game.gamestate.next_game_state
+
 
     # ID 3
     def carry_out_take_crown_king(self, game):
@@ -579,9 +600,8 @@ class option():
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['choice']))
             if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
                 self.attributes['target'].replicas -= 1
-            if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
-                for _ in range(len(self.attributes['target'].museum_cards.cards)):
-                    self.attributes['perpetrator'].museum_cards.add_card(self.attributes['target'].museum_cards.draw_card())
+            settle_museum(self, game)
+            settle_lighthouse(self)
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
@@ -594,9 +614,9 @@ class option():
             if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
                 self.attributes['target'].replicas -= 1
 
-            if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
-                for _ in range(len(self.attributes['target'].museum_cards.cards)):
-                    game.discard_deck.add_card(self.attributes['target'].museum_cards.draw_card())
+            settle_museum(self, game)
+            settle_lighthouse(self)
+            
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
@@ -605,7 +625,7 @@ class option():
             game.gamestate.state = 6
             game.gamestate.player = graveyard_owner
             game.gamestate.next_game_state = GameState(state=5, current_player=self.attributes['perpetrator'], already_done_moves=["character_ability"])
-            
+
 
     def carry_out_diplomat(self, game):
         if not game.role_properties[7].dead and not game.role_properties[7].possessed:
@@ -615,9 +635,11 @@ class option():
             self.attributes['target'].buildings.add_card(self.attributes['perpetrator'].buildings.get_a_card_like_it(self.attributes['give']))
             if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
                 self.attributes['target'].replicas -= 1
-            if self.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
-                for _ in range(len(self.attributes['target'].museum_cards.cards)):
-                    self.attributes['perpetrator'].museum_cards.add_card(self.attributes['target'].museum_cards.draw_card())
+
+            settle_museum(self, game)
+            settle_lighthouse(self)
+
+
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
@@ -643,6 +665,21 @@ def get_player_from_role_id(role_id, game):
         if player.role == game.roles[role_id]:
             return player
     return None
+
+def settle_lighthouse(option):
+    if option.attributes['choice'] == Card(**{"suit":"unique", "type_ID":29, "cost": 3}) and option.attributes['target'].can_use_lighthouse:
+        option.attributes['target'].can_use_lighthouse = False
+        option.attributes['perpetrator'].can_use_lighthouse = True
+
+def settle_museum(option, game):
+    if option.name == "warlord_desctruction":
+        if option.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
+            for _ in range(len(option.attributes['target'].museum_cards.cards)):
+                game.discard_deck.add_card(option.attributes['target'].museum_cards.draw_card())
+    else:
+        if option.attributes['choice'] == Card(**{"suit":"unique", "type_ID":34, "cost": 4}):
+            for _ in range(len(option.attributes['target'].museum_cards.cards)):
+                option.attributes['perpetrator'].museum_cards.add_card(option.attributes['target'].museum_cards.draw_card())
 
 def troneroom_owner_gold(game):
     trone_room_owner = None

@@ -109,7 +109,7 @@ class Game():
                 if player.id == crown_player:
                     player.crown = True
             
-
+        self.seer_taken_card = []
 
         # Dictionary with 1 item
         self.visible_face_up_role = None
@@ -136,6 +136,10 @@ class Game():
         return roles
     
     def setup_round(self):
+        for role_property in self.role_properties:
+            role_property.reset_role_properties() 
+        self.seer_taken_card = []
+        
         self.used_roles = []
         # setup roles
         roles_to_choose_from = list(self.roles.items())

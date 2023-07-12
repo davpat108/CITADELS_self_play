@@ -17,29 +17,52 @@ class Agent():
         self.replicas = False
         
         self.museum_cards = Deck(empty=True)
+        self.can_use_lighthouse = False
 
         self.crown = False
         self.gold = 2
         self.id = id
         self.known_hands = []
 
+
+    # gamestates:	0 - choose role -> 1
+	#1 2 gold or 2 cards -> 2 or 3
+	#2 Which card to put back -> 3
+	#3 Blackmail response -> 4 different character
+	#4 Respond to response reveal -> 5 different character
+	#5 Character ability/build/smithy/museum/lab/magic_school/weapon_storage -> next player 1 or 0 or end
+	#6 graveyard -> 5 different character (warlord)
+    #7 Magistrate reveal -> 5 different character
+    #8 seer give back card
+    #9 witch
+
     def get_options(self, game):
-        if game.game_state.state == 0:
-            return self.pick_role_options(game)
-        elif game.game_state.state == 1:
-            return self.gold_or_card_options(game)
-        elif game.game_state.state == 2:
-            return self.which_card_to_keep_options(game)
-        elif game.game_state.state == 3:
-            return self.blackmail_response_options(game)
-        elif game.game_state.state == 4:
-            return self.reveal_blackmail_as_blackmailer_options(game)
-        elif game.game_state.state == 5:
-            return self.main_round_options(game)
-        elif game.game_state.state == 6:
-            return self.graveyard_options(game)
-        elif game.game_state.state == 7:
-            return self.reveal_warrant_as_magistrate_options(game)
+        if not game.role_properties[role_to_role_id[self.role]].dead:
+            if game.game_state.state == 0:
+                return self.pick_role_options(game)
+            if game.game_state.state == 1:
+                return self.gold_or_card_options(game)
+            if game.game_state.state == 2:
+                return self.which_card_to_keep_options(game)
+            if game.game_state.state == 3:
+                return self.blackmail_response_options(game)
+            if game.game_state.state == 4:
+                return self.reveal_blackmail_as_blackmailer_options(game)
+            if game.game_state.state == 6:
+                return self.graveyard_options(game)
+            if game.game_state.state == 7:
+                return self.reveal_warrant_as_magistrate_options(game)
+            if self.role == "Witch":
+                return self.witch_options(game)
+            if not game.role_properties[role_to_role_id[self.role]].possessed:
+                if game.game_state.state == 5:
+                    return self.main_round_options(game)
+                if game.game_state.state == 8:
+                    return self.seer_give_back_card(game)
+            else:
+                return [option(name="finish_round", perpetrator=self, next_witch=True)]
+        else:
+            return [option(name="finish_round", perpetrator=self)]
 
     # Helper functions for agent
     def get_build_limit(self):
@@ -148,12 +171,10 @@ class Agent():
         return options
     
     def lighthouse_options(self, game) -> list:
-        # Async, HAVE TO USE RIGHT AFTER BUILDING THE HOUSE
-        # SHUFFLE AFTER, AND KNOW WHATS LEFT IN THE DECK
         options = []
-        if Card(**{"suit":"unique", "type_ID":29, "cost": 3}) in self.buildings.cards:
+        if Card(**{"suit":"unique", "type_ID":29, "cost": 3}) in self.buildings.cards and not self.can_use_lighthouse:
             for card in game.deck.cards:
-                options.append(option(choice=card.type_ID, perpetrator=self, name="lighthouse_choice"))
+                options.append(option(choice=card, perpetrator=self, name="lighthouse_choice"))
         return options
 
     def museum_options(self, game) -> list:
@@ -190,7 +211,7 @@ class Agent():
         
     
     def main_round_options(self, game):
-        options = []
+        options = [option(name="finish_round", perpetrator=self)]
         options += self.build_options(game)
         options += self.character_options(game)
         options += self.smithy_options(game)
@@ -214,8 +235,8 @@ class Agent():
                 options += self.assasin_options(game)
             elif self.role == "Magistrate":
                 options += self.magistrate_options(game)
-            elif self.role == "Witch":
-                options += self.witch_options(game)
+            #elif self.role == "Witch":
+            #    options += self.witch_options(game)
 
             #ID 1
             elif self.role == "Thief":
@@ -386,10 +407,10 @@ class Agent():
         return [option(name="seer", perpetrator=self)]
     
 
-    def seer_give_back_card(self, players_with_taken_cards):
+    def seer_give_back_card(self, game):
         options = []
-        for permutation in permutations(self.hand.cards, len(players_with_taken_cards)):
-            card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(players_with_taken_cards, permutation)}
+        for permutation in permutations(self.hand.cards, len(game.seer_taken_card)):
+            card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(game.seer_taken_card, permutation)}
             options.append(option(name="give_back_card", perpetrator=self, card_handouts=card_handouts))
         return options
 
