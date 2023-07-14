@@ -3,7 +3,7 @@ from game.option import option
 from game.config import role_to_role_id
 from itertools import combinations, permutations, combinations_with_replacement
 from copy import copy
-from helper_classes import HandKnowlage
+from game.helper_classes import HandKnowlage
 
 class Agent():
 
@@ -34,30 +34,29 @@ class Agent():
 	#6 graveyard -> 5 different character (warlord)
     #7 Magistrate reveal -> 5 different character
     #8 seer give back card
-    #9 witch
 
     def get_options(self, game):
+        if game.gamestate.state == 0:
+            return self.pick_role_options(game)
         if not game.role_properties[role_to_role_id[self.role]].dead:
-            if game.game_state.state == 0:
-                return self.pick_role_options(game)
-            if game.game_state.state == 1:
+            if game.gamestate.state == 1:
                 return self.gold_or_card_options(game)
-            if game.game_state.state == 2:
+            if game.gamestate.state == 2:
                 return self.which_card_to_keep_options(game)
-            if game.game_state.state == 3:
+            if game.gamestate.state == 3:
                 return self.blackmail_response_options(game)
-            if game.game_state.state == 4:
+            if game.gamestate.state == 4:
                 return self.reveal_blackmail_as_blackmailer_options(game)
-            if game.game_state.state == 6:
+            if game.gamestate.state == 6:
                 return self.graveyard_options(game)
-            if game.game_state.state == 7:
+            if game.gamestate.state == 7:
                 return self.reveal_warrant_as_magistrate_options(game)
             if self.role == "Witch":
                 return self.witch_options(game)
             if not game.role_properties[role_to_role_id[self.role]].possessed:
-                if game.game_state.state == 5:
+                if game.gamestate.state == 5:
                     return self.main_round_options(game)
-                if game.game_state.state == 8:
+                if game.gamestate.state == 8:
                     return self.seer_give_back_card(game)
             else:
                 return [option(name="finish_round", perpetrator=self, next_witch=True)]
@@ -127,10 +126,10 @@ class Agent():
         return [option(name="empty_option", perpetrator=self, next_gamestate=4, next_player=self)]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_game_state.current_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
+        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.current_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
     
     def reveal_warrant_as_magistrate_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_game_state.current_player, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self, target=game.warranted_player, name="reveal_warrant_as_magistrate")]
+        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.current_player, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self, target=game.warranted_player, name="reveal_warrant_as_magistrate")]
 
 
     def ghost_town_color_choice_options(self) -> list:
@@ -141,13 +140,13 @@ class Agent():
         return []
         
     def smithy_options(self, game) -> list:
-        if Card(**{"suit":"unique", "type_ID":21, "cost": 5}) in self.buildings.cards and self.gold >= 2 and not "smithy" in game.game_state.already_done_moves:
+        if Card(**{"suit":"unique", "type_ID":21, "cost": 5}) in self.buildings.cards and self.gold >= 2 and not "smithy" in game.gamestate.already_done_moves:
             return [option(name="smithy_choice", perpetrator=self,)]
         return []
     
     def laboratory_options(self, game) -> list:
         options = []
-        if Card(**{"suit":"unique", "type_ID":22, "cost": 5}) in self.buildings.cards and not "lab" in game.game_state.already_done_moves:
+        if Card(**{"suit":"unique", "type_ID":22, "cost": 5}) in self.buildings.cards and not "lab" in game.gamestate.already_done_moves:
             for card in self.hand.cards:
                 options.append(option(name="laboratory_choice", perpetrator=self, choice=card))
         return []
@@ -155,7 +154,7 @@ class Agent():
     def magic_school_options(self, game) -> list:
         # Every round
         # used before character ability
-        if not "magic_school" in game.game_state.already_done_moves:
+        if not "magic_school" in game.gamestate.already_done_moves:
             if Card(**{"suit":"unique", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"trade", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"war", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"religion", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"lord", "type_ID":23, "cost": 6}) in self.buildings.cards:
                 return [option(choice="trade", perpetrator=self, name="magic_school_choice"), option(choice="war", perpetrator=self, name="magic_school_choice"),
                          option(choice="religion", perpetrator=self, name="magic_school_choice"), option(choice="lord", perpetrator=self, name="magic_school_choice"), option(choice="unique", perpetrator=self, name="magic_school_choice")]
@@ -179,7 +178,7 @@ class Agent():
 
     def museum_options(self, game) -> list:
         options = []
-        if Card(**{"suit":"unique", "type_ID":34, "cost": 4}) in self.buildings.cards and not "museum" in game.game_state.already_done_moves:
+        if Card(**{"suit":"unique", "type_ID":34, "cost": 4}) in self.buildings.cards and not "museum" in game.gamestate.already_done_moves:
             for card in self.hand.cards:
                 options.append(option(choice=card, perpetrator=self, name="museum_choice"))
         return options
@@ -202,10 +201,10 @@ class Agent():
         options = []
         build_limit = self.get_build_limit()
         if self.role != "Trader":
-            if game.game_state.already_done_moves.count("trade_building") + game.game_state.already_done_moves.count("non_trade_building") < build_limit:
+            if game.gamestate.already_done_moves.count("trade_building") + game.gamestate.already_done_moves.count("non_trade_building") < build_limit:
                 self.get_builds(options)
         else:
-            if game.game_state.already_done_moves.count("non_trade_building") < build_limit:
+            if game.gamestate.already_done_moves.count("non_trade_building") < build_limit:
                 self.get_builds(options)
         return options
         
@@ -230,7 +229,7 @@ class Agent():
     def character_options(self, game):
         options = []
         # ID 0
-        if "character_ability" not in game.game_state.already_done_moves:
+        if "character_ability" not in game.gamestate.already_done_moves:
             if self.role == "Assassin":
                 options += self.assasin_options(game)
             elif self.role == "Magistrate":
@@ -387,7 +386,7 @@ class Agent():
         return options
     
     def wizard_take_from_hand_options(self, game):
-        if "character_ability" in game.game_state.already_done_moves and "took_from_hand" not in game.game_state.already_done_moves:
+        if "character_ability" in game.gamestate.already_done_moves and "took_from_hand" not in game.gamestate.already_done_moves:
             target_player = next((hand for hand in self.known_hands if hand.confidence == 5 and hand.id != -1), None)
             options = []
             for card in target_player.hand.cards:
@@ -478,7 +477,7 @@ class Agent():
         return options
     
     def abbot_beg(self, game):
-        if not "begged" in game.game_state.already_done_moves:
+        if not "begged" in game.gamestate.already_done_moves:
             return [option(name="abbot_beg", perpetrator=self)]
         return []
     
@@ -547,7 +546,7 @@ class Agent():
         return options  
     
     def take_gold_for_war_options(self, game):
-        if "take_gold" not in game.game_state.already_done_moves:
+        if "take_gold" not in game.gamestate.already_done_moves:
             return [option(name="take_gold_for_war", perpetrator=self)]
         return []
     # ID 8 later for more players

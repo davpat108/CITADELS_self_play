@@ -59,7 +59,7 @@ class Game():
             self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[21])))
             self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[22])))
             self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[23])))
-            self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**unique_building_cards[24])))
+            self.player6.hand.add_card(self.deck.get_a_card_like_it(Card(**building_cards[0])))
 
             self.players = [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]
             self.player4.crown = True
@@ -124,7 +124,7 @@ class Game():
             7 : RolePropery()
             }
         
-        game_state = GameState()
+        self.gamestate = GameState()
 
         
     def sample_roles(self, avaible_roles, number_of_used_roles):
@@ -136,7 +136,7 @@ class Game():
         return roles
     
     def setup_round(self):
-        for role_property in self.role_properties:
+        for role_property in self.role_properties.values():
             role_property.reset_role_properties() 
         self.seer_taken_card = []
         
@@ -152,17 +152,20 @@ class Game():
             self.visible_face_up_role = None
         # Facedown role card
         roles_to_choose_from.pop()
+        
 
-        self.roles_to_choose_from = dict(roles_to_choose_from.sort())
+        self.roles_to_choose_from = dict(sorted(roles_to_choose_from, key=lambda x: x[0]))
         crowned_player_index = next((player.id for player in self.players if player.crown), None)
         if crowned_player_index is None:
             raise Exception("No player with crown")
         self.turn_orders_for_roles = self.turn_orders_for_roles[crowned_player_index:] + self.turn_orders_for_roles[:crowned_player_index]
 
         self.gamestate.state = 0
-        self.gamestate.player = self.turn_orders_for_roles[0]
+        self.gamestate.player = self.players[self.turn_orders_for_roles[0]]
 
         for player in self.players:
             player.substract_from_known_hand_confidences()
 
-
+    def next(self):
+        # returns the next actor.get_options() for the next player
+        return self.gamestate.player.get_options(self)

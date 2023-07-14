@@ -76,7 +76,7 @@ unique_building_cards = [{"suit":"unique", "type_ID":16, "cost": 5},
                   {"suit":"unique", "type_ID":35, "cost": 6},
                   {"suit":"unique", "type_ID":36, "cost": 5},
                   {"suit":"unique", "type_ID":37, "cost": 4},
-                  {"suit":"unique", "type_ID":38, "cost": 6},
+                  #{"suit":"unique", "type_ID":38, "cost": 6}, Hospital quite boring, going to switch to something else like theater
                   {"suit":"unique", "type_ID":39, "cost": 5},]
 
 
