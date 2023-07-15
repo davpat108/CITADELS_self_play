@@ -62,7 +62,7 @@ class option():
 
         # roles
         # ID 0
-        if self.name == "assassination":
+        elif self.name == "assassination":
             self.carry_out_assasination(game)
         elif self.name == "magistrate_warrant":
             self.carry_out_warranting(game)
@@ -140,7 +140,7 @@ class option():
 
         if self.attributes['perpetrator'].id != game.turn_orders_for_roles[-1]:
             game.gamestate.state = 0
-            game.gamestate.player = game.players[game.turn_orders_for_roles.index(self.attributes['perpetrator'].id) + 1]
+            game.gamestate.player = game.players[game.turn_orders_for_roles[game.turn_orders_for_roles.index(self.attributes['perpetrator'].id) + 1]]
         else:
             refresh_used_roles(game)
             game.gamestate.state = 1
@@ -311,6 +311,7 @@ class option():
             game.gamestate.state = 5
             game.gamestate.player = get_player_from_role_id(game.used_roles[0], game)
             game.gamestate.player.role = self.attributes['perpetrator'].role
+            game.role_properties[role_to_role_id[self.attributes['perpetrator'].role]].possessed = False
             return
         
         # I was the last player in the round
@@ -705,5 +706,5 @@ def check_if_building_is_replica(target_player, building):
 
 def refresh_used_roles(game):
     for player in game.players:
-        game.used_roles.append(role_to_role_id(player.role))
+        game.used_roles.append(role_to_role_id[player.role])
     game.used_roles.sort()

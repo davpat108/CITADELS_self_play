@@ -61,7 +61,7 @@ class Agent():
             else:
                 return [option(name="finish_round", perpetrator=self, next_witch=True)]
         else:
-            return [option(name="finish_round", perpetrator=self)]
+            return [option(name="finish_round", perpetrator=self, next_witch=False)]
 
     # Helper functions for agent
     def get_build_limit(self):
@@ -123,7 +123,7 @@ class Agent():
     def blackmail_response_options(self, game) -> list:
         if game.role_properties[role_to_role_id[self.role]].blackmail:
             return [option(choice="pay", perpetrator=self, name="blackmail_response"), option(choice="not_pay", perpetrator=self, name="blackmail_response")]
-        return [option(name="empty_option", perpetrator=self, next_gamestate=4, next_player=self)]
+        return [option(name="empty_option", perpetrator=self, next_gamestate=5, next_player=self)]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
         return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.current_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
@@ -186,10 +186,10 @@ class Agent():
     # Main stuff
     def get_builds(self, options) -> list:
         # Returns buildable cards from hand by cost
-        for card in self.hand:
+        for card in self.hand.cards:
             cost = card.cost
-            factory = False
-            if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
+            replica = 0
+            if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings.cards and card.suit == "unique":
                 cost -= -1
             if card in self.buildings.cards and Card(**{"suit":"unique", "type_ID":36, "cost": 5}) and not self.replicas: 
                 replica = self.replicas + 1
@@ -210,7 +210,7 @@ class Agent():
         
     
     def main_round_options(self, game):
-        options = [option(name="finish_round", perpetrator=self)]
+        options = [option(name="finish_round", perpetrator=self, next_witch=False)]
         options += self.build_options(game)
         options += self.character_options(game)
         options += self.smithy_options(game)
@@ -307,11 +307,10 @@ class Agent():
 
     # ID 0
     def assasin_options(self, game):
-        options = []
-        for role_ID in game.roles:
-            if not (game.visible_face_up_role and role_ID > 0) and role_ID != next(iter(game.visible_face_up_role.keys())):
-                options.append(option(name="assassination", target=role_ID))
-        return options
+        target_possibilities = game.roles.copy()
+        if game.visible_face_up_role:
+            target_possibilities.pop(next(iter(game.visible_face_up_role.keys())))
+        return [option(name="assassination", perpetrator=self, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0]
         
     def magistrate_options(self, game):
         options = []
@@ -324,23 +323,21 @@ class Agent():
         for real_target in target_possibilities:
             for fake_tagets in combinations(target_possibilities, 2):
                 if real_target not in fake_tagets:
-                    options.append(option(name="magistrate_warrant", real_target=real_target, fake_targets=list(fake_tagets)))
+                    options.append(option(name="magistrate_warrant", perpetrator=self, real_target=real_target, fake_targets=list(fake_tagets)))
         return options
 
     def witch_options(self, game):
-        options = []
-        for role_ID in game.roles:
-            if not (game.visible_face_up_role and role_ID > 0) and role_ID != next(iter(game.visible_face_up_role.keys())):
-                options.append(option(name="bewitching", perpetrator=self, target=role_ID))
-        return options
+        target_possibilities = game.roles.copy()
+        if game.visible_face_up_role:
+            target_possibilities.pop(next(iter(game.visible_face_up_role.keys())))
+        return [option(name="bewitching",  perpetrator=self, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0]
     
     # ID 1
     def thief_options(self, game):
-        options = []
-        for role_ID in game.roles:
-            if not (game.visible_face_up_role and role_ID > 1) and role_ID != next(iter(game.visible_face_up_role.keys())):
-                options.append(option(name="steal", perpetrator=self, target=role_ID))
-        return options
+        target_possibilities = game.roles.copy()
+        if game.visible_face_up_role:
+            target_possibilities.pop(next(iter(game.visible_face_up_role.keys())))
+        return [option(name="steal", perpetrator=self, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 1]
     
     def blackmail_options(self, game):
         options = []
@@ -393,7 +390,7 @@ class Agent():
                 if option(name="take_from_hand", card=card, build=False, perpetrator=self, target=target_player) not in options:
                     options.append(option(name="take_from_hand", card=card, build=False, perpetrator=self, target=target_player))
                 cost = card.cost
-                if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
+                if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings.cards and card.suit == "unique":
                     cost -= -1
                 if card in self.buildings.cards: 
                     replica = self.replicas + 1
@@ -444,11 +441,11 @@ class Agent():
         options = []
         for player in game.players:
             # Check each card in our hand
-            for card in self.hand:
+            for card in self.hand.cards:
                 # If the card cost is less than the player's gold
                 cost = card.cost
                 factory = False
-                if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings and card.suit == "unique":
+                if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings.cards and card.suit == "unique":
                     cost -= -1
                     factory = True
                 if card in self.buildings.cards and Card(**{"suit":"unique", "type_ID":36, "cost": 5}) and not self.replicas: 
@@ -457,9 +454,9 @@ class Agent():
                     # Calculate how many cards we need to give in exchange
                     exchange_cards_count = max(player.gold - cost, 0)
                     # If we have enough cards to give (excluding the current card)
-                    if len(self.hand) - 1 >= exchange_cards_count:
+                    if len(self.hand.cards) - 1 >= exchange_cards_count:
                         # Get all combinations of exchange_cards_count cards (excluding the current card)
-                        other_cards = [c for c in self.hand if c != card]
+                        other_cards = [c for c in self.hand.cards if c != card]
                         exchange_combinations = combinations(other_cards, exchange_cards_count)
                         # Each combination of exchange cards is a possible trade
                         for exchange_cards in exchange_combinations:
@@ -469,7 +466,7 @@ class Agent():
     
     def abbot_options(self, game):
         options = []
-        total_religious_districts = sum([1 if card.suit == "religion" else 0 for card in self.hand])
+        total_religious_districts = sum([1 if card.suit == "religion" else 0 for card in self.hand.cards])
         gold_or_card_combinations = combinations_with_replacement(["gold", "card"], total_religious_districts)
         for gold_or_card_combination in gold_or_card_combinations:
             options.append(option(name="abbot_gold_or_card", gold_or_card_combination=list(gold_or_card_combination)))
