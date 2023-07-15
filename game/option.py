@@ -59,6 +59,8 @@ class option():
         elif self.name == "graveyard":
             self.carry_out_graveyard(game)
         
+        elif self.name == "take_gold_for_war":
+            self.carry_out_take_gold_for_war
 
         # roles
         # ID 0
@@ -223,7 +225,7 @@ class option():
             game.gamestate.already_done_moves.append("non_trade_building")
 
         # No warrant
-        if game.role_properties[role_to_role_id[self.perpetrator.role]].warrant is None:
+        if game.role_properties[role_to_role_id[self.attributes['perpetrator'].role]].warrant is None:
             game.gamestate.state = 5
             game.gamestate.player = self.attributes['perpetrator']
         # Warrant
@@ -415,7 +417,7 @@ class option():
                 if player.id != self.attributes['perpetrator'].id and player.hand.cards:
                     player.hand.shuffle_deck()
                     reshuffle_deck_if_empty(game)
-                    self.hand.add_card(player.hand.draw_card())
+                    self.attributes['perpetrator'].hand.add_card(player.hand.draw_card())
                     game.seer_taken_card.append(player)
         game.gamestate.state = 8
         game.gamestate.player = self.attributes['perpetrator']
@@ -426,7 +428,7 @@ class option():
         if not game.role_properties[2].dead and not game.role_properties[2].possessed:
             for handout in self.attributes['card_handouts'].items():
                 handout[0].hand.add_card(self.attributes['perpetrator'].hand.get_a_card_like_it(handout[1]))
-                self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=self.attributes['target'].id, hand=[handout[1]], confidence=5))
+                self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=handout[1].id, hand=[handout[1]], confidence=5))
         game.gamestate = game.gamestate.next_gamestate
 
 

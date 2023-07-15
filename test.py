@@ -5,8 +5,8 @@ game = Game()
 game.setup_round()
 while 1:
     options = game.next()
-    print(options[0].name)
-    options[0].carry_out(game)
+    print(options[-1].name)
+    options[-1].carry_out(game)
 
 
 print("X")

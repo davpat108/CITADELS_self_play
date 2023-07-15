@@ -126,7 +126,7 @@ class Agent():
         return [option(name="empty_option", perpetrator=self, next_gamestate=5, next_player=self)]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.current_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.blackmailed_player, name="reveal_blackmail_as_blackmailer")]
+        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.current_player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.gamestate.next_gamestate.current_player, name="reveal_blackmail_as_blackmailer")]
     
     def reveal_warrant_as_magistrate_options(self, game) -> list:
         return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.current_player, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self, target=game.warranted_player, name="reveal_warrant_as_magistrate")]
@@ -379,7 +379,7 @@ class Agent():
         options = []
         for player in game.players:
             if player.id != self.id:
-                options.append(option(name="look_at_hand", perpetrator=self, target_player=player))
+                options.append(option(name="look_at_hand", perpetrator=self, target=player))
         return options
     
     def wizard_take_from_hand_options(self, game):
@@ -445,6 +445,7 @@ class Agent():
                 # If the card cost is less than the player's gold
                 cost = card.cost
                 factory = False
+                replica = 0
                 if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings.cards and card.suit == "unique":
                     cost -= -1
                     factory = True
