@@ -1,6 +1,6 @@
 from random import shuffle, sample
 from game.config import building_cards, unique_building_cards
-
+import logging
 class Card:
     def __init__(self, type_ID:int, suit: str,  cost:int):
         self.suit = suit
@@ -50,7 +50,7 @@ class Deck:
         if isinstance(card, Card):
             self.cards.append(card)
         else:
-            raise "Not a card"
+            logging.debug("Not a card, deck empty")
     
     def shuffle_deck(self):
         shuffle(self.cards)

@@ -109,7 +109,6 @@ class Game():
                 if player.id == crown_player:
                     player.crown = True
             
-        self.seer_taken_card = []
 
         # Dictionary with 1 item
         self.visible_face_up_role = None
@@ -138,7 +137,6 @@ class Game():
     def setup_round(self):
         for role_property in self.role_properties.values():
             role_property.reset_role_properties() 
-        self.seer_taken_card = []
         
         self.used_roles = []
         # setup roles
@@ -160,8 +158,7 @@ class Game():
             raise Exception("No player with crown")
         self.turn_orders_for_roles = self.turn_orders_for_roles[crowned_player_index:] + self.turn_orders_for_roles[:crowned_player_index]
 
-        self.gamestate.state = 0
-        self.gamestate.player = self.players[self.turn_orders_for_roles[0]]
+        self.gamestate = GameState(state=0, player=self.players[self.turn_orders_for_roles[0]])
 
         for player in self.players:
             player.substract_from_known_hand_confidences()
