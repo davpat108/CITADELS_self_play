@@ -48,7 +48,7 @@ class option():
             self.carry_out_smithy(game)
         elif self.name == "laboratory_choice":
             self.carry_out_laboratory(game)
-        elif self.name == "magic_school":
+        elif self.name == "magic_school_choice":
             self.carry_out_magic_school(game)
         elif self.name == "weapon_storage_choice":
             self.carry_out_weapon_storage(game)
@@ -182,8 +182,7 @@ class option():
         game.gamestate.player = self.attributes['perpetrator']
 
     def carry_out_empty(self, game):
-        game.gamestate.state = self.attributes['next_gamestate']
-        game.gamestate.player = self.attributes['next_player']
+        game.gamestate = self.attributes['next_gamestate']
 
     def carry_out_respond_to_blackmail(self, game):
         # Victims response
@@ -271,7 +270,7 @@ class option():
         game.gamestate.player = self.attributes['perpetrator']
     
     def carry_out_museum(self, game):
-        self.attributes['perpetrator'].museum_cards.add_card(self.hand.get_a_card_like_it(self.attributes['choice']))
+        self.attributes['perpetrator'].museum_cards.add_card(self.attributes['perpetrator'].hand.get_a_card_like_it(self.attributes['choice']))
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append('museum')
@@ -283,7 +282,7 @@ class option():
         game.gamestate.player = self.attributes['perpetrator']
 
     def carry_out_lighthouse(self, game):
-        self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=-1, hand=copy(game.deck), confidence=5))
+        self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=-1, hand=deepcopy(game.deck), confidence=5))
         self.attributes['perpetrator'].hand.add_card(game.deck.get_a_card_like_it(self.attributes['choice']))
         self.attributes['perpetrator'].can_use_lighthouse = False
         game.deck.shuffle_deck()
@@ -392,7 +391,7 @@ class option():
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_wizard_hand_looking(self, game):
-        self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=self.attributes['target'].id, hand=copy(self.attributes['target'].hand), confidence=5))
+        self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=self.attributes['target'].id, hand=deepcopy(self.attributes['target'].hand), confidence=5))
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
@@ -578,7 +577,7 @@ class option():
 
     def carry_out_scholar_draw(self, game):
         game.seven_drawn_cards = Deck(empty=True)
-        for _ in range(7):
+        for _ in range(min(7, len(game.deck.cards))):
             reshuffle_deck_if_empty(game)
             card = game.deck.draw_card()
             self.attributes['perpetrator'].hand.add_card(card)
@@ -631,10 +630,10 @@ class option():
     def carry_out_diplomat(self, game):
         self.attributes['perpetrator'].gold -= self.attributes['money_owed']
         self.attributes['target'].gold += self.attributes['money_owed']
-        self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['take']))
+        self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(self.attributes['choice']))
         self.attributes['target'].buildings.add_card(self.attributes['perpetrator'].buildings.get_a_card_like_it(self.attributes['give']))
 
-        if check_if_building_is_replica(self.attributes['target'], self.attributes['take']):
+        if check_if_building_is_replica(self.attributes['target'], self.attributes['choice']):
             self.attributes['target'].replicas -= 1
         settle_museum(self, game)
         settle_lighthouse(self)

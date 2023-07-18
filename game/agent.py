@@ -3,7 +3,7 @@ from game.option import option
 from game.config import role_to_role_id
 from itertools import combinations, permutations, combinations_with_replacement
 from copy import copy
-from game.helper_classes import HandKnowlage
+from game.helper_classes import HandKnowlage, GameState
 
 class Agent():
 
@@ -125,7 +125,7 @@ class Agent():
     def blackmail_response_options(self, game) -> list:
         if game.role_properties[role_to_role_id[self.role]].blackmail:
             return [option(choice="pay", perpetrator=self, name="blackmail_response"), option(choice="not_pay", perpetrator=self, name="blackmail_response")]
-        return [option(name="empty_option", perpetrator=self, next_gamestate=5, next_player=self)]
+        return [option(name="empty_option", perpetrator=self, next_gamestate=GameState(state=5, player=self))]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
         return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.gamestate.next_gamestate.player, name="reveal_blackmail_as_blackmailer")]
@@ -226,7 +226,7 @@ class Agent():
     def graveyard_options(self, game):
         if self.gold > 0:
             return [option(name="graveyard", perpetrator=self)]
-        return []
+        return [option(name="empty_option", perpetrator=self, next_gamestate=game.gamestate.next_gamestate)]
 
     def character_options(self, game):
         options = []
@@ -390,8 +390,8 @@ class Agent():
             options = []
             replica = 0
             for card in target_hand.hand.cards:
-                if option(name="take_from_hand", card=card, build=False, perpetrator=self, target=target_hand) not in options:
-                    options.append(option(name="take_from_hand", card=card, build=False, perpetrator=self, target=target_hand))
+                if option(name="take_from_hand", card=card, build=False, perpetrator=self, target=game.players[target_hand.player_id]) not in options:
+                    options.append(option(name="take_from_hand", card=card, build=False, perpetrator=self, target=game.players[target_hand.player_id]))
                 cost = card.cost
                 if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings.cards and card.suit == "unique":
                     cost -= -1
@@ -503,7 +503,9 @@ class Agent():
         return [option(name="navigator_gold_card", perpetrator=self, choice="4gold"), option(name="navigator_gold_card", perpetrator=self, choice="4card")]
 
     def scholar_options(self, game):
-        return [option(name="scholar", perpetrator=self)]
+        if game.deck.cards:
+            return [option(name="scholar", perpetrator=self)]
+        return []
 
     def scholar_give_back_options(self, game):
         options = []
@@ -543,8 +545,8 @@ class Agent():
                 for enemy_building in player.buildings.cards:
                     for own_building in self.buildings.cards:
                         if enemy_building.cost-own_building.cost <= self.gold and enemy_building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}) and player.role != "Bishop" and enemy_building not in self.buildings.cards:
-                            if option(name="diplomat_exchange", target=player, perpetrator=self, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
-                                options.append(option(name="diplomat_exchange", target=player, perpetrator=self, take=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
+                            if option(name="diplomat_exchange", target=player, perpetrator=self, choice=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
+                                options.append(option(name="diplomat_exchange", target=player, perpetrator=self, choice=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
         return options  
     
     def take_gold_for_war_options(self, game):

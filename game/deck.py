@@ -1,6 +1,8 @@
 from random import shuffle, sample
 from game.config import building_cards, unique_building_cards
 import logging
+from copy import deepcopy
+
 class Card:
     def __init__(self, type_ID:int, suit: str,  cost:int):
         self.suit = suit
@@ -11,7 +13,10 @@ class Card:
         if isinstance(other, Card):
             return self.type_ID == other.type_ID
         return False
-
+    
+    def __deepcopy__(self, memo):
+        return Card(deepcopy(self.type_ID, memo), deepcopy(self.suit, memo), deepcopy(self.cost, memo))
+    
 class Deck:
     def __init__(self, used_cards=None, empty = False):
         if not empty:
@@ -30,6 +35,10 @@ class Deck:
 
         self.shuffle_deck()
 
+    def __deepcopy__(self, memo):
+        new_deck = Deck(empty=True)
+        new_deck.cards = [deepcopy(card, memo) for card in self.cards]
+        return new_deck
     
     def get_a_card_like_it(self, card_to_get:Card):
         for card in self.cards:
