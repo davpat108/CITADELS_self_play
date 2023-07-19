@@ -124,6 +124,7 @@ class Game():
             }
         
         self.gamestate = GameState()
+        self.ending = False
 
         
     def sample_roles(self, avaible_roles, number_of_used_roles):
@@ -162,6 +163,15 @@ class Game():
 
         for player in self.players:
             player.substract_from_known_hand_confidences()
+
+    def check_game_ending(self, player:Agent):
+        "Returns whether its the games last round or not"
+        if not self.ending:
+            for player in self.players:
+                if len(player.buildings.cards) == 7:
+                    self.ending = True
+                    player.first_to_7 = True
+
 
     def next(self):
         # returns the next actor.get_options() for the next player

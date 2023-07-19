@@ -23,6 +23,9 @@ class option():
 
     # others
     def carry_out(self, game):
+        winner = None
+        
+
         if self.name == "role_pick":
             self.carry_out_role_pick(game)
         elif self.name == "gold_or_card":
@@ -33,14 +36,14 @@ class option():
             self.carry_out_respond_to_blackmail(game)
         elif self.name == "reveal_blackmail_as_blackmailer":
             self.carry_out_responding_to_blackmail_response(game)
-        elif self.name == "reveal":
+        elif self.name == "reveal_warrant_as_magistrate":
             self.carry_out_magistrate_reaveal(game)
         elif self.name == "build":
             self.carry_out_building(game)
         elif self.name == "empty_option":
             self.carry_out_empty(game)
         elif self.name == "finish_round":
-            self.finnish_main_sequnce_actions(game)
+            winner = self.finnish_main_sequnce_actions(game)
 
         elif self.name == "ghost_town_color_choice":
             self.carry_out_ghost_town(game)
@@ -138,6 +141,9 @@ class option():
 
         #ID 8
         # Not yet
+        game.check_game_ending(self.attributes['perpetrator'])
+
+        return winner
 
     def carry_out_role_pick(self, game):
         self.attributes['perpetrator'].role = self.attributes['choice']
@@ -188,7 +194,7 @@ class option():
         # Victims response
         if self.attributes['choice'] == "pay":
             self.attributes['perpetrator'].gold -= int(self.attributes['perpetrator'].gold/2)
-            self.attributes['target'].gold += int(self.attributes['perpetrator'].gold/2)
+            get_player_from_role_id(1, game).gold += int(self.attributes['perpetrator'].gold/2)
             game.gamestate.state = 5
             game.gamestate.player = self.attributes['perpetrator']
         else:
@@ -199,18 +205,19 @@ class option():
 
     def carry_out_responding_to_blackmail_response(self, game):
         # Its reversed as its the blackmailers response
-        if self.attributes['choice'] == "reveal" and game.role_properties[self.attributes['real_target']].blackmail == "Real":
+        if self.attributes['choice'] == "reveal" and game.role_properties[role_to_role_id[self.attributes['target'].role]].blackmail == "Real":
             self.attributes['perpetrator'].gold += self.attributes['target'].gold
             self.attributes['target'].gold = 0
-            game.role_properties[self.attributes['fake_target']].blackmail = None
+            for property in game.role_properties.values():
+                property.blackmail = None
         game.gamestate = game.gamestate.next_gamestate
 
     def carry_out_magistrate_reaveal(self, game):
-        if self.attributes['choice'] == "reveal" and game.role_properties[self.attributes['real_target']].warrant == "Real":
+        if self.attributes['choice'] == "reveal" and game.role_properties[role_to_role_id[self.attributes['target'].role]].warrant == "Real":
             self.attributes['perpetrator'].buildings.add_card(self.attributes['target'].buildings.get_a_card_like_it(game.warrant_building))
             self.attributes['target'].gold += game.warrant_building.cost
-            game.role_properties[self.attributes['fake_targets'][0]].warrant = None
-            game.role_properties[self.attributes['fake_targets'][1]].warrant = None
+            for property in game.role_properties.values():
+                property.warrant = None
         game.gamestate = game.gamestate.next_gamestate
 
     def carry_out_building(self, game):
@@ -317,17 +324,25 @@ class option():
             game.gamestate.player.role = self.attributes['perpetrator'].role
             game.role_properties[role_to_role_id[self.attributes['perpetrator'].role]].possessed = False
             game.gamestate.already_done_moves = []
-            return
+            return False
         
         # I was the last player in the round
         if game.used_roles[-1] == role_to_role_id[self.attributes['perpetrator'].role]:
+            if game.ending:
+                points = []
+                for player in game.players:
+                    points.append(player.count_points())
+                game.points = points
+                return game.players[points.index(max(points))]
             game.setup_round()
+
         # Not the last player
         else:
             game.gamestate.state = 1
             game.gamestate.player = get_player_from_role_id(game.used_roles[game.used_roles.index(role_to_role_id[self.attributes['perpetrator'].role])+1], game)
             game.gamestate.already_done_moves = []
 
+        return False
     # ID 0
     def carry_out_assasination(self, game):
         game.role_properties[self.attributes['target']].dead = True

@@ -23,6 +23,7 @@ class Agent():
         self.gold = 2
         self.id = id
         self.known_hands = []
+        self.first_to_7 = False
 
 
     # gamestates:	0 - choose role -> 1
@@ -85,7 +86,7 @@ class Agent():
             if hand_knowlage.confidence == 0:
                 self.known_hands.remove(hand_knowlage)
 
-    def count_points(self, game):
+    def count_points(self):
         points = 0
         for card in self.buildings.cards:
             points += card.cost
@@ -94,8 +95,14 @@ class Agent():
             # Whishing well
             if Card(**{"suit":"unique", "type_ID":31, "cost": 5}) in self.buildings.cards and card.suit == "unique":
                 points += 1
-        
-        points += len(self.museum_cards)
+
+        if len(self.buildings.cards) >= 7:
+            points += 2
+
+        if self.first_to_7:
+            points += 4
+
+        points += len(self.museum_cards.cards)
 
         # Imp teasury
         if Card(**{"suit":"unique", "type_ID":37, "cost": 4}) in self.buildings.cards:
@@ -106,12 +113,14 @@ class Agent():
             points += len(self.hand.cards)
 
 
+        return points
+
     # Options from gamestates
     def pick_role_options(self, game):
         return [option(name="role_pick", perpetrator=self, choice=role) for role in game.roles_to_choose_from.values()]
 
     def gold_or_card_options(self, game):
-        return [option(name="gold_or_card", perpetrator=self, choice="gold"), option(name="gold_or_card", perpetrator=self, choice="card")] if len(game.deck.cards) > 0 else [option(name="gold_or_card", perpetrator=self, choice="gold")]
+        return [option(name="gold_or_card", perpetrator=self, choice="gold"), option(name="gold_or_card", perpetrator=self, choice="card")] if len(game.deck.cards) > 1 else [option(name="gold_or_card", perpetrator=self, choice="gold")]
     
     def which_card_to_keep_options(self, game):
         options = []
@@ -131,7 +140,7 @@ class Agent():
         return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self, target=game.gamestate.next_gamestate.player, name="reveal_blackmail_as_blackmailer")]
     
     def reveal_warrant_as_magistrate_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.current_player, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self, target=game.warranted_player, name="reveal_warrant_as_magistrate")]
+        return [option(choice="reveal", perpetrator=self, target=game.gamestate.next_gamestate.player, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self, target=game.gamestate.next_gamestate.player, name="reveal_warrant_as_magistrate")]
 
 
     def ghost_town_color_choice_options(self) -> list:
@@ -157,7 +166,7 @@ class Agent():
         # Every round
         # used before character ability
         if not "magic_school" in game.gamestate.already_done_moves:
-            if Card(**{"suit":"unique", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"trade", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"war", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"religion", "type_ID":23, "cost": 6}) in self.buildings.cards or Card(**{"suit":"lord", "type_ID":23, "cost": 6}) in self.buildings.cards:
+            if Card(**{"suit":"unique", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"trade", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"war", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"religion", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"lord", "type_ID":25, "cost": 6}) in self.buildings.cards:
                 return [option(choice="trade", perpetrator=self, name="magic_school_choice"), option(choice="war", perpetrator=self, name="magic_school_choice"),
                          option(choice="religion", perpetrator=self, name="magic_school_choice"), option(choice="lord", perpetrator=self, name="magic_school_choice"), option(choice="unique", perpetrator=self, name="magic_school_choice")]
         return []
