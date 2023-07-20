@@ -381,8 +381,8 @@ class Agent():
         for r in range(1, len(self.hand.cards)+1):
             # list of cards
             discard_possibilities = list(combinations(self.hand.cards, r))
-            for discard_possibility in discard_possibilities:
-                options.append(option(name="discard_and_draw", perpetrator=self, cards=discard_possibility))
+            for i in range(0, len(discard_possibilities), max(round(len(discard_possibilities)/1e2), 1)):
+                options.append(option(name="discard_and_draw", perpetrator=self, cards=discard_possibilities[i]))
             
         return options
     
@@ -418,8 +418,9 @@ class Agent():
 
     def seer_give_back_card(self, game):
         options = []
-        for permutation in permutations(self.hand.cards, len(game.seer_taken_card_from)):
-            card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(game.seer_taken_card_from, permutation)}
+        perms = list(permutations(self.hand.cards, len(game.seer_taken_card_from)))
+        for i in range(0, len(perms), max(round(len(perms)/1e3), 1)):
+            card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(game.seer_taken_card_from, perms[i])}
             options.append(option(name="give_back_card", perpetrator=self, card_handouts=card_handouts))
         return options
 
@@ -471,10 +472,10 @@ class Agent():
                     if len(self.hand.cards) - 1 >= exchange_cards_count:
                         # Get all combinations of exchange_cards_count cards (excluding the current card)
                         other_cards = [c for c in self.hand.cards if c != card]
-                        exchange_combinations = combinations(other_cards, exchange_cards_count)
+                        exchange_combinations = list(combinations(other_cards, exchange_cards_count))
                         # Each combination of exchange cards is a possible trade
-                        for exchange_cards in exchange_combinations:
-                            options.append(option(name="cardinal_exchange", perpetrator=self, target=player, built_card=card, cards_to_give=exchange_cards, replica=replica, factory=factory))
+                        for i in range(0, len(exchange_combinations), max(round(len(exchange_combinations)/1e2), 1)):
+                            options.append(option(name="cardinal_exchange", perpetrator=self, target=player, built_card=card, cards_to_give=exchange_combinations[i], replica=replica, factory=factory))
 
         return options
     
