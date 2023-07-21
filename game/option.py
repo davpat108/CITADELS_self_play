@@ -232,6 +232,9 @@ class option():
             game.gamestate.already_done_moves.append("trade_building")
         else:
             game.gamestate.already_done_moves.append("non_trade_building")
+        
+        if self.attributes['built_card'].type_ID == 29:
+            self.attributes['perpetrator'].can_use_lighthouse = True
 
         # No warrant
         if game.role_properties[role_to_role_id[self.attributes['perpetrator'].role]].warrant is None:
@@ -351,9 +354,9 @@ class option():
         game.gamestate.already_done_moves.append("character_ability")
         
     def carry_out_warranting(self, game):
-        game.role_properties[self.attributes['real_target']].warrant = "real"
-        game.role_properties[self.attributes['fake_targets'][0]].warrant = "fake"
-        game.role_properties[self.attributes['fake_targets'][1]].warrant = "fake"
+        game.role_properties[self.attributes['real_target']].warrant = "Real"
+        game.role_properties[self.attributes['fake_targets'][0]].warrant = "Fake"
+        game.role_properties[self.attributes['fake_targets'][1]].warrant = "Fake"
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")

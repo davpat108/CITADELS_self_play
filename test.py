@@ -8,7 +8,8 @@ while 1:
     winner = False
     while not winner:
         options = game.next()
-        print(choice(options).name)
-        winner = choice(options).carry_out(game)
+        chosen_option = choice(options)
+        print(chosen_option.name)
+        winner = chosen_option.carry_out(game)
     print(winner.id)
 

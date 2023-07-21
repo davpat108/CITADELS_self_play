@@ -1,7 +1,7 @@
 import numpy as np
 
 class CFRNode:
-    def __init__(self, game, num_actions, player_id, parent=None, policy=None, cfr_strategy_func=None, action_choice_func=None, player_count = 6):
+    def __init__(self, game, num_actions, player_id, parent=None, player_count = 6):
         self.game = game
         self.num_actions = num_actions
 

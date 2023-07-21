@@ -182,7 +182,7 @@ class Agent():
     
     def lighthouse_options(self, game) -> list:
         options = []
-        if Card(**{"suit":"unique", "type_ID":29, "cost": 3}) in self.buildings.cards and not self.can_use_lighthouse:
+        if Card(**{"suit":"unique", "type_ID":29, "cost": 3}) in self.buildings.cards and self.can_use_lighthouse:
             for card in game.deck.cards:
                 options.append(option(choice=card, perpetrator=self, name="lighthouse_choice"))
         return options
