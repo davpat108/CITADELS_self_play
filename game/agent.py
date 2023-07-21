@@ -3,7 +3,7 @@ from game.option import option
 from game.config import role_to_role_id
 from itertools import combinations, permutations, combinations_with_replacement
 from copy import copy
-from game.helper_classes import HandKnowlage, GameState
+from game.helper_classes import HandKnowlage, GameState, RoleKnowlage
 
 class Agent():
 
@@ -23,6 +23,7 @@ class Agent():
         self.gold = 2
         self.id = id
         self.known_hands = []
+        self.known_roles = [RoleKnowlage(player_id=i, possible_roles=[]) for i in range(playercount)]
         self.first_to_7 = False
 
 
@@ -85,6 +86,10 @@ class Agent():
             hand_knowlage.confidence -= 1
             if hand_knowlage.confidence == 0:
                 self.known_hands.remove(hand_knowlage)
+
+    def reset_known_roles(self):
+        for role_knowlage in self.known_roles:
+            role_knowlage.possible_roles = []
 
     def count_points(self):
         points = 0

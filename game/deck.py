@@ -20,15 +20,9 @@ class Card:
 class Deck:
     def __init__(self, used_cards=None, empty = False):
         if not empty:
-            if not used_cards:
-                used_cards = building_cards + sample(unique_building_cards, 14)
-                self.cards = []
-                for card_info in used_cards:
-                    self.cards.append(Card(**card_info))
-            else:
-                self.cards = []
-                for card_info in used_cards:
-                    self.cards.append(Card(**card_info))
+            self.cards = []
+            for card_info in used_cards:
+                self.cards.append(Card(**card_info))
         
         else:
             self.cards = []

@@ -3,13 +3,15 @@ from game.deck import Deck, Card
 from game.config import building_cards, unique_building_cards, roles, role_to_role_id
 import random
 from game.helper_classes import RolePropery, GameState
+from copy import deepcopy, copy
 
 class Game():
     def __init__(self, avaible_roles=None, debug=False) -> None:
         if debug:
             # For debug purpuses all the unique cards are used
-            used_cards = building_cards + unique_building_cards
-            self.deck = Deck(used_cards=used_cards)
+            self.used_cards = building_cards + unique_building_cards
+            self.deck = Deck(used_cards=self.used_cards)
+            self.used_cards = deepcopy(self.deck)
             self.discard_deck = Deck(empty=True)
 
             # For debug purpuses 6 card per hand, 4 in general, this to test every unique building
@@ -77,8 +79,9 @@ class Game():
             self.turn_orders_for_roles = [0, 1, 2, 3, 4, 5]
 
         else:
-            
-            self.deck = Deck()
+            self.used_cards = building_cards + random.sample(unique_building_cards, 14)
+            self.deck = Deck(used_cards=self.used_cards)
+            self.used_cards = deepcopy(self.deck)
             self.discard_deck = Deck(empty=True)
             self.player1 = Agent(id=0, playercount=6)
             self.player2 = Agent(id=1, playercount=6)
@@ -163,6 +166,7 @@ class Game():
 
         for player in self.players:
             player.substract_from_known_hand_confidences()
+            player.reset_known_roles()
 
     def check_game_ending(self, player:Agent):
         "Returns whether its the games last round or not"
@@ -171,6 +175,43 @@ class Game():
                 if len(player.buildings.cards) == 7:
                     self.ending = True
                     player.first_to_7 = True
+
+    def get_unknown_cards(self, player):
+        unknown_cards = copy(self.used_cards) # Start with a copy of all used cards
+
+        # Remove cards that any player has in their buildings deck
+        for p in self.players:
+            for card in p.buildings.cards:
+                unknown_cards.get_a_card_like_it(card)
+
+        # Remove cards that any player has in their museum_cards deck
+        for p in self.players:
+            for card in p.museum_cards.cards:
+                unknown_cards.get_a_card_like_it(card)
+
+        # Remove cards that the player has in their hand
+        for card in player.hand.cards:
+            unknown_cards.get_a_card_like_it(card)
+
+        return unknown_cards
+
+    def sample_private_information(self, player_character):
+        # For each player
+        unknown_cards = self.get_unknown_cards(player_character)
+        for player in self.players:
+            if player == player_character:
+                continue
+
+            random.shuffle(unknown_cards.cards)
+            unknown_card_count = len(player.hand.cards)
+
+            for _ in range(unknown_card_count):
+                player.hand.add_card(unknown_cards.draw_card())
+        
+            if self.gamestate.state != 0:
+                player.role = random.choice(player_character.known_roles[player.id].possible_roles)[1]
+        # Replace the game's deck with the remaining unknown cards
+        self.deck.cards = unknown_cards.cards
 
 
     def next(self):

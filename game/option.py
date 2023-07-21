@@ -1,6 +1,6 @@
 from copy import deepcopy, copy
 from game.deck import Deck, Card
-from game.helper_classes import GameState, HandKnowlage, RolePropery
+from game.helper_classes import GameState, HandKnowlage, RolePropery, RoleKnowlage
 from game.config import role_to_role_id
 
 class option():
@@ -148,6 +148,21 @@ class option():
     def carry_out_role_pick(self, game):
         self.attributes['perpetrator'].role = self.attributes['choice']
         game.roles_to_choose_from.pop(role_to_role_id[self.attributes['choice']])
+        used_role = (role_to_role_id[self.attributes['choice']], self.attributes['choice'])
+
+        for player in game.players:
+            if player != self.attributes['perpetrator']: 
+                if game.turn_orders_for_roles.index(player.id) <  game.turn_orders_for_roles.index(self.attributes['perpetrator'].id):
+                    possible_roles = list(game.roles.items())
+                    if game.visible_face_up_role:
+                        possible_roles.remove(list(game.visible_face_up_role.items())[0])
+                    for role in game.roles_to_choose_from.items():
+                        possible_roles.remove(role)
+                    possible_roles.remove(used_role)
+                    self.attributes['perpetrator'].known_roles[player.id].possible_roles=dict(sorted(possible_roles, key=lambda x: x[0]))
+
+                else:
+                    self.attributes['perpetrator'].known_roles[player.id].possible_roles=deepcopy(game.roles_to_choose_from)
 
         if self.attributes['perpetrator'].id != game.turn_orders_for_roles[-1]:
             game.gamestate.state = 0

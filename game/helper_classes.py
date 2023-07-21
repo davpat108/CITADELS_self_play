@@ -30,3 +30,9 @@ class HandKnowlage():
         self.player_id = player_id
         self.confidence = confidence
         self.hand = hand
+
+class RoleKnowlage():
+    
+    def __init__(self, player_id, possible_roles) -> None:
+        self.player_id = player_id
+        self.possible_roles = possible_roles
