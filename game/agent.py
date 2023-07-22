@@ -81,9 +81,10 @@ class Agent():
             build_limit = 1
         return build_limit
     
-    def substract_from_known_hand_confidences(self):
+    def substract_from_known_hand_confidences_and_clear_wizard(self):
         for hand_knowlage in self.known_hands:
             hand_knowlage.confidence -= 1
+            hand_knowlage.wizard = False
             if hand_knowlage.confidence == 0:
                 self.known_hands.remove(hand_knowlage)
 

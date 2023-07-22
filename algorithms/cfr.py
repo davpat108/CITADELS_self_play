@@ -2,8 +2,7 @@ import numpy as np
 
 class CFRNode:
     def __init__(self, game, num_actions, player_id, parent=None, player_count = 6):
-        self.game = game
-        self.num_actions = num_actions
+        self.game = game # Unkown informations are present but counted as dont care
 
         self.parent = parent
         self.children = [] # (Option that carries the game to the node, NODE)
@@ -26,8 +25,7 @@ class CFRNode:
         pass
 
     def is_terminal(self):
-        if self.game.is_terminal():
-            return True
+        return self.game.terminal
 
     def cfr(self, max_iterations=1000):
         # If terminal end the game
@@ -88,7 +86,7 @@ class CFRNode:
             self.strategy = self.cumulative_regrets / total_regret
         else:
             # If there is no regret, use a uniform random strategy
-            self.strategy = np.ones(self.num_actions) / self.num_actions
+            self.strategy = np.ones(len(self.children)) / len(self.children)
 
         # Update the cumulative strategy used for the average strategy output
         self.cumulative_strategy += self.strategy

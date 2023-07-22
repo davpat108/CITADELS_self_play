@@ -351,6 +351,7 @@ class option():
                 for player in game.players:
                     points.append(player.count_points())
                 game.points = points
+                game.terminal = True
                 return game.players[points.index(max(points))]
             game.setup_round()
 
@@ -424,7 +425,7 @@ class option():
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_wizard_hand_looking(self, game):
-        self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=self.attributes['target'].id, hand=deepcopy(self.attributes['target'].hand), confidence=5))
+        self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=self.attributes['target'].id, hand=deepcopy(self.attributes['target'].hand), confidence=5, wizard=True))
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
@@ -432,13 +433,16 @@ class option():
     def carry_out_wizard_take_from_hand(self, game):
         # Can be the same building you already have, unlike with regualr building
         if self.attributes['build']:
+            wizard_hand_knowlage = next((hand_knowlage for hand_knowlage in self.attributes["perpetrator"].known_hands if hand_knowlage.wizard), None)
             self.carry_out_building(game)
             # It has to be the last one in this position
-            self.attributes["perpetrator"].known_hands[-1].hand.get_a_card_like_it(self.attributes['built_card'])
+            wizard_hand_knowlage.hand.get_a_card_like_it(self.attributes['built_card'])
         else:
+            wizard_hand_knowlage = next((hand_knowlage for hand_knowlage in self.attributes["perpetrator"].known_hands if hand_knowlage.wizard), None)
+
             self.attributes['perpetrator'].hand.add_card(self.attributes['target'].hand.get_a_card_like_it(self.attributes['card']))
             # It has to be the last one in this position
-            self.attributes["perpetrator"].known_hands[-1].hand.get_a_card_like_it(self.attributes['card'])
+            wizard_hand_knowlage.hand.get_a_card_like_it(self.attributes['card'])
         game.gamestate.state = 5
         game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("took_from_hand")
@@ -458,8 +462,10 @@ class option():
 
     def carry_out_seer_give_back_cards(self, game):
         for handout in self.attributes['card_handouts'].items():
+            added_deck = Deck(empty=True)
+            added_deck.add_card(handout[1])
             handout[0].hand.add_card(self.attributes['perpetrator'].hand.get_a_card_like_it(handout[1]))
-            self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=handout[0].id, hand=Deck(empty=True).add_card(handout[1]), confidence=5))
+            self.attributes['perpetrator'].known_hands.append(HandKnowlage(player_id=handout[0].id, hand=added_deck, confidence=5))
         game.seer_taken_card_from = []
         game.gamestate = game.gamestate.next_gamestate
 
@@ -735,7 +741,6 @@ def check_if_building_is_replica(target_player, building):
         return True
     return False
 
-            
 
 def refresh_used_roles(game):
     for player in game.players:

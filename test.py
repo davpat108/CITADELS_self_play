@@ -7,14 +7,15 @@ while 1:
     game.setup_round()
     winner = False
     i =0
+    tota_options = 0
     while not winner:
         i+=1
         options = game.next()
+        tota_options += len(options)
         chosen_option = choice(options)
         print(chosen_option.name)
         winner = chosen_option.carry_out(game)
-        if i > 100:
-            #game.sample_private_information(game.player1)
-            print("X")
+
+    print(tota_options/i)
     print(winner.id)
 

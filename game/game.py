@@ -128,6 +128,7 @@ class Game():
         
         self.gamestate = GameState()
         self.ending = False
+        self.terminal = False
 
         
     def sample_roles(self, avaible_roles, number_of_used_roles):
@@ -165,7 +166,7 @@ class Game():
         self.gamestate = GameState(state=0, player=self.players[self.turn_orders_for_roles[0]])
 
         for player in self.players:
-            player.substract_from_known_hand_confidences()
+            player.substract_from_known_hand_confidences_and_clear_wizard()
             player.reset_known_roles()
 
     def check_game_ending(self, player:Agent):
