@@ -18,7 +18,7 @@ class TestGame(unittest.TestCase):
         winner = False
         i=0
         while not winner:
-            options = self.game.next()
+            options = self.game.get_options_from_state()
             chosen_option = choice(options)
             for choice in options:
                 if hasattr(choice, "choice"):

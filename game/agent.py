@@ -27,6 +27,12 @@ class Agent():
         self.first_to_7 = False
 
 
+    def __eq__(self, other):
+        if isinstance(other, Agent):
+            return self.id == other.id and self.role == other.role and self.hand == other.hand and self.buildings == other.buildings and self.just_drawn_cards == other.just_drawn_cards and self.replicas == other.replicas and self.museum_cards == other.museum_cards and self.can_use_lighthouse == other.can_use_lighthouse and self.crown == other.crown and self.gold == other.gold and self.first_to_7 == other.first_to_7
+        return False
+    
+    
     # gamestates:	0 - choose role -> 1
 	#1 2 gold or 2 cards -> 2 or 3
 	#2 Which card to put back -> 3

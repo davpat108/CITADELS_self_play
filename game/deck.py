@@ -34,6 +34,11 @@ class Deck:
         new_deck.cards = [deepcopy(card, memo) for card in self.cards]
         return new_deck
     
+    def __eq__(self, other):
+        if isinstance(other, Deck):
+            return self.cards == other.cards
+        return False
+    
     def get_a_card_like_it(self, card_to_get:Card):
         for card in self.cards:
             if card.type_ID == card_to_get.type_ID:

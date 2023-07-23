@@ -23,6 +23,11 @@ class GameState():
         # like reaction decisions, for example reaveal or not as blackmailer
         self.next_gamestate = next_gamestate
 
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, GameState):
+            return self.state == __value.state and self.player.id == __value.player.id
+        return False
+
 # Confidence: 5 Surely know everyhing, 4 already used a card, 3 used two cards, ... 0
 # id player_id, -1 means the deck
 class HandKnowlage():

@@ -1,61 +1,93 @@
 import numpy as np
+from copy import deepcopy
 
 class CFRNode:
-    def __init__(self, game, num_actions, player_id, parent=None, player_count = 6):
+    def __init__(self, game, current_player_id, original_player_id, parent=None, player_count = 6):
         self.game = game # Unkown informations are present but counted as dont care
 
         self.parent = parent
         self.children = [] # (Option that carries the game to the node, NODE)
-        self.player_id = player_id
+        self.current_player_id = current_player_id
+        # The player id of the player that started the game
+        # It is used to know which player doesn't need private info sampling
+        self.original_player_id = original_player_id
 
         
         # Initialize regrets and strategy
-        self.cumulative_regrets = np.zeros(len(self.children))
-        self.strategy = np.zeros(len(self.children))
-        self.cumulative_strategy = np.zeros(len(self.children))
+        self.cumulative_regrets = np.array([])
+        self.strategy = np.zeros([])
+        self.cumulative_strategy = np.zeros([])
         self.node_value = np.zeros(player_count) # For the current_player node_value[player_id] = reward
         
 
     def action_choice(self):
-        # returns a child node, so node and option
-        pass
+        # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
+        normalized_strategy = self.strategy / self.strategy.sum()
 
+        # Choose an action according to the normalized strategy
+        choice_index = np.random.choice(range(len(self.children)), p=normalized_strategy)
+
+        # Return the chosen child and option
+        return  self.children[choice_index][1], self.children[choice_index][0]
+    
     def expand(self):
-        # Account for player
-        pass
+        if self.current_player_id == self.original_player_id and len(self.children) == 0:
+            options = self.game.get_options_from_state()
+            for option in options:
+                hypothetical_game = deepcopy(self.game)
+                assert hypothetical_game == self.game
+                option.carry_out(hypothetical_game)
+                self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player.id, original_player_id=self.original_player_id, parent=self)))
+
+            self.cumulative_regrets = np.zeros(len(self.children))
+            self.strategy = np.zeros(len(self.children))
+            self.cumulative_strategy = np.zeros(len(self.children))
+
+        elif self.current_player_id != self.original_player_id:
+            hypothetical_game = deepcopy(self.game)
+            #hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
+            options = hypothetical_game.get_options_from_state()
+            choice_index = np.random.choice(range(len(options)))
+            options[choice_index].carry_out(hypothetical_game)
+            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player.id, original_player_id=self.original_player_id, parent=self)))
+
+            self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
+            self.strategy = np.append(self.strategy, 0)
+            self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
+            
 
     def is_terminal(self):
         return self.game.terminal
 
     def cfr(self, max_iterations=1000):
-        # If terminal end the game
+        # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 
 
-        if self.children == []:
-            self.expand()
+        self.expand()
         
         node = self
-        for iteration in range(max_iterations):
+        for i in range(max_iterations):
+            print("CFR iteration: ", i)
             # Traverse
-            node, option = node.action_choice()
-
+            node.update_strategy()
+            node, action = node.action_choice()
+            print("Action: ", action.name)
+            node.expand()
             # leaf node
-            if node.children == []:
-                node.expand()
-                # terminal node, get rewards, calc regrets, backpropagate
-                if node.is_terminal():
-                    reward = node.get_reward()
-                    node.backpropagate(reward) # backpropagate the reward and calculate regrets
-                    node.update_strategy()
-                    node = self
+            # terminal node, get rewards, calc regrets, backpropagate
+            if node.is_terminal():
+                reward = node.get_reward()
+                node.backpropagate(reward) # backpropagate the reward and calculate regrets
+                node.update_strategy()
+                node = self
         
 
     def update_regrets(self):
         # backprops, checks all the other choices it could have made from the parent and calcs reward
         # pay attention to player id
 
-        player_id = self.player_id
+        player_id = self.current_player_id
         # Calculate the actual rewards for each action
         actual_rewards = [child.node_value[player_id] for child in self.children]
         # Get the maximum possible reward

@@ -130,6 +130,10 @@ class Game():
         self.ending = False
         self.terminal = False
 
+    def __eq__(self, __value: object) -> bool:
+        if isinstance(__value, Game):
+            return self.players == __value.players and self.deck == __value.deck and self.discard_deck == __value.discard_deck and self.used_cards == __value.used_cards and self.gamestate == __value.gamestate and self.ending == __value.ending and self.terminal == __value.terminal
+        return False
         
     def sample_roles(self, avaible_roles, number_of_used_roles):
         roles = {}
@@ -178,7 +182,7 @@ class Game():
                     player.first_to_7 = True
 
     def get_unknown_cards(self, player):
-        unknown_cards = copy(self.used_cards) # Start with a copy of all used cards
+        unknown_cards = deepcopy(self.used_cards) # Start with a copy of all used cards
 
         # Remove cards that any player has in their buildings deck
         for p in self.players:
@@ -215,6 +219,6 @@ class Game():
         self.deck.cards = unknown_cards.cards
 
 
-    def next(self):
+    def get_options_from_state(self):
         # returns the next actor.get_options() for the next player
         return self.gamestate.player.get_options(self)
