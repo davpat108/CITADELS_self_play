@@ -174,6 +174,10 @@ class option():
 
 
     def carry_out_gold_or_card(self, game):
+        if game.role_properties[role_to_role_id[game.players[self.attributes['perpetrator']].role]].robbed:
+            get_player_from_role_id(1, game).gold += game.players[self.attributes['perpetrator']].gold
+            game.players[self.attributes['perpetrator']].gold = 0
+            
         if self.attributes['choice'] == "gold":
             game.players[self.attributes['perpetrator']].gold += 2
             game.gamestate.state = 3

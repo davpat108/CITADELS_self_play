@@ -257,7 +257,11 @@ class Game():
                     self.role_properties[key].warrant = "Real" if key == real_warrant_key else "Fake"
 
             if self.gamestate.state != 0:
-                player.role = random.choice(player_character.known_roles[player.id].possible_roles)[1]
+                player.role = random.choice(list(player_character.known_roles[player.id].possible_roles.values()))
+
+                # Remove the chosen role from all RoleKnowledge objects
+                for rk in player_character.known_roles:
+                    rk.possible_roles = {k: v for k, v in rk.possible_roles.items() if v != player.role}
 
         # Replace the game's deck with the remaining unknown cards
         self.deck.cards = unknown_cards.cards

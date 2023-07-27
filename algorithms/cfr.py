@@ -35,7 +35,7 @@ class CFRNode:
             options = self.game.get_options_from_state()
             for option in options:
                 hypothetical_game = deepcopy(self.game)
-                assert hypothetical_game == self.game
+                hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
                 option.carry_out(hypothetical_game)
                 self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player.id, original_player_id=self.original_player_id, parent=self)))
 
@@ -45,7 +45,7 @@ class CFRNode:
 
         elif self.current_player_id != self.original_player_id:
             hypothetical_game = deepcopy(self.game)
-            #hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
+            hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
             options = hypothetical_game.get_options_from_state()
             choice_index = np.random.choice(range(len(options)))
             options[choice_index].carry_out(hypothetical_game)
