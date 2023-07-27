@@ -3,7 +3,7 @@ from game.option import option
 from game.config import role_to_role_id
 from itertools import combinations, permutations, combinations_with_replacement
 from copy import copy
-from game.helper_classes import HandKnowlage, GameState, RoleKnowlage
+from game.helper_classes import HandKnowledge, GameState, RoleKnowlage
 
 class Agent():
 
@@ -91,6 +91,7 @@ class Agent():
         for hand_knowlage in self.known_hands:
             hand_knowlage.confidence -= 1
             hand_knowlage.wizard = False
+            hand_knowlage.used = False
             if hand_knowlage.confidence == 0:
                 self.known_hands.remove(hand_knowlage)
 

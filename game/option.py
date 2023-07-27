@@ -1,6 +1,6 @@
 from copy import deepcopy, copy
 from game.deck import Deck, Card
-from game.helper_classes import GameState, HandKnowlage, RolePropery, RoleKnowlage
+from game.helper_classes import GameState, HandKnowledge, RolePropery, RoleKnowlage
 from game.config import role_to_role_id
 
 class option():
@@ -307,7 +307,7 @@ class option():
         game.gamestate.player = game.players[self.attributes['perpetrator']]
 
     def carry_out_lighthouse(self, game):
-        game.players[self.attributes['perpetrator']].known_hands.append(HandKnowlage(player_id=-1, hand=deepcopy(game.deck), confidence=5))
+        game.players[self.attributes['perpetrator']].known_hands.append(HandKnowledge(player_id=-1, hand=deepcopy(game.deck), confidence=5))
         game.players[self.attributes['perpetrator']].hand.add_card(game.deck.get_a_card_like_it(self.attributes['choice']))
         game.players[self.attributes['perpetrator']].can_use_lighthouse = False
         game.deck.shuffle_deck()
@@ -426,7 +426,7 @@ class option():
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_wizard_hand_looking(self, game):
-        game.players[self.attributes['perpetrator']].known_hands.append(HandKnowlage(player_id=self.attributes['target'], hand=deepcopy(game.players[self.attributes['target']].hand), confidence=5, wizard=True))
+        game.players[self.attributes['perpetrator']].known_hands.append(HandKnowledge(player_id=self.attributes['target'], hand=deepcopy(game.players[self.attributes['target']].hand), confidence=5, wizard=True))
         game.gamestate.state = 5
         game.gamestate.player = game.players[self.attributes['perpetrator']]
         game.gamestate.already_done_moves.append("character_ability")
@@ -466,7 +466,7 @@ class option():
             added_deck = Deck(empty=True)
             added_deck.add_card(handout[1])
             game.players[handout[0]].hand.add_card(game.players[self.attributes['perpetrator']].hand.get_a_card_like_it(handout[1]))
-            game.players[self.attributes['perpetrator']].known_hands.append(HandKnowlage(player_id=handout[0], hand=added_deck, confidence=5))
+            game.players[self.attributes['perpetrator']].known_hands.append(HandKnowledge(player_id=handout[0], hand=added_deck, confidence=5))
         game.seer_taken_card_from = []
         game.gamestate = game.gamestate.next_gamestate
 

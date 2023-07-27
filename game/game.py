@@ -181,7 +181,7 @@ class Game():
                     self.ending = True
                     player.first_to_7 = True
 
-    def get_unknown_cards(self, player):
+    def get_unknown_cards(self, player_character):
         unknown_cards = deepcopy(self.used_cards) # Start with a copy of all used cards
 
         # Remove cards that any player has in their buildings deck
@@ -195,26 +195,70 @@ class Game():
                 unknown_cards.get_a_card_like_it(card)
 
         # Remove cards that the player has in their hand
-        for card in player.hand.cards:
+        for card in player_character.hand.cards:
             unknown_cards.get_a_card_like_it(card)
+
+        # Remove cards that are in the HandKnowledge of the player_character
+        for hk in player_character.known_hands:
+            if hk.used: # Only remove cards if HandKnowledge is used
+                for card in hk.hand.cards:
+                    unknown_cards.get_a_card_like_it(card)
 
         return unknown_cards
 
     def sample_private_information(self, player_character):
+
+        # Decide whether to use each HandKnowledge based on confidence, (confidence * 20% chance)
+        for hk in player_character.known_hands:
+            random_chance = random.random()
+            if (hk.confidence - 1) * 0.2 > random_chance:
+                hk.used = True
+            else:
+                hk.used = False
+
         # For each player
         unknown_cards = self.get_unknown_cards(player_character)
         for player in self.players:
             if player == player_character:
                 continue
 
-            random.shuffle(unknown_cards.cards)
-            unknown_card_count = len(player.hand.cards)
+            # Check if player exists in HandKnowledge list and if it is used
+            player_hand_knowledge = deepcopy(next((hk for hk in player_character.known_hands if hk.player_id == player.id and hk.used), None))
 
-            for _ in range(unknown_card_count):
+            player_hand_card_count = len(player.hand.cards)
+            if player_hand_knowledge is not None:
+                # Number of cards to take from HandKnowledge
+                known_card_count = min(len(player_hand_knowledge.hand.cards), player_hand_card_count)
+                for _ in range(known_card_count):
+                    card_to_take = player_hand_knowledge.hand.cards.pop(0)
+                    unknown_cards.get_a_card_like_it(card_to_take)
+                    player.hand.add_card(card_to_take)
+                    player_hand_card_count -= 1
+
+            # Fill the rest of the hand with random cards
+            random.shuffle(unknown_cards.cards)
+            for _ in range(player_hand_card_count):
                 player.hand.add_card(unknown_cards.draw_card())
-        
+            
+            # Sample blackmails
+            blackmails = [key for key, role_property in self.role_properties.items() if role_property.blackmail is not None]
+            if blackmails:
+                random.shuffle(blackmails)
+                real_blackmail_key = blackmails[0]
+                for key in blackmails:
+                    self.role_properties[key].blackmail = "Real" if key == real_blackmail_key else "Fake"
+            
+            #Sample warrants
+            warrants = [key for key, role_property in self.role_properties.items() if role_property.warrant is not None]
+            if warrants:
+                random.shuffle(warrants)
+                real_warrant_key = warrants[0]
+                for key in warrants:
+                    self.role_properties[key].warrant = "Real" if key == real_warrant_key else "Fake"
+
             if self.gamestate.state != 0:
                 player.role = random.choice(player_character.known_roles[player.id].possible_roles)[1]
+
         # Replace the game's deck with the remaining unknown cards
         self.deck.cards = unknown_cards.cards
 

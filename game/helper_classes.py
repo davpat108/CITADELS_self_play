@@ -30,12 +30,14 @@ class GameState():
 
 # Confidence: 5 Surely know everyhing, 4 already used a card, 3 used two cards, ... 0
 # id player_id, -1 means the deck
-class HandKnowlage():
+# used attribute is only used when sampling information
+class HandKnowledge():
     def __init__(self, player_id, hand, confidence, wizard=False) -> None:
         self.player_id = player_id
         self.confidence = confidence
         self.hand = hand
         self.wizard = wizard
+        self.used = False
 
 class RoleKnowlage():
     
