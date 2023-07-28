@@ -25,6 +25,7 @@ class Agent():
         self.known_hands = []
         self.known_roles = [RoleKnowlage(player_id=i, possible_roles={}) for i in range(playercount)]
         self.first_to_7 = False
+        self.witch = False
 
 
     def __eq__(self, other):
@@ -69,9 +70,11 @@ class Agent():
                 if game.gamestate.state == 9:
                     return self.scholar_give_back_options(game)
             else:
-                return [option(name="finish_round", perpetrator=self.id, next_witch=True)]
+                return [option(name="finish_round", perpetrator=self.id, next_witch=True, crown=True if self.role == "King" or self.role == "Patrician" else False)]
+        elif self.role == "Emperor" and "character_ability" not in game.gamestate.already_done_moves:
+            return self.emperor_options(game, dead_emperor=True)
         else:
-            return [option(name="finish_round", perpetrator=self.id, next_witch=False)]
+            return [option(name="finish_round", perpetrator=self.id, next_witch=False, crown=True if self.role == "King" or self.role == "Patrician" else False)]
 
     # Helper functions for agent
     def get_build_limit(self):
@@ -147,13 +150,13 @@ class Agent():
     def blackmail_response_options(self, game) -> list:
         if game.role_properties[role_to_role_id[self.role]].blackmail:
             return [option(choice="pay", perpetrator=self.id, name="blackmail_response"), option(choice="not_pay", perpetrator=self.id, name="blackmail_response")]
-        return [option(name="empty_option", perpetrator=self.id, next_gamestate=GameState(state=5, player=self))]
+        return [option(name="empty_option", perpetrator=self.id, next_gamestate=GameState(state=5, player=self.id))]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player.id, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player.id, name="reveal_blackmail_as_blackmailer")]
+        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player, name="reveal_blackmail_as_blackmailer")]
     
     def reveal_warrant_as_magistrate_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player.id, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player.id, name="reveal_warrant_as_magistrate")]
+        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player, name="reveal_warrant_as_magistrate")]
 
 
     def ghost_town_color_choice_options(self) -> list:
@@ -234,7 +237,7 @@ class Agent():
         
     
     def main_round_options(self, game):
-        options = [option(name="finish_round", perpetrator=self.id, next_witch=False)]
+        options = [option(name="finish_round", perpetrator=self.id, next_witch=False, crown=False)]
         options += self.build_options(game)
         options += self.character_options(game)
         options += self.smithy_options(game)
@@ -258,8 +261,6 @@ class Agent():
                 options += self.assasin_options(game)
             elif self.role == "Magistrate":
                 options += self.magistrate_options(game)
-            #elif self.role == "Witch":
-            #    options += self.witch_options(game)
 
             #ID 1
             elif self.role == "Thief":
@@ -371,6 +372,11 @@ class Agent():
         if game.visible_face_up_role:
             target_possibilities.remove(next(iter(game.visible_face_up_role.keys())))
         
+        # Cant blackmail possessed role
+        for role_property in game.role_properties.items():
+            if role_property[1].possessed:
+                target_possibilities.remove(role_property[0])
+
         for targets in combinations(target_possibilities, 2):
             options.append(option(name="blackmail", perpetrator=self.id, real_target=targets[0], fake_target=targets[1]))
             options.append(option(name="blackmail", perpetrator=self.id, real_target=targets[1], fake_target=targets[0]))
@@ -442,15 +448,15 @@ class Agent():
         # Nothing you just take the crown
         return [option(name="take_crown_king", perpetrator=self.id)]
 
-    def emperor_options(self, game):
+    def emperor_options(self, game, dead_emperor=False):
         options = []
         for player in game.players:
             if player.id != self.id:
-                if len(player.hand.cards):
+                if len(player.hand.cards) and not dead_emperor:
                     options.append(option(name="give_crown", perpetrator=self.id, target=player.id, gold_or_card="card"))
-                if player.gold:
+                if player.gold and not dead_emperor:
                     options.append(option(name="give_crown", perpetrator=self.id, target=player.id, gold_or_card="gold"))
-                if not player.gold and not len(player.hand.cards):
+                if not player.gold and not len(player.hand.cards) or dead_emperor:
                     options.append(option(name="give_crown", perpetrator=self.id,  target=player.id, gold_or_card="nothing"))
                     
         return options
@@ -550,7 +556,7 @@ class Agent():
                             options.append(option(name="warlord_desctruction", target=player.id, perpetrator=self.id, choice=building))
                             
         return options
-    
+
     def marshal_options(self, game):
         options = []
         for player in game.players:
@@ -560,7 +566,7 @@ class Agent():
                         if option(name="marshal_steal", target=player.id, perpetrator=self.id, choice=building) not in options:
                             options.append(option(name="marshal_steal", target=player.id, perpetrator=self.id, choice=building))
         return options    
-                
+
     def diplomat_options(self, game):
         options = []
         for player in game.players:

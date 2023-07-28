@@ -147,6 +147,7 @@ class Game():
         for role_property in self.role_properties.values():
             role_property.reset_role_properties() 
         
+        # Choosen roles during chose role phase, filled at the end of rolepick
         self.used_roles = []
         # setup roles
         roles_to_choose_from = list(self.roles.items())
@@ -167,7 +168,7 @@ class Game():
             raise Exception("No player with crown")
         self.turn_orders_for_roles = self.turn_orders_for_roles[crowned_player_index:] + self.turn_orders_for_roles[:crowned_player_index]
 
-        self.gamestate = GameState(state=0, player=self.players[self.turn_orders_for_roles[0]])
+        self.gamestate = GameState(state=0, player=self.turn_orders_for_roles[0])
 
         for player in self.players:
             player.substract_from_known_hand_confidences_and_clear_wizard()
@@ -218,6 +219,7 @@ class Game():
 
         # For each player
         unknown_cards = self.get_unknown_cards(player_character)
+        known_roles_by_player = deepcopy(player_character.known_roles)
         for player in self.players:
             if player == player_character:
                 continue
@@ -248,7 +250,7 @@ class Game():
                 for key in blackmails:
                     self.role_properties[key].blackmail = "Real" if key == real_blackmail_key else "Fake"
             
-            #Sample warrants
+            # Sample warrants
             warrants = [key for key, role_property in self.role_properties.items() if role_property.warrant is not None]
             if warrants:
                 random.shuffle(warrants)
@@ -256,17 +258,30 @@ class Game():
                 for key in warrants:
                     self.role_properties[key].warrant = "Real" if key == real_warrant_key else "Fake"
 
+            # Sample roles
             if self.gamestate.state != 0:
-                player.role = random.choice(list(player_character.known_roles[player.id].possible_roles.values()))
+                player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
 
                 # Remove the chosen role from all RoleKnowledge objects
-                for rk in player_character.known_roles:
+                for rk in known_roles_by_player:
                     rk.possible_roles = {k: v for k, v in rk.possible_roles.items() if v != player.role}
+
+        if self.gamestate.state != 0:
+            self.refresh_used_roles()
 
         # Replace the game's deck with the remaining unknown cards
         self.deck.cards = unknown_cards.cards
 
+    def refresh_used_roles(self):
+        # Clear the used_roles list
+        self.used_roles = []
+
+        # Iterate over all players and add their role ID to used_roles
+        for player in self.players:
+            role_id = role_to_role_id[player.role]
+            self.used_roles.append(role_id)
+        self.used_roles.sort()
 
     def get_options_from_state(self):
         # returns the next actor.get_options() for the next player
-        return self.gamestate.player.get_options(self)
+        return self.players[self.gamestate.player].get_options(self)

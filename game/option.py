@@ -151,8 +151,9 @@ class option():
         used_role = (role_to_role_id[self.attributes['choice']], self.attributes['choice'])
 
         for player in game.players:
-            if player != game.players[self.attributes['perpetrator']]: 
-                if game.turn_orders_for_roles.index(player.id) <  game.turn_orders_for_roles.index(game.players[self.attributes['perpetrator']].id):
+            if player != game.players[self.attributes['perpetrator']]:
+                # Before this player
+                if game.turn_orders_for_roles.index(player.id) <  game.turn_orders_for_roles.index(self.attributes['perpetrator']):
                     possible_roles = list(game.roles.items())
                     if game.visible_face_up_role:
                         possible_roles.remove(list(game.visible_face_up_role.items())[0])
@@ -160,28 +161,31 @@ class option():
                         possible_roles.remove(role)
                     possible_roles.remove(used_role)
                     game.players[self.attributes['perpetrator']].known_roles[player.id].possible_roles=dict(sorted(possible_roles, key=lambda x: x[0]))
-
+                # After this player
                 else:
                     game.players[self.attributes['perpetrator']].known_roles[player.id].possible_roles=deepcopy(game.roles_to_choose_from)
 
-        if game.players[self.attributes['perpetrator']].id != game.turn_orders_for_roles[-1]:
+        if self.attributes['perpetrator'] != game.turn_orders_for_roles[-1]:
             game.gamestate.state = 0
-            game.gamestate.player = game.players[game.turn_orders_for_roles[game.turn_orders_for_roles.index(game.players[self.attributes['perpetrator']].id) + 1]]
+            game.gamestate.player = game.turn_orders_for_roles[game.turn_orders_for_roles.index(self.attributes['perpetrator']) + 1]
         else:
-            refresh_used_roles(game)
+            game.refresh_used_roles()
             game.gamestate.state = 1
-            game.gamestate.player = get_player_from_role_id(game.used_roles[0], game)
+            game.gamestate.player = get_player_from_role_id(game.used_roles[0], game).id
 
 
     def carry_out_gold_or_card(self, game):
+        # Reveal role
+        confirm_role_knowledges(game.players[self.attributes['perpetrator']], game)
+
         if game.role_properties[role_to_role_id[game.players[self.attributes['perpetrator']].role]].robbed:
             get_player_from_role_id(1, game).gold += game.players[self.attributes['perpetrator']].gold
             game.players[self.attributes['perpetrator']].gold = 0
-            
+
         if self.attributes['choice'] == "gold":
             game.players[self.attributes['perpetrator']].gold += 2
             game.gamestate.state = 3
-            game.gamestate.player = game.players[self.attributes['perpetrator']]
+            game.gamestate.player = self.attributes['perpetrator']
         else:
             # Astrology tower
             if Card(**{"suit":"unique", "type_ID":16, "cost": 5}) in game.players[self.attributes['perpetrator']].buildings.cards:
@@ -193,7 +197,7 @@ class option():
                     reshuffle_deck_if_empty(game)
                     game.players[self.attributes['perpetrator']].just_drawn_cards.add_card(game.deck.draw_card())
             game.gamestate.state = 2
-            game.gamestate.player = game.players[self.attributes['perpetrator']]
+            game.gamestate.player = self.attributes['perpetrator']
 
 
     def carry_out_put_back_card(self, game):
@@ -204,7 +208,7 @@ class option():
         game.players[self.attributes['perpetrator']].just_drawn_cards.cards = []
 
         game.gamestate.state = 3
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
 
     def carry_out_empty(self, game):
         game.gamestate = self.attributes['next_gamestate']
@@ -215,11 +219,11 @@ class option():
             get_player_from_role_id(1, game).gold += int(game.players[self.attributes['perpetrator']].gold/2)
             game.players[self.attributes['perpetrator']].gold -= int(game.players[self.attributes['perpetrator']].gold/2)
             game.gamestate.state = 5
-            game.gamestate.player = game.players[self.attributes['perpetrator']]
+            game.gamestate.player = self.attributes['perpetrator']
         else:
             game.gamestate.state = 4
-            game.gamestate.player = get_player_from_role_id(1, game)
-            game.gamestate.next_gamestate = GameState(state=5, player=game.players[self.attributes['perpetrator']])
+            game.gamestate.player = get_player_from_role_id(1, game).id
+            game.gamestate.next_gamestate = GameState(state=5, player=self.attributes['perpetrator'])
 
 
     def carry_out_responding_to_blackmail_response(self, game):
@@ -258,13 +262,13 @@ class option():
         # No warrant
         if game.role_properties[role_to_role_id[game.players[self.attributes['perpetrator']].role]].warrant is None:
             game.gamestate.state = 5
-            game.gamestate.player = game.players[self.attributes['perpetrator']]
+            game.gamestate.player = self.attributes['perpetrator']
         # Warrant
         else:
             game.warrant_building = self.attributes['built_card']
             game.gamestate.state = 7
-            game.gamestate.player = get_player_from_role_id(0, game)
-            game.gamestate.next_gamestate = GameState(state=5, player=game.players[self.attributes['perpetrator']], already_done_moves=game.gamestate.already_done_moves)
+            game.gamestate.player = get_player_from_role_id(0, game).id
+            game.gamestate.next_gamestate = GameState(state=5, player=self.attributes['perpetrator'], already_done_moves=game.gamestate.already_done_moves)
 
 
 
@@ -274,14 +278,14 @@ class option():
             reshuffle_deck_if_empty(game)
             game.players[self.attributes['perpetrator']].just_drawn_cards.add_card(game.deck.draw_card())
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append('smithy')
     
     def carry_out_laboratory(self, game):
         game.discard_deck.add_card(game.players[self.attributes['perpetrator']].hand.get_a_card_like_it(self.attributes['choice']))
         game.players[self.attributes['perpetrator']].gold += 1
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append('lab')
 
     def carry_out_magic_school(self, game):
@@ -289,26 +293,26 @@ class option():
         game.players[self.attributes['perpetrator']].buildings.get_a_card_like_it(Card(**{"suit":current_magic_school_suit, "type_ID":25, "cost": 6}))
         game.players[self.attributes['perpetrator']].buildings.add_card(Card(**{"suit":self.attributes['choice'], "type_ID":25, "cost": 6}))
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append('magic_school')
 
     def carry_out_ghost_town(self, game):
         game.players[self.attributes['perpetrator']].buildings.get_a_card_like_it(Card(**{"suit":"unique", "type_ID":19, "cost": 2}))
         game.players[self.attributes['perpetrator']].buildings.add_card(Card(**{"suit":self.attributes['choice'], "type_ID":19, "cost": 2}))
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
     
     def carry_out_museum(self, game):
         game.players[self.attributes['perpetrator']].museum_cards.add_card(game.players[self.attributes['perpetrator']].hand.get_a_card_like_it(self.attributes['choice']))
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append('museum')
 
     def carry_out_weapon_storage(self, game):
         game.discard_deck.add_card(game.players[self.attributes['perpetrator']].buildings.get_a_card_like_it(Card(**{"suit":"unique", "type_ID":27, "cost": 3})))
         game.discard_deck.add_card(game.players[self.attributes['target']].buildings.get_a_card_like_it(self.attributes['choice']))
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
 
     def carry_out_lighthouse(self, game):
         game.players[self.attributes['perpetrator']].known_hands.append(HandKnowledge(player_id=-1, hand=deepcopy(game.deck), confidence=5))
@@ -317,7 +321,7 @@ class option():
         game.deck.shuffle_deck()
 
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
 
 
     def carry_out_graveyard(self, game):
@@ -341,10 +345,23 @@ class option():
                     game.players[self.attributes['perpetrator']].gold += 1
         # witch
         if self.attributes['next_witch']:
+            # Witch cannot take the crown
+            if self.attributes['crown']:
+                move_crown(game, self.attributes['perpetrator'])
+
+            # Witch is making the choices
             game.gamestate.state = 5
-            game.gamestate.player = get_player_from_role_id(game.used_roles[0], game)
-            game.gamestate.player.role = game.players[self.attributes['perpetrator']].role
+            game.gamestate.player = get_player_from_role_id(0, game).id
+
+            # Witch takes over role
+            game.players[game.gamestate.player].role = game.players[self.attributes['perpetrator']].role
             game.role_properties[role_to_role_id[game.players[self.attributes['perpetrator']].role]].possessed = False
+            
+            # Update known roles with witches new role
+            for player in game.players:
+                if player.id != game.gamestate.player:
+                    player.known_roles[game.gamestate.player].possible_roles = {role_to_role_id[game.players[game.gamestate.player].role]: game.players[game.gamestate.player].role}
+            
             game.gamestate.already_done_moves = []
             return False
         
@@ -362,7 +379,7 @@ class option():
         # Not the last player
         else:
             game.gamestate.state = 1
-            game.gamestate.player = get_player_from_role_id(game.used_roles[game.used_roles.index(role_to_role_id[game.players[self.attributes['perpetrator']].role])+1], game)
+            game.gamestate.player = get_player_from_role_id(game.used_roles[game.used_roles.index(role_to_role_id[game.players[self.attributes['perpetrator']].role])+1], game).id
             game.gamestate.already_done_moves = []
 
         return False
@@ -370,7 +387,7 @@ class option():
     def carry_out_assasination(self, game):
         game.role_properties[self.attributes['target']].dead = True
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
         
     def carry_out_warranting(self, game):
@@ -378,27 +395,28 @@ class option():
         game.role_properties[self.attributes['fake_targets'][0]].warrant = "Fake"
         game.role_properties[self.attributes['fake_targets'][1]].warrant = "Fake"
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_bewitching(self, game):
         game.role_properties[self.attributes['target']].possessed = True
+        game.players[self.attributes['perpetrator']].witch = True
         game.gamestate.state = 1
-        game.gamestate.player = get_player_from_role_id(game.used_roles[game.used_roles.index(role_to_role_id[game.players[self.attributes['perpetrator']].role])+1], game)
+        game.gamestate.player = get_player_from_role_id(game.used_roles[game.used_roles.index(role_to_role_id[game.players[self.attributes['perpetrator']].role])+1], game).id
         
     # ID 1
     def carry_out_stealing(self, game):
         # TODO this is wrong like this
         game.role_properties[self.attributes['target']].robbed = True
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
     
     def carry_out_blackmail(self, game):
         game.role_properties[self.attributes['real_target']].blackmail = "Real"
         game.role_properties[self.attributes['fake_target']].blackmail = "Fake"
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
         
     def carry_out_spying(self, game):
@@ -411,7 +429,7 @@ class option():
         reshuffle_deck_if_empty(game)
         game.players[self.attributes['perpetrator']].hand.add_card(game.deck.draw_card())
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     # ID 2
@@ -426,13 +444,13 @@ class option():
                 reshuffle_deck_if_empty(game)
                 game.players[self.attributes['perpetrator']].hand.add_card(game.deck.draw_card())
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_wizard_hand_looking(self, game):
         game.players[self.attributes['perpetrator']].known_hands.append(HandKnowledge(player_id=self.attributes['target'], hand=deepcopy(game.players[self.attributes['target']].hand), confidence=5, wizard=True))
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_wizard_take_from_hand(self, game):
@@ -449,7 +467,7 @@ class option():
             # It has to be the last one in this position
             wizard_hand_knowlage.hand.get_a_card_like_it(self.attributes['card'])
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("took_from_hand")
 
     def carry_out_seer_take_a_card(self, game):
@@ -461,9 +479,9 @@ class option():
                 game.players[self.attributes['perpetrator']].hand.add_card(player.hand.draw_card())
                 game.seer_taken_card_from.append(player.id)
         game.gamestate.state = 8
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
-        game.gamestate.next_gamestate = GameState(state=5, player=game.players[self.attributes['perpetrator']], already_done_moves=game.gamestate.already_done_moves)
+        game.gamestate.next_gamestate = GameState(state=5, player=self.attributes['perpetrator'], already_done_moves=game.gamestate.already_done_moves)
 
     def carry_out_seer_give_back_cards(self, game):
         for handout in self.attributes['card_handouts'].items():
@@ -477,34 +495,25 @@ class option():
 
     # ID 3
     def carry_out_take_crown_king(self, game):
-        for player in game.players:
-            if player.crown:
-                player.crown = False
-                break
         for building in game.players[self.attributes['perpetrator']].buildings.cards:
             if building.suit == "lord":
                 game.players[self.attributes['perpetrator']].gold += 1
-
-        game.players[self.attributes['perpetrator']].crown = True
-        troneroom_owner_gold(game)
+        if not game.players[self.attributes['perpetrator']].witch:
+            move_crown(game, self.attributes['perpetrator'])
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_take_crown_patrician(self, game):
-        for player in game.players:
-            if player.crown:
-                player.crown = False
-                break
         for building in game.players[self.attributes['perpetrator']].buildings.cards:
             if building.suit == "lord":
                 reshuffle_deck_if_empty(game)
                 game.players[self.attributes['perpetrator']].hand.add_card(game.deck.draw_card())
-                
-        game.players[self.attributes['perpetrator']].crown = True
-        troneroom_owner_gold(game)
+
+        if not game.players[self.attributes['perpetrator']].witch:
+            move_crown(game, self.attributes['perpetrator'])
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_emperor(self, game):
@@ -520,12 +529,9 @@ class option():
             game.players[self.attributes['perpetrator']].gold += 1
             game.players[self.attributes['target']].gold -= 1
 
-        if not game.role_properties[3].possessed:
-            game.players[self.attributes['perpetrator']].crown = False
-            game.players[self.attributes['target']].crown = True
-            troneroom_owner_gold(game)
+        move_crown(game, self.attributes['target'])
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
             
 
@@ -535,7 +541,7 @@ class option():
             if building.suit == "religion":
                 game.players[self.attributes['perpetrator']].gold += 1
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
     
     def carry_out_abbot(self, game):
@@ -544,7 +550,7 @@ class option():
             reshuffle_deck_if_empty(game)
             game.players[self.attributes['perpetrator']].hand.add_card(game.deck.draw_card())
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
                 
     def carry_out_abbot_beg(self, game):
@@ -552,7 +558,7 @@ class option():
         game.players[max_gold_player_index].gold -= 1
         get_player_from_role_id(4, game).gold += 1
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("begged")
             
     def carry_out_cardinal(self, game):
@@ -572,7 +578,7 @@ class option():
             for card in self.attributes['cards_to_give']:
                 game.players[self.attributes['target']].hand.add_card(game.players[self.attributes['perpetrator']].hand.get_a_card_like_it(card))
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     # ID 5
@@ -582,7 +588,7 @@ class option():
                 game.players[self.attributes['perpetrator']].gold += 1
         game.players[self.attributes['perpetrator']].gold += 1
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
     
     def carry_out_alchemist(self, game):
@@ -594,7 +600,7 @@ class option():
             if building.suit == "religion":
                 game.players[self.attributes['perpetrator']].gold += 1
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     # ID 6
@@ -604,7 +610,7 @@ class option():
             reshuffle_deck_if_empty(game)
             game.players[self.attributes['perpetrator']].hand.add_card(game.deck.draw_card())
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_navigator(self, game):
@@ -616,7 +622,7 @@ class option():
         if self.attributes['choice'] == "4gold":
             game.players[self.attributes['perpetrator']].gold += 4
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_scholar_draw(self, game):
@@ -628,9 +634,9 @@ class option():
             game.seven_drawn_cards.add_card(card)
 
         game.gamestate.state = 9
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
-        game.gamestate.next_gamestate = GameState(state=5, player=game.players[self.attributes['perpetrator']], already_done_moves=game.gamestate.already_done_moves)
+        game.gamestate.next_gamestate = GameState(state=5, player=self.attributes['perpetrator'], already_done_moves=game.gamestate.already_done_moves)
 
     def carry_out_scholar_put_back(self, game):
         for card in self.attributes['unchosen_cards'].cards:
@@ -648,7 +654,7 @@ class option():
         settle_museum(self, game)
         settle_lighthouse(self, game)
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_warlord(self, game):
@@ -662,13 +668,13 @@ class option():
         settle_lighthouse(self, game)
             
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
         graveyard_owner = get_graveyard_owner(game)
         if graveyard_owner is not None and graveyard_owner != game.players[self.attributes['perpetrator']]:
             game.gamestate.state = 6
-            game.gamestate.player = graveyard_owner
-            game.gamestate.next_gamestate = GameState(state=5, player=game.players[self.attributes['perpetrator']], already_done_moves=["character_ability"])
+            game.gamestate.player = graveyard_owner.id
+            game.gamestate.next_gamestate = GameState(state=5, player=self.attributes['perpetrator'], already_done_moves=["character_ability"])
 
 
     def carry_out_diplomat(self, game):
@@ -684,7 +690,7 @@ class option():
 
 
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_take_gold_for_war(self, game):
@@ -692,7 +698,7 @@ class option():
             if building.suit == "war":
                 game.players[self.attributes['perpetrator']].gold += 1
         game.gamestate.state = 5
-        game.gamestate.player = game.players[self.attributes['perpetrator']]
+        game.gamestate.player = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("take_gold")
 
 
@@ -746,8 +752,24 @@ def check_if_building_is_replica(target_player, building):
         return True
     return False
 
-
-def refresh_used_roles(game):
+def confirm_role_knowledges(revealed_player, game):
+    """
+    Reveal the role of the player_character to all players.
+    """
     for player in game.players:
-        game.used_roles.append(role_to_role_id[player.role])
-    game.used_roles.sort()
+        for role_knowledge in player.known_roles:
+            if role_knowledge.player_id == revealed_player.id:
+                # Confirm the role of the revealed player
+                role_knowledge.possible_roles = {role_to_role_id[revealed_player.role]: revealed_player.role}
+            else:
+                # Remove the revealed role from the possible_roles of all other players
+                role_knowledge.possible_roles = {role_id: role for role_id, role in role_knowledge.possible_roles.items() if role != revealed_player.role}
+
+
+def move_crown(game, target_player_id):
+    for player in game.players:
+        if player.crown:
+            player.crown = False
+            break
+    game.players[target_player_id].crown = True
+    troneroom_owner_gold(game)

@@ -35,9 +35,11 @@ class CFRNode:
             options = self.game.get_options_from_state()
             for option in options:
                 hypothetical_game = deepcopy(self.game)
-                hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
+                # Sample if not the same players turn as before
+                if self.parent is None or  hypothetical_game.gamestate.player != self.parent.game.gamestate.player:
+                    hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
                 option.carry_out(hypothetical_game)
-                self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player.id, original_player_id=self.original_player_id, parent=self)))
+                self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player, original_player_id=self.original_player_id, parent=self)))
 
             self.cumulative_regrets = np.zeros(len(self.children))
             self.strategy = np.zeros(len(self.children))
@@ -45,11 +47,13 @@ class CFRNode:
 
         elif self.current_player_id != self.original_player_id:
             hypothetical_game = deepcopy(self.game)
-            hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
+            # Sample if not the same players turn as before
+            if self.parent is None or hypothetical_game.gamestate.player != self.parent.game.gamestate.player:
+                hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
             options = hypothetical_game.get_options_from_state()
             choice_index = np.random.choice(range(len(options)))
             options[choice_index].carry_out(hypothetical_game)
-            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player.id, original_player_id=self.original_player_id, parent=self)))
+            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player, original_player_id=self.original_player_id, parent=self)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
