@@ -44,7 +44,7 @@ class Deck:
             if card.type_ID == card_to_get.type_ID:
                 self.cards.remove(card)
                 return card
-        raise Exception("No card like that in the deck")
+        raise KeyError("No card like that in the deck")
 
     def draw_card(self):
         if len(self.cards) == 0:

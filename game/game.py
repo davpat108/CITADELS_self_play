@@ -184,6 +184,7 @@ class Game():
 
     def get_unknown_cards(self, player_character):
         unknown_cards = deepcopy(self.used_cards) # Start with a copy of all used cards
+        unknown_cards.cards = unknown_cards.cards*3
 
         # Remove cards that any player has in their buildings deck
         for p in self.players:
@@ -202,8 +203,15 @@ class Game():
         # Remove cards that are in the HandKnowledge of the player_character
         for hk in player_character.known_hands:
             if hk.used: # Only remove cards if HandKnowledge is used
-                for card in hk.hand.cards:
-                    unknown_cards.get_a_card_like_it(card)
+                # If no such card in unknown_cards,
+                # all of those cards are in the player's hand, built or in museum
+                # (Its faster to do this instead of picking them one by one when they are revealed)
+                try:
+                    for card in hk.hand.cards:
+                        unknown_cards.get_a_card_like_it(card)
+                except KeyError:
+                    print("XXXXXXXXXXX CARD FOUND")
+                    hk.hand.get_a_card_like_it(card)
 
         return unknown_cards
 
@@ -213,13 +221,33 @@ class Game():
         for hk in player_character.known_hands:
             random_chance = random.random()
             if (hk.confidence - 1) * 0.2 > random_chance:
-                hk.used = True
+                hk.used = False
             else:
                 hk.used = False
 
-        # For each player
         unknown_cards = self.get_unknown_cards(player_character)
         known_roles_by_player = deepcopy(player_character.known_roles)
+
+        # Settle deck
+        deck_count = len(self.deck.cards)
+        lighthouse_knowledge = deepcopy(next((hk for hk in player_character.known_hands if hk.player_id == -1 and hk.used), None))
+        self.deck.cards = []
+        if lighthouse_knowledge is not None:
+            # Number of cards to take from HandKnowledge
+            known_card_count = min(len(lighthouse_knowledge.hand.cards), deck_count)
+
+            for _ in range(known_card_count):
+                card_to_take = lighthouse_knowledge.hand.cards.pop(0)
+                unknown_cards.get_a_card_like_it(card_to_take)
+                self.deck.add_card(card_to_take)
+                deck_count -= 1
+
+        # Fill the deck with unknown cards if more than lighthouse
+        random.shuffle(unknown_cards.cards)
+        for _ in range(deck_count):
+            self.deck.add_card(unknown_cards.draw_card())
+
+        # Settle players
         for player in self.players:
             if player == player_character:
                 continue
@@ -228,6 +256,7 @@ class Game():
             player_hand_knowledge = deepcopy(next((hk for hk in player_character.known_hands if hk.player_id == player.id and hk.used), None))
 
             player_hand_card_count = len(player.hand.cards)
+            player.hand.cards = []
             if player_hand_knowledge is not None:
                 # Number of cards to take from HandKnowledge
                 known_card_count = min(len(player_hand_knowledge.hand.cards), player_hand_card_count)
@@ -238,7 +267,6 @@ class Game():
                     player_hand_card_count -= 1
 
             # Fill the rest of the hand with random cards
-            random.shuffle(unknown_cards.cards)
             for _ in range(player_hand_card_count):
                 player.hand.add_card(unknown_cards.draw_card())
             

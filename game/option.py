@@ -2,6 +2,7 @@ from copy import deepcopy, copy
 from game.deck import Deck, Card
 from game.helper_classes import GameState, HandKnowledge, RolePropery, RoleKnowlage
 from game.config import role_to_role_id
+import numpy as np
 
 class option():
     def __init__(self, name, **kwargs):
@@ -373,6 +374,8 @@ class option():
                     points.append(player.count_points())
                 game.points = points
                 game.terminal = True
+                game.rewards = np.zeros(len(game.players))
+                game.rewards[points.index(max(points))] = 1
                 return game.players[points.index(max(points))]
             game.setup_round()
 

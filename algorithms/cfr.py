@@ -45,7 +45,7 @@ class CFRNode:
             self.strategy = np.zeros(len(self.children))
             self.cumulative_strategy = np.zeros(len(self.children))
 
-        elif self.current_player_id != self.original_player_id:
+        elif self.current_player_id != self.original_player_id and len(self.children) < 10:
             hypothetical_game = deepcopy(self.game)
             # Sample if not the same players turn as before
             if self.parent is None or hypothetical_game.gamestate.player != self.parent.game.gamestate.player:
@@ -63,6 +63,9 @@ class CFRNode:
     def is_terminal(self):
         return self.game.terminal
 
+    def get_reward(self):
+        return self.game.rewards
+
     def cfr(self, max_iterations=1000):
         # If the cfr is called from a terminal node, return
         if self.is_terminal():
@@ -77,7 +80,6 @@ class CFRNode:
             node.update_strategy()
             node, action = node.action_choice()
             print("Action: ", action.name)
-            node.expand()
             # leaf node
             # terminal node, get rewards, calc regrets, backpropagate
             if node.is_terminal():
@@ -85,6 +87,8 @@ class CFRNode:
                 node.backpropagate(reward) # backpropagate the reward and calculate regrets
                 node.update_strategy()
                 node = self
+            else:
+                node.expand()
         
 
     def update_regrets(self):
@@ -93,7 +97,7 @@ class CFRNode:
 
         player_id = self.current_player_id
         # Calculate the actual rewards for each action
-        actual_rewards = [child.node_value[player_id] for child in self.children]
+        actual_rewards = [child[1].node_value[player_id] for child in self.children]
         # Get the maximum possible reward
         max_reward = max(actual_rewards)
         # Update regrets
@@ -109,7 +113,7 @@ class CFRNode:
         self.node_value += reward
 
         # Calculate regret for this node
-        self.update_regrets(reward)
+        self.update_regrets()
 
         # Recursively call backpropagate on parent node
         self.parent.backpropagate(reward)
