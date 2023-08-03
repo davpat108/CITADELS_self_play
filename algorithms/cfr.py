@@ -1,5 +1,6 @@
 import numpy as np
 from copy import deepcopy
+from game.checks import check_same_memory_address
 
 class CFRNode:
     def __init__(self, game, current_player_id, original_player_id, parent=None, player_count = 6):
@@ -37,10 +38,12 @@ class CFRNode:
                 hypothetical_game = deepcopy(self.game)
                 # Sample if not the same players turn as before
                 if self.parent is None or  hypothetical_game.gamestate.player != self.parent.game.gamestate.player:
+                    print("Sampling private information for our own round")
                     hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
                 option.carry_out(hypothetical_game)
                 self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player, original_player_id=self.original_player_id, parent=self)))
-
+                if check_same_memory_address(self.game, hypothetical_game):
+                    print("X")
             self.cumulative_regrets = np.zeros(len(self.children))
             self.strategy = np.zeros(len(self.children))
             self.cumulative_strategy = np.zeros(len(self.children))
@@ -49,10 +52,14 @@ class CFRNode:
             hypothetical_game = deepcopy(self.game)
             # Sample if not the same players turn as before
             if self.parent is None or hypothetical_game.gamestate.player != self.parent.game.gamestate.player:
+                print("Sampling private information for others")
                 hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
             options = hypothetical_game.get_options_from_state()
             choice_index = np.random.choice(range(len(options)))
             options[choice_index].carry_out(hypothetical_game)
+            if check_same_memory_address(self.game, hypothetical_game):
+                print("X")
+
             self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player, original_player_id=self.original_player_id, parent=self)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
@@ -66,7 +73,7 @@ class CFRNode:
     def get_reward(self):
         return self.game.rewards
 
-    def cfr(self, max_iterations=1000):
+    def cfr(self, max_iterations=100):
         # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 
@@ -91,6 +98,8 @@ class CFRNode:
                 node.expand()
         
 
+        
+
     def update_regrets(self):
         # backprops, checks all the other choices it could have made from the parent and calcs reward
         # pay attention to player id
@@ -113,7 +122,8 @@ class CFRNode:
         self.node_value += reward
 
         # Calculate regret for this node
-        self.update_regrets()
+        if self.children:
+            self.update_regrets()
 
         # Recursively call backpropagate on parent node
         self.parent.backpropagate(reward)

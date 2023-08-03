@@ -245,7 +245,7 @@ class option():
         game.gamestate = game.gamestate.next_gamestate
 
     def carry_out_building(self, game):
-        game.players[self.attributes['perpetrator']].buildings.add_card(self.attributes['built_card'])
+        game.players[self.attributes['perpetrator']].buildings.add_card(game.players[self.attributes['perpetrator']].hand.get_a_card_like_it(self.attributes['built_card']))
         if not game.players[self.attributes['perpetrator']].role == "Alchemist":
             game.players[self.attributes['perpetrator']].gold -= self.attributes['built_card'].cost
 

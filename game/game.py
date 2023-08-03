@@ -210,13 +210,11 @@ class Game():
                     for card in hk.hand.cards:
                         unknown_cards.get_a_card_like_it(card)
                 except KeyError:
-                    print("XXXXXXXXXXX CARD FOUND")
                     hk.hand.get_a_card_like_it(card)
 
         return unknown_cards
 
     def sample_private_information(self, player_character):
-
         # Decide whether to use each HandKnowledge based on confidence, (confidence * 20% chance)
         for hk in player_character.known_hands:
             random_chance = random.random()
