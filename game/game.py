@@ -4,6 +4,7 @@ from game.config import building_cards, unique_building_cards, roles, role_to_ro
 import random
 from game.helper_classes import RolePropery, GameState
 from copy import deepcopy, copy
+import numpy as np
 
 class Game():
     def __init__(self, avaible_roles=None, debug=False) -> None:
@@ -68,7 +69,7 @@ class Game():
 
             self.roles = {0: "Assassin",
                      1: "Spy",
-                     2: "Magician",
+                     2: "Wizard",
                      3: "King",
                      4: "Abbot",
                      5: "Alchemist",
@@ -164,17 +165,15 @@ class Game():
 
         self.roles_to_choose_from = dict(sorted(roles_to_choose_from, key=lambda x: x[0]))
         crowned_player_index = next((player.id for player in self.players if player.crown), None)
-        if crowned_player_index is None:
-            raise Exception("No player with crown")
         self.turn_orders_for_roles = self.turn_orders_for_roles[crowned_player_index:] + self.turn_orders_for_roles[:crowned_player_index]
 
-        self.gamestate = GameState(state=0, player=self.turn_orders_for_roles[0])
+        self.gamestate = GameState(state=0, player_id=self.turn_orders_for_roles[0])
 
         for player in self.players:
             player.substract_from_known_hand_confidences_and_clear_wizard()
             player.reset_known_roles()
 
-    def check_game_ending(self, player:Agent):
+    def is_last_round(self, player:Agent):
         "Returns whether its the games last round or not"
         if not self.ending:
             for player in self.players:
@@ -294,6 +293,9 @@ class Game():
 
         if self.gamestate.state != 0:
             self.refresh_used_roles()
+        
+            if not self.gamestate.interruption:
+                self.setup_next_player(current_player_id=self.gamestate.player_id)
 
         # Replace the game's deck with the remaining unknown cards
         self.deck.cards = unknown_cards.cards
@@ -308,6 +310,38 @@ class Game():
             self.used_roles.append(role_id)
         self.used_roles.sort()
 
+    def check_game_ending(self):
+        if self.ending:
+            points = []
+            for player in self.players:
+                points.append(player.count_points())
+            self.points = points
+            self.terminal = True
+            self.rewards = np.zeros(len(self.players))
+            self.rewards[points.index(max(points))] = 1
+            return self.players[points.index(max(points))]
+        return False
+
+
+    def setup_next_player(self, current_player_id=None):
+        if self.gamestate.state == 0:
+            self.refresh_used_roles()
+            self.gamestate.state = 1
+            self.gamestate.player_id = self.get_player_from_role_id(self.used_roles[0]).id
+        elif current_player_id is not None:
+            self.gamestate.state = 1
+            self.gamestate.player_id = self.get_player_from_role_id(self.used_roles[self.used_roles.index(role_to_role_id[self.players[current_player_id].role])+1]).id
+            self.gamestate.already_done_moves = []
+        else:
+            raise Exception("No current player and not in rolepick state")
+
+    def get_player_from_role_id(self, role_id):
+        for player in self.players:
+            if player.role == self.roles[role_id]:
+                return player
+        return None
+
+
     def get_options_from_state(self):
         # returns the next actor.get_options() for the next player
-        return self.players[self.gamestate.player].get_options(self)
+        return self.players[self.gamestate.player_id].get_options(self)

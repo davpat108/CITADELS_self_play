@@ -43,22 +43,24 @@ class Agent():
 	#6 graveyard -> 5 different character (warlord)
     #7 Magistrate reveal -> 5 different character
     #8 seer give back card
+    #9 Scholar_give put back cards
+    #10 Wizard choose from hand
 
     def get_options(self, game):
         if game.gamestate.state == 0:
             return self.pick_role_options(game)
-        if not game.role_properties[role_to_role_id[self.role]].dead:
+        if self.role == "Bewitched" or not game.role_properties[role_to_role_id[self.role]].dead:
             if game.gamestate.state == 1:
                 return self.gold_or_card_options(game)
             if game.gamestate.state == 2:
                 return self.which_card_to_keep_options(game)
             if game.gamestate.state == 3:
                 return self.blackmail_response_options(game)
-            if game.gamestate.state == 4:
+            if game.gamestate.state == 4: # interrupting
                 return self.reveal_blackmail_as_blackmailer_options(game)
-            if game.gamestate.state == 6:
+            if game.gamestate.state == 6: # interrupting
                 return self.graveyard_options(game)
-            if game.gamestate.state == 7:
+            if game.gamestate.state == 7: # interrupting
                 return self.reveal_warrant_as_magistrate_options(game)
             if self.role == "Witch":
                 return self.witch_options(game)
@@ -69,6 +71,8 @@ class Agent():
                     return self.seer_give_back_card(game)
                 if game.gamestate.state == 9:
                     return self.scholar_give_back_options(game)
+                if game.gamestate.state == 10:
+                    return self.wizard_take_from_hand_options(game)
             else:
                 return [option(name="finish_round", perpetrator=self.id, next_witch=True, crown=True if self.role == "King" or self.role == "Patrician" else False)]
         elif self.role == "Emperor" and "character_ability" not in game.gamestate.already_done_moves:
@@ -91,12 +95,15 @@ class Agent():
         return build_limit
     
     def substract_from_known_hand_confidences_and_clear_wizard(self):
+        remaining_hand_knowledge = [] # New list to keep track of remaining hand knowledge objects
         for hand_knowlage in self.known_hands:
             hand_knowlage.confidence -= 1
             hand_knowlage.wizard = False
             hand_knowlage.used = False
-            if hand_knowlage.confidence == 0:
-                self.known_hands.remove(hand_knowlage)
+            if hand_knowlage.confidence != 0:
+                remaining_hand_knowledge.append(hand_knowlage) # Add to new list if confidence is not 0
+
+        self.known_hands = remaining_hand_knowledge # Assign new list to self.known_hands
 
     def reset_known_roles(self):
         for role_knowlage in self.known_roles:
@@ -150,13 +157,13 @@ class Agent():
     def blackmail_response_options(self, game) -> list:
         if game.role_properties[role_to_role_id[self.role]].blackmail:
             return [option(choice="pay", perpetrator=self.id, name="blackmail_response"), option(choice="not_pay", perpetrator=self.id, name="blackmail_response")]
-        return [option(name="empty_option", perpetrator=self.id, next_gamestate=GameState(state=5, player=self.id))]
+        return [option(name="empty_option", perpetrator=self.id, next_gamestate=GameState(state=5, player_id=self.id))]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player, name="reveal_blackmail_as_blackmailer")]
+        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer")]
     
     def reveal_warrant_as_magistrate_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player, name="reveal_warrant_as_magistrate")]
+        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate")]
 
 
     def ghost_town_color_choice_options(self) -> list:
@@ -322,8 +329,6 @@ class Agent():
             options += self.take_gold_for_war_options(game)
         elif self.role == "Abbot":
             options += self.abbot_beg(game)
-        elif self.role == "Wizard":
-            options += self.wizard_take_from_hand_options(game)
         #ID 8
         # Not yet
 
@@ -408,28 +413,27 @@ class Agent():
     def wizard_look_at_hand_options(self, game):
         options = []
         for player in game.players:
-            if player.id != self.id:
+            if player.id != self.id and len(player.hand.cards) > 0:
                 options.append(option(name="look_at_hand", perpetrator=self.id, target=player.id))
         return options
     
     def wizard_take_from_hand_options(self, game):
-        if "character_ability" in game.gamestate.already_done_moves and "took_from_hand" not in game.gamestate.already_done_moves:
-            target_hand = next((hand for hand in self.known_hands if hand.confidence == 5 and hand.player_id != -1), None)
-            options = []
-            replica = 0
-            for card in target_hand.hand.cards:
-                if option(name="take_from_hand", card=card, build=False, perpetrator=self.id, target=target_hand.player_id) not in options:
-                    options.append(option(name="take_from_hand", card=card, build=False, perpetrator=self.id, target=target_hand.player_id))
-                cost = card.cost
-                if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings.cards and card.suit == "unique":
-                    cost -= -1
-                if card in self.buildings.cards: 
-                    replica = self.replicas + 1
-                if cost <= self.gold and option(name="take_from_hand", built_card=card, build=True, perpetrator=self.id, target=target_hand.player_id, replica=replica) not in options:
-                    options.append(option(name="take_from_hand", built_card=card, build=True, perpetrator=self.id, target=target_hand.player_id, replica=replica))
-
-            return options
-        return []
+        target_hand = next((hand for hand in self.known_hands if hand.confidence == 5 and hand.player_id != -1 and hand.wizard==True), None)
+        options = []
+        replica = 0
+        for card in target_hand.hand.cards:
+            if option(name="take_from_hand", card=card, build=False, perpetrator=self.id, target=target_hand.player_id) not in options:
+                options.append(option(name="take_from_hand", card=card, build=False, perpetrator=self.id, target=target_hand.player_id))
+            cost = card.cost
+            if Card(**{"suit":"unique", "type_ID":35, "cost": 6}) in self.buildings.cards and card.suit == "unique":
+                cost -= -1
+            if card in self.buildings.cards: 
+                replica = self.replicas + 1
+            if cost <= self.gold and option(name="take_from_hand", built_card=card, build=True, perpetrator=self.id, target=target_hand.player_id, replica=replica) not in options:
+                options.append(option(name="take_from_hand", built_card=card, build=True, perpetrator=self.id, target=target_hand.player_id, replica=replica))
+        if options == []:
+            return [option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)]
+        return options
     
     def seer_options(self, game):
         return [option(name="seer", perpetrator=self.id)]

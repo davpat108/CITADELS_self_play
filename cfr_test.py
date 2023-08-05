@@ -10,7 +10,7 @@ i = 0
 tota_options = 0
 while not winner:
     i+=1
-    if game.gamestate.player  == 0:
+    if game.gamestate.player_id  == 0:
         position_root = CFRNode(game, current_player_id=0, original_player_id=0)
         position_root.cfr()
         _, chosen_option = position_root.action_choice()

@@ -15,9 +15,7 @@ def recursive_memory_check(obj1, obj2):
         for i in obj1:
             for j in obj2:
                 if recursive_memory_check(i, j):
-                    print(f"Attribute '{i}' in {
-                        
-                    } in first class and attribute '{j}' in {obj2} in second class are referencing the same memory.")
+                    print(f"Attribute '{i}' in {obj1} in first class and attribute '{j}' in {obj2} in second class are referencing the same memory.")
                     return True
     elif isinstance(obj1, dict) and isinstance(obj2, dict):
         for i in obj1.values():

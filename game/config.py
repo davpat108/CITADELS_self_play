@@ -90,7 +90,8 @@ roles = {0: ["Assassin", "Witch", "Magistrate"],
          7: ["Warlord", "Diplomat", "Marshal"],
          8: ["Queen", "Artist", "Tax Collector"]}
 
-role_to_role_id = {'Assassin': 0,
+role_to_role_id = {'Bewitched': -1,
+                   'Assassin': 0,
                    'Witch': 0,
                    'Magistrate': 0,
                    'Thief': 1,

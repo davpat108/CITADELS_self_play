@@ -37,13 +37,14 @@ class CFRNode:
             for option in options:
                 hypothetical_game = deepcopy(self.game)
                 # Sample if not the same players turn as before
-                if self.parent is None or  hypothetical_game.gamestate.player != self.parent.game.gamestate.player:
+                if self.parent is None or  hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
                     print("Sampling private information for our own round")
                     hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
                 option.carry_out(hypothetical_game)
-                self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player, original_player_id=self.original_player_id, parent=self)))
-                if check_same_memory_address(self.game, hypothetical_game):
-                    print("X")
+                print("Current role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id)
+                self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
+                #if check_same_memory_address(self.game, hypothetical_game):
+                #    print("X")
             self.cumulative_regrets = np.zeros(len(self.children))
             self.strategy = np.zeros(len(self.children))
             self.cumulative_strategy = np.zeros(len(self.children))
@@ -51,20 +52,22 @@ class CFRNode:
         elif self.current_player_id != self.original_player_id and len(self.children) < 10:
             hypothetical_game = deepcopy(self.game)
             # Sample if not the same players turn as before
-            if self.parent is None or hypothetical_game.gamestate.player != self.parent.game.gamestate.player:
+            if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
                 print("Sampling private information for others")
                 hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
+            print("Current role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id)
             options = hypothetical_game.get_options_from_state()
             choice_index = np.random.choice(range(len(options)))
             options[choice_index].carry_out(hypothetical_game)
-            if check_same_memory_address(self.game, hypothetical_game):
-                print("X")
+            #if check_same_memory_address(self.game, hypothetical_game):
+            #    print("X")
 
-            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player, original_player_id=self.original_player_id, parent=self)))
+            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
             self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
+
             
 
     def is_terminal(self):
@@ -82,11 +85,10 @@ class CFRNode:
         
         node = self
         for i in range(max_iterations):
-            print("CFR iteration: ", i)
             # Traverse
             node.update_strategy()
             node, action = node.action_choice()
-            print("Action: ", action.name)
+            print(f"cfr{i}, Action: ", action.name)
             # leaf node
             # terminal node, get rewards, calc regrets, backpropagate
             if node.is_terminal():
