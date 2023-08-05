@@ -30,37 +30,40 @@ class CFRNode:
 
         # Return the chosen child and option
         return  self.children[choice_index][1], self.children[choice_index][0]
-    
+
+
     def expand(self):
         if self.current_player_id == self.original_player_id and len(self.children) == 0:
             options = self.game.get_options_from_state()
             for option in options:
                 hypothetical_game = deepcopy(self.game)
+
                 # Sample if not the same players turn as before
                 if self.parent is None or  hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
-                    print("Sampling private information for our own round")
                     hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
                 option.carry_out(hypothetical_game)
+                hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
+
                 print("Current role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id)
                 self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
-                #if check_same_memory_address(self.game, hypothetical_game):
-                #    print("X")
+
+
             self.cumulative_regrets = np.zeros(len(self.children))
             self.strategy = np.zeros(len(self.children))
             self.cumulative_strategy = np.zeros(len(self.children))
 
         elif self.current_player_id != self.original_player_id and len(self.children) < 10:
             hypothetical_game = deepcopy(self.game)
+            
             # Sample if not the same players turn as before
             if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
-                print("Sampling private information for others")
                 hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
             print("Current role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id)
             options = hypothetical_game.get_options_from_state()
             choice_index = np.random.choice(range(len(options)))
             options[choice_index].carry_out(hypothetical_game)
-            #if check_same_memory_address(self.game, hypothetical_game):
-            #    print("X")
+            hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
+
 
             self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 

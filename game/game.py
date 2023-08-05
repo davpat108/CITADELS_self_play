@@ -102,7 +102,7 @@ class Game():
             # All roles from config if not specified
             if avaible_roles is None:
                 avaible_roles = roles
-            self.roles = self.sample_roles(avaible_roles, 8)
+            self.roles = self.sample_roles_for_player(avaible_roles, 8)
             
             self.turn_orders_for_roles = [0, 1, 2, 3, 4, 5]
             random.shuffle(self.turn_orders_for_roles)
@@ -136,7 +136,7 @@ class Game():
             return self.players == __value.players and self.deck == __value.deck and self.discard_deck == __value.discard_deck and self.used_cards == __value.used_cards and self.gamestate == __value.gamestate and self.ending == __value.ending and self.terminal == __value.terminal
         return False
         
-    def sample_roles(self, avaible_roles, number_of_used_roles):
+    def sample_roles_for_player(self, avaible_roles, number_of_used_roles):
         roles = {}
 
         for i in range(number_of_used_roles):
@@ -183,7 +183,7 @@ class Game():
 
     def get_unknown_cards(self, player_character):
         unknown_cards = deepcopy(self.used_cards) # Start with a copy of all used cards
-        unknown_cards.cards = unknown_cards.cards*3
+        unknown_cards.cards = unknown_cards.cards
 
         # Remove cards that any player has in their buildings deck
         for p in self.players:
@@ -218,13 +218,28 @@ class Game():
         for hk in player_character.known_hands:
             random_chance = random.random()
             if (hk.confidence - 1) * 0.2 > random_chance:
-                hk.used = False
+                hk.used = False # TODO
             else:
                 hk.used = False
 
         unknown_cards = self.get_unknown_cards(player_character)
-        known_roles_by_player = deepcopy(player_character.known_roles)
 
+        self.sample_deck(player_character, unknown_cards)
+        self.sample_warrants_and_blackmails()
+        # Settle players
+        known_roles_by_player = deepcopy(player_character.known_roles)
+        for player in self.players:
+            self.sample_cards_for_opponent(player, player_character, unknown_cards)
+            self.sample_roles_for_opponent(player, player_character, known_roles_by_player)
+
+        self.refresh_roles_after_sampling_roles()
+
+
+        # Replace the game's deck with the remaining unknown cards
+
+        self.check_if_all_cards_exist()
+
+    def sample_deck(self, player_character, unknown_cards):
         # Settle deck
         deck_count = len(self.deck.cards)
         lighthouse_knowledge = deepcopy(next((hk for hk in player_character.known_hands if hk.player_id == -1 and hk.used), None))
@@ -244,61 +259,76 @@ class Game():
         for _ in range(deck_count):
             self.deck.add_card(unknown_cards.draw_card())
 
-        # Settle players
-        for player in self.players:
-            if player == player_character:
-                continue
+    def sample_cards_for_opponent(self, player, original_player, unknown_cards):
+        if player == original_player:
+            return
+        # Check if player exists in HandKnowledge list and if it is used
+        player_hand_knowledge = deepcopy(next((hk for hk in original_player.known_hands if hk.player_id == player.id and hk.used), None))
+        player_hand_card_count = len(player.hand.cards)
+        player.hand.cards = []
+        if player_hand_knowledge is not None:
+            # Number of cards to take from HandKnowledge
+            known_card_count = min(len(player_hand_knowledge.hand.cards), player_hand_card_count)
+            for _ in range(known_card_count):
+                card_to_take = player_hand_knowledge.hand.cards.pop(0)
+                unknown_cards.get_a_card_like_it(card_to_take)
+                player.hand.add_card(card_to_take)
+                player_hand_card_count -= 1
+        # Fill the rest of the hand with random cards
+        for _ in range(player_hand_card_count):
+            player.hand.add_card(unknown_cards.draw_card())
+        
 
-            # Check if player exists in HandKnowledge list and if it is used
-            player_hand_knowledge = deepcopy(next((hk for hk in player_character.known_hands if hk.player_id == player.id and hk.used), None))
+    def sample_roles_for_opponent(self, player, original_player, known_roles_by_player):
+        # Dont sample for original player or the current playing beginning its round
+        if original_player == player or player.id == self.gamestate.player_id:
+            return
 
-            player_hand_card_count = len(player.hand.cards)
-            player.hand.cards = []
-            if player_hand_knowledge is not None:
-                # Number of cards to take from HandKnowledge
-                known_card_count = min(len(player_hand_knowledge.hand.cards), player_hand_card_count)
-                for _ in range(known_card_count):
-                    card_to_take = player_hand_knowledge.hand.cards.pop(0)
-                    unknown_cards.get_a_card_like_it(card_to_take)
-                    player.hand.add_card(card_to_take)
-                    player_hand_card_count -= 1
-
-            # Fill the rest of the hand with random cards
-            for _ in range(player_hand_card_count):
-                player.hand.add_card(unknown_cards.draw_card())
-            
-            # Sample blackmails
-            blackmails = [key for key, role_property in self.role_properties.items() if role_property.blackmail is not None]
-            if blackmails:
-                random.shuffle(blackmails)
-                real_blackmail_key = blackmails[0]
-                for key in blackmails:
-                    self.role_properties[key].blackmail = "Real" if key == real_blackmail_key else "Fake"
-            
-            # Sample warrants
-            warrants = [key for key, role_property in self.role_properties.items() if role_property.warrant is not None]
-            if warrants:
-                random.shuffle(warrants)
-                real_warrant_key = warrants[0]
-                for key in warrants:
-                    self.role_properties[key].warrant = "Real" if key == real_warrant_key else "Fake"
-
-            # Sample roles
-            if self.gamestate.state != 0:
-                player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
-
-                # Remove the chosen role from all RoleKnowledge objects
-                for rk in known_roles_by_player:
-                    rk.possible_roles = {k: v for k, v in rk.possible_roles.items() if v != player.role}
 
         if self.gamestate.state != 0:
-            self.refresh_used_roles()
+            player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
+            # Remove the chosen role from all RoleKnowledge objects
+            for rk in known_roles_by_player:
+                rk.possible_roles = {k: v for k, v in rk.possible_roles.items() if v != player.role}
+
+
+
+    def sample_private_info_after_role_pick_end(self, original_player):
+        known_roles_by_player = deepcopy(original_player.known_roles)
+        if self.gamestate.state == 1 and self.gamestate.player_id == self.get_player_from_role_id(self.used_roles[0]).id:
+            for player in self.players:
+                self.sample_roles_for_opponent(player, original_player, known_roles_by_player)
+            self.refresh_roles_after_sampling_roles(from_role_pick_end_sample=True)
+
+
+
+    def sample_warrants_and_blackmails(self):
+        # Sample blackmails
+        blackmails = [key for key, role_property in self.role_properties.items() if role_property.blackmail is not None]
+        if blackmails:
+            random.shuffle(blackmails)
+            real_blackmail_key = blackmails[0]
+            for key in blackmails:
+                self.role_properties[key].blackmail = "Real" if key == real_blackmail_key else "Fake"
+        
+        # Sample warrants
+        warrants = [key for key, role_property in self.role_properties.items() if role_property.warrant is not None]
+        if warrants:
+            random.shuffle(warrants)
+            real_warrant_key = warrants[0]
+            for key in warrants:
+                self.role_properties[key].warrant = "Real" if key == real_warrant_key else "Fake"
+
+
+    def refresh_roles_after_sampling_roles(self, from_role_pick_end_sample=False):
+        # refresh orders after sampling roles
+        if self.gamestate.state != 0:
+            if not from_role_pick_end_sample:
+                self.refresh_used_roles()
         
             if not self.gamestate.interruption:
-                self.setup_next_player(current_player_id=self.gamestate.player_id)
+                self.setup_next_player(current_player_id=self.gamestate.player_id, from_role_pick_end_sample=from_role_pick_end_sample)
 
-        # Replace the game's deck with the remaining unknown cards
-        self.deck.cards = unknown_cards.cards
 
     def refresh_used_roles(self):
         # Clear the used_roles list
@@ -322,9 +352,20 @@ class Game():
             return self.players[points.index(max(points))]
         return False
 
+    def check_if_all_cards_exist(self):
+        total_cards = []
+        for player in self.players:
+            total_cards += player.hand.cards
+            total_cards += player.buildings.cards
+            total_cards += player.museum_cards.cards
+            total_cards += player.just_drawn_cards.cards
+        total_cards += self.deck.cards
+        total_cards += self.discard_deck.cards
+        if sorted(self.used_cards.cards) != sorted(total_cards):
+            raise Exception("Card error in sampling")
 
-    def setup_next_player(self, current_player_id=None):
-        if self.gamestate.state == 0:
+    def setup_next_player(self, current_player_id=None, from_role_pick_end_sample=False):
+        if self.gamestate.state == 0 or from_role_pick_end_sample:
             self.refresh_used_roles()
             self.gamestate.state = 1
             self.gamestate.player_id = self.get_player_from_role_id(self.used_roles[0]).id

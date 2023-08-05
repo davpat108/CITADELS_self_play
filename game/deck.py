@@ -13,6 +13,11 @@ class Card:
         if isinstance(other, Card):
             return self.type_ID == other.type_ID
         return False
+
+    def __lt__(self, other:int) -> bool:
+        if isinstance(other, Card):
+            return self.type_ID < other.type_ID
+        return False
     
     def __deepcopy__(self, memo):
         return Card(deepcopy(self.type_ID, memo), deepcopy(self.suit, memo), deepcopy(self.cost, memo))
@@ -38,6 +43,7 @@ class Deck:
         if isinstance(other, Deck):
             return self.cards == other.cards
         return False
+
     
     def get_a_card_like_it(self, card_to_get:Card):
         for card in self.cards:

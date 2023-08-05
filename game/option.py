@@ -153,6 +153,7 @@ class option():
         game.roles_to_choose_from.pop(role_to_role_id[self.attributes['choice']])
         used_role = (role_to_role_id[self.attributes['choice']], self.attributes['choice'])
 
+        # Settling role knowledge of other players
         for player in game.players:
             if player != game.players[self.attributes['perpetrator']]:
                 # Before this player
