@@ -36,6 +36,7 @@ class CFRNode:
         if self.current_player_id == self.original_player_id and len(self.children) == 0:
             options = self.game.get_options_from_state()
             for option in options:
+
                 hypothetical_game = deepcopy(self.game)
 
                 # Sample if not the same players turn as before
@@ -44,7 +45,7 @@ class CFRNode:
                 option.carry_out(hypothetical_game)
                 hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
 
-                print("Current role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id)
+                print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name )
                 self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 
 
@@ -58,13 +59,12 @@ class CFRNode:
             # Sample if not the same players turn as before
             if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
                 hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
-            print("Current role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id)
             options = hypothetical_game.get_options_from_state()
             choice_index = np.random.choice(range(len(options)))
             options[choice_index].carry_out(hypothetical_game)
+            
             hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
-
-
+            print("Added child info set from opponent child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", options[choice_index].name )
             self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
@@ -91,7 +91,7 @@ class CFRNode:
             # Traverse
             node.update_strategy()
             node, action = node.action_choice()
-            print(f"cfr{i}, Action: ", action.name)
+            print(f"cfr{i}, Traversion: ", action.name)
             # leaf node
             # terminal node, get rewards, calc regrets, backpropagate
             if node.is_terminal():

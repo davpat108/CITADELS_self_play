@@ -214,6 +214,7 @@ class Game():
         return unknown_cards
 
     def sample_private_information(self, player_character):
+        print("Sampling private information")
         # Decide whether to use each HandKnowledge based on confidence, (confidence * 20% chance)
         for hk in player_character.known_hands:
             random_chance = random.random()
@@ -228,6 +229,9 @@ class Game():
         self.sample_warrants_and_blackmails()
         # Settle players
         known_roles_by_player = deepcopy(player_character.known_roles)
+
+        self.remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self.players[self.gamestate.player_id].role, known_roles_by_player)
+
         for player in self.players:
             self.sample_cards_for_opponent(player, player_character, unknown_cards)
             self.sample_roles_for_opponent(player, player_character, known_roles_by_player)
@@ -238,6 +242,7 @@ class Game():
         # Replace the game's deck with the remaining unknown cards
 
         self.check_if_all_cards_exist()
+
 
     def sample_deck(self, player_character, unknown_cards):
         # Settle deck
@@ -279,25 +284,38 @@ class Game():
             player.hand.add_card(unknown_cards.draw_card())
         
 
-    def sample_roles_for_opponent(self, player, original_player, known_roles_by_player):
+    def sample_roles_for_opponent(self, player, original_player, known_roles_by_player, role_pick_end_sample=False):
         # Dont sample for original player or the current playing beginning its round
-        if original_player == player or player.id == self.gamestate.player_id:
+        if original_player == player or (player.id == self.gamestate.player_id and not role_pick_end_sample):
             return
-
 
         if self.gamestate.state != 0:
             player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
             # Remove the chosen role from all RoleKnowledge objects
-            for rk in known_roles_by_player:
-                rk.possible_roles = {k: v for k, v in rk.possible_roles.items() if v != player.role}
+            self.remove_role_from_role_knowledge(player.role, known_roles_by_player)
 
+
+    def remove_role_from_role_knowledge(self, role, role_knowledge_list):
+        for rk in role_knowledge_list:
+            if not rk.confirmed:
+                rk.possible_roles = {k: v for k, v in rk.possible_roles.items() if v != role}
+            
+
+    def remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self, role, known_roles_by_player):
+        # Remove the players role whose about to play from the samples, and all the roles that are smalled id
+        self.remove_role_from_role_knowledge(role, known_roles_by_player)
+        if role is not None:
+            logically_left_out_role_ids = [role_id for role_id in self.roles.keys() if role_id < role_to_role_id[role]]
+            for role_id in logically_left_out_role_ids:
+                self.remove_role_from_role_knowledge(self.roles[role_id], known_roles_by_player)
 
 
     def sample_private_info_after_role_pick_end(self, original_player):
-        known_roles_by_player = deepcopy(original_player.known_roles)
         if self.gamestate.state == 1 and self.gamestate.player_id == self.get_player_from_role_id(self.used_roles[0]).id:
+            print("Sampling private information after role pick end")
+            known_roles_by_player = deepcopy(original_player.known_roles)
             for player in self.players:
-                self.sample_roles_for_opponent(player, original_player, known_roles_by_player)
+                self.sample_roles_for_opponent(player, original_player, known_roles_by_player, role_pick_end_sample=True)
             self.refresh_roles_after_sampling_roles(from_role_pick_end_sample=True)
 
 

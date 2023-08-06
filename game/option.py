@@ -758,14 +758,17 @@ def confirm_role_knowledges(revealed_player, game):
     """
     Reveal the role of the player_character to all players.
     """
+    # If blackmailer reveales herself first, I know witch isn't picked
+    logically_left_out_role_ids = [role_id for role_id in game.used_roles if role_id < role_to_role_id[revealed_player.role]]
     for player in game.players:
         for role_knowledge in player.known_roles:
             if role_knowledge.player_id == revealed_player.id:
                 # Confirm the role of the revealed player
                 role_knowledge.possible_roles = {role_to_role_id[revealed_player.role]: revealed_player.role}
-            else:
-                # Remove the revealed role from the possible_roles of all other players
-                role_knowledge.possible_roles = {role_id: role for role_id, role in role_knowledge.possible_roles.items() if role != revealed_player.role}
+                role_knowledge.confirmed = True
+            elif not role_knowledge.confirmed:
+                # Remove the revealed role from the possible_roles of all other players and logically left out roles
+                role_knowledge.possible_roles = {role_id: role for role_id, role in role_knowledge.possible_roles.items() if role != revealed_player.role or role_id not in logically_left_out_role_ids}
 
 
 def move_crown(game, target_player_id):

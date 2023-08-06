@@ -47,6 +47,7 @@ class RoleKnowlage():
     def __init__(self, player_id, possible_roles) -> None:
         self._player_id = player_id
         self._possible_roles = possible_roles
+        self.confirmed = False
     
     @property
     def player_id(self):
