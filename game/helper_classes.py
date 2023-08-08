@@ -66,3 +66,6 @@ class RoleKnowlage():
     def possible_roles(self, value):
         #print(f'Changing value of possible roles from {self._possible_roles} to {value}')
         self._possible_roles = value
+
+    def __str__(self):
+        return f"RoleKnowledge(player_id={self._player_id}, possible_roles={self._possible_roles}, confirmed={self.confirmed})"

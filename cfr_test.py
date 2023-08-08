@@ -2,6 +2,7 @@ from game.game import Game
 
 from random import choice
 from algorithms.cfr import CFRNode
+from algorithms.visualization import visualize_cfr_tree
 
 game = Game()
 game.setup_round()

@@ -231,7 +231,7 @@ class Game():
         known_roles_by_player = deepcopy(player_character.known_roles)
 
         self.remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self.players[self.gamestate.player_id].role, known_roles_by_player)
-
+        [print(role_knowledge) for role_knowledge in known_roles_by_player]
         for player in self.players:
             self.sample_cards_for_opponent(player, player_character, unknown_cards)
             self.sample_roles_for_opponent(player, player_character, known_roles_by_player)
@@ -291,6 +291,7 @@ class Game():
 
         if self.gamestate.state != 0:
             player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
+            print(f"Player {player.id} role is {player.role}")
             # Remove the chosen role from all RoleKnowledge objects
             self.remove_role_from_role_knowledge(player.role, known_roles_by_player)
 
@@ -341,11 +342,10 @@ class Game():
     def refresh_roles_after_sampling_roles(self, from_role_pick_end_sample=False):
         # refresh orders after sampling roles
         if self.gamestate.state != 0:
-            if not from_role_pick_end_sample:
-                self.refresh_used_roles()
+            self.refresh_used_roles()
         
-            if not self.gamestate.interruption:
-                self.setup_next_player(current_player_id=self.gamestate.player_id, from_role_pick_end_sample=from_role_pick_end_sample)
+            #if not self.gamestate.interruption:
+            #    self.setup_next_player(current_player_id=self.gamestate.player_id, from_role_pick_end_sample=from_role_pick_end_sample)
 
 
     def refresh_used_roles(self):
@@ -379,6 +379,7 @@ class Game():
             total_cards += player.just_drawn_cards.cards
         total_cards += self.deck.cards
         total_cards += self.discard_deck.cards
+        
         if sorted(self.used_cards.cards) != sorted(total_cards):
             raise Exception("Card error in sampling")
 
@@ -395,9 +396,14 @@ class Game():
             raise Exception("No current player and not in rolepick state")
 
     def get_player_from_role_id(self, role_id):
-        for player in self.players:
-            if player.role == self.roles[role_id]:
-                return player
+        if role_id == -1:
+            for player in self.players:
+                if player.role == "Bewitched":
+                    return player
+        else:
+            for player in self.players:
+                if player.role == self.roles[role_id]:
+                    return player
         return None
 
 
