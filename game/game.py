@@ -229,9 +229,8 @@ class Game():
         self.sample_warrants_and_blackmails()
         # Settle players
         known_roles_by_player = deepcopy(player_character.known_roles)
-
+        x = self.players[self.gamestate.player_id].role
         self.remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self.players[self.gamestate.player_id].role, known_roles_by_player)
-        [print(role_knowledge) for role_knowledge in known_roles_by_player]
         for player in self.players:
             self.sample_cards_for_opponent(player, player_character, unknown_cards)
             self.sample_roles_for_opponent(player, player_character, known_roles_by_player)
@@ -291,7 +290,6 @@ class Game():
 
         if self.gamestate.state != 0:
             player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
-            print(f"Player {player.id} role is {player.role}")
             # Remove the chosen role from all RoleKnowledge objects
             self.remove_role_from_role_knowledge(player.role, known_roles_by_player)
 
@@ -303,7 +301,7 @@ class Game():
             
 
     def remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self, role, known_roles_by_player):
-        # Remove the players role whose about to play from the samples, and all the roles that are smalled id
+        # Remove the players role whose about to play from the samples, and all the roles that are smaller id
         self.remove_role_from_role_knowledge(role, known_roles_by_player)
         if role is not None:
             logically_left_out_role_ids = [role_id for role_id in self.roles.keys() if role_id < role_to_role_id[role]]
@@ -342,10 +340,11 @@ class Game():
     def refresh_roles_after_sampling_roles(self, from_role_pick_end_sample=False):
         # refresh orders after sampling roles
         if self.gamestate.state != 0:
-            self.refresh_used_roles()
+            if not from_role_pick_end_sample: # It is already done later in setup next player
+                self.refresh_used_roles()
         
-            #if not self.gamestate.interruption:
-            #    self.setup_next_player(current_player_id=self.gamestate.player_id, from_role_pick_end_sample=from_role_pick_end_sample)
+            if not self.gamestate.interruption and from_role_pick_end_sample:
+                self.setup_next_player(current_player_id=self.gamestate.player_id, from_role_pick_end_sample=from_role_pick_end_sample)
 
 
     def refresh_used_roles(self):
@@ -380,8 +379,14 @@ class Game():
         total_cards += self.deck.cards
         total_cards += self.discard_deck.cards
         
-        if sorted(self.used_cards.cards) != sorted(total_cards):
-            raise Exception("Card error in sampling")
+        used_card_ids = [card.type_ID for card in self.used_cards.cards]
+        total_card_ids = [card.type_ID for card in total_cards]
+
+        missing_from_used = [card_id for card_id in total_card_ids if card_id not in used_card_ids]
+        missing_from_total = [card_id for card_id in used_card_ids if card_id not in total_card_ids]
+
+        if missing_from_used or missing_from_total:
+            raise Exception(f"Card error in sampling. Missing from used cards: {missing_from_used}. Missing from total cards: {missing_from_total}.")
 
     def setup_next_player(self, current_player_id=None, from_role_pick_end_sample=False):
         if self.gamestate.state == 0 or from_role_pick_end_sample:

@@ -45,7 +45,7 @@ class CFRNode:
                 option.carry_out(hypothetical_game)
                 hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
 
-                print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
+                #print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
                 self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 
 
@@ -64,7 +64,7 @@ class CFRNode:
             options[choice_index].carry_out(hypothetical_game)
             
             hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
-            print("Added child info set from opponent child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", options[choice_index].name )
+
             self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
@@ -91,8 +91,8 @@ class CFRNode:
             # Traverse
             node.update_strategy()
             node, action = node.action_choice()
-            if hasattr(action, "choice"):
-                print(f"cfr{i}, Traversion: ", action.name, "choice: ", action.choice)
+            if "role" in action.attributes.keys():
+                print(f"cfr{i}, Traversion: ", action.name, "choice: ", action.attributes["role"])
             else:
                 print(f"cfr{i}, Traversion: ", action.name)
             # leaf node
