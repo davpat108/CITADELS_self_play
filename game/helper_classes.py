@@ -64,7 +64,7 @@ class RoleKnowlage():
 
     @possible_roles.setter
     def possible_roles(self, value):
-        #print(f'Changing value of possible roles from {self._possible_roles} to {value}')
+        #print(f'Changing value of possible roles of {self._player_id} from {self._possible_roles} to {value}')
         self._possible_roles = value
 
     def __str__(self):

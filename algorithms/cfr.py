@@ -45,7 +45,7 @@ class CFRNode:
                 option.carry_out(hypothetical_game)
                 hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
 
-                #print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
+                print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
                 self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 
 
@@ -62,7 +62,7 @@ class CFRNode:
             options = hypothetical_game.get_options_from_state()
             choice_index = np.random.choice(range(len(options)))
             options[choice_index].carry_out(hypothetical_game)
-            
+            print("Added child info set from opponent child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", options[choice_index].name )
             hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
 
             self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
@@ -79,7 +79,7 @@ class CFRNode:
     def get_reward(self):
         return self.game.rewards
 
-    def cfr(self, max_iterations=100):
+    def cfr(self, max_iterations=10000):
         # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 

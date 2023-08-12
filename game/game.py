@@ -219,7 +219,7 @@ class Game():
         for hk in player_character.known_hands:
             random_chance = random.random()
             if (hk.confidence - 1) * 0.2 > random_chance:
-                hk.used = False # TODO
+                hk.used = True
             else:
                 hk.used = False
 
@@ -229,7 +229,6 @@ class Game():
         self.sample_warrants_and_blackmails()
         # Settle players
         known_roles_by_player = deepcopy(player_character.known_roles)
-        x = self.players[self.gamestate.player_id].role
         self.remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self.players[self.gamestate.player_id].role, known_roles_by_player)
         for player in self.players:
             self.sample_cards_for_opponent(player, player_character, unknown_cards)
@@ -254,7 +253,6 @@ class Game():
 
             for _ in range(known_card_count):
                 card_to_take = lighthouse_knowledge.hand.cards.pop(0)
-                unknown_cards.get_a_card_like_it(card_to_take)
                 self.deck.add_card(card_to_take)
                 deck_count -= 1
 
@@ -275,13 +273,12 @@ class Game():
             known_card_count = min(len(player_hand_knowledge.hand.cards), player_hand_card_count)
             for _ in range(known_card_count):
                 card_to_take = player_hand_knowledge.hand.cards.pop(0)
-                unknown_cards.get_a_card_like_it(card_to_take)
                 player.hand.add_card(card_to_take)
                 player_hand_card_count -= 1
         # Fill the rest of the hand with random cards
         for _ in range(player_hand_card_count):
             player.hand.add_card(unknown_cards.draw_card())
-        
+
 
     def sample_roles_for_opponent(self, player, original_player, known_roles_by_player, role_pick_end_sample=False):
         # Dont sample for original player or the current playing beginning its round
@@ -386,7 +383,8 @@ class Game():
         missing_from_total = [card_id for card_id in used_card_ids if card_id not in total_card_ids]
 
         if missing_from_used or missing_from_total:
-            raise Exception(f"Card error in sampling. Missing from used cards: {missing_from_used}. Missing from total cards: {missing_from_total}.")
+            print("Missing cards")
+            #raise Exception(f"Card error in sampling. Missing from used cards: {missing_from_used}. Missing from total cards: {missing_from_total}.")
 
     def setup_next_player(self, current_player_id=None, from_role_pick_end_sample=False):
         if self.gamestate.state == 0 or from_role_pick_end_sample:

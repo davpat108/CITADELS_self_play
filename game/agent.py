@@ -49,6 +49,7 @@ class Agent():
     def get_options(self, game):
         if game.gamestate.state == 0:
             return self.pick_role_options(game)
+        # If bewitched role_id is not in role properties
         if self.role == "Bewitched" or not game.role_properties[role_to_role_id[self.role]].dead:
             if game.gamestate.state == 1:
                 return self.gold_or_card_options(game)

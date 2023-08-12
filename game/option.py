@@ -347,11 +347,12 @@ class option():
             if Card(**{"suit":"unique", "type_ID":30, "cost": 5}) in game.players[self.attributes['perpetrator']].buildings.cards:
                 if len(game.players[self.attributes['perpetrator']].hand.cards) == 0:
                     game.players[self.attributes['perpetrator']].gold += 1
+
+        if self.attributes['crown']:
+            confirm_role_knowledges(game.players[self.attributes['perpetrator']], game)
+            move_crown(game, self.attributes['perpetrator'])
         # witch
         if self.attributes['next_witch']:
-            # Witch cannot take the crown
-            if self.attributes['crown']:
-                move_crown(game, self.attributes['perpetrator'])
 
             # Witch is making the choices
             game.gamestate.state = 5
@@ -377,10 +378,13 @@ class option():
         
         # I was the last player in the round
         if game.used_roles[-1] == role_to_role_id[game.players[self.attributes['perpetrator']].role]:
+            if game.ending:
+                print("X")
             winner = game.check_game_ending()
             if not winner:
                 game.setup_round()
             else:
+
                 return winner
 
         # Not the last player
@@ -410,7 +414,6 @@ class option():
         
     # ID 1
     def carry_out_stealing(self, game):
-        # TODO this is wrong like this
         game.role_properties[self.attributes['target']].robbed = True
         game.gamestate.state = 5
         game.gamestate.player_id = self.attributes['perpetrator']
@@ -534,7 +537,7 @@ class option():
         if self.attributes['gold_or_card'] == "gold":
             game.players[self.attributes['perpetrator']].gold += 1
             game.players[self.attributes['target']].gold -= 1
-
+        confirm_role_knowledges(game.players[self.attributes['perpetrator']], game)
         move_crown(game, self.attributes['target'])
         game.gamestate.state = 5
         game.gamestate.player_id = self.attributes['perpetrator']
