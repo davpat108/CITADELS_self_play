@@ -378,8 +378,6 @@ class option():
         
         # I was the last player in the round
         if game.used_roles[-1] == role_to_role_id[game.players[self.attributes['perpetrator']].role]:
-            if game.ending:
-                print("X")
             winner = game.check_game_ending()
             if not winner:
                 game.setup_round()

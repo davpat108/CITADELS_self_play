@@ -16,10 +16,10 @@ class CFRNode:
         
         # Initialize regrets and strategy
         self.cumulative_regrets = np.array([])
-        self.strategy = np.zeros([])
-        self.cumulative_strategy = np.zeros([])
-        self.node_value = np.zeros(player_count) # For the current_player node_value[player_id] = reward
-        
+        self.strategy = np.array([])
+        self.cumulative_strategy = np.array([])
+        self.node_value = np.zeros(player_count)
+
 
     def action_choice(self):
         # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
@@ -33,45 +33,77 @@ class CFRNode:
 
 
     def expand(self):
-        if self.current_player_id == self.original_player_id and len(self.children) == 0:
-            options = self.game.get_options_from_state()
-            for option in options:
+        """
+        Expands the node by adding all possible children to the node.
+        Make repeats multiple times if its the end of the role pick phase
+        For original player it expands to every option once, while for opponent expands once per traversion
+        """
+    
+        def expansion_logic(expansion_function):
+            current_count = 0
+            max_repeat_count = 1
+    
+            while current_count < max_repeat_count:
+                max_repeat_count = expansion_function()
+                current_count += 1
+    
+        if self.current_player_id == self.original_player_id and not self.children:
+            expansion_logic(self.expand_for_original_player)
+        elif self.current_player_id != self.original_player_id and len(self.children) < 10:
+            expansion_logic(self.expand_for_opponents)
 
-                hypothetical_game = deepcopy(self.game)
 
-                # Sample if not the same players turn as before
-                if self.parent is None or  hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
-                    hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
-                option.carry_out(hypothetical_game)
+
+    
+    def expand_for_original_player(self):
+        max_rep_count = 1
+        options = self.game.get_options_from_state()
+        for option in options:
+
+            hypothetical_game = deepcopy(self.game)
+
+            # Sample if not the same players turn as before
+            if self.parent is None or  hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
+                hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
+            option.carry_out(hypothetical_game)
+
+            if hypothetical_game.is_end_of_role_pick():
+                max_rep_count = 5
                 hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
 
-                print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
-                self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
+            print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
+            self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 
+        self.cumulative_regrets = np.zeros(len(self.children))
+        self.strategy = np.zeros(len(self.children))
+        self.cumulative_strategy = np.zeros(len(self.children))
 
-            self.cumulative_regrets = np.zeros(len(self.children))
-            self.strategy = np.zeros(len(self.children))
-            self.cumulative_strategy = np.zeros(len(self.children))
+        return max_rep_count
 
-        elif self.current_player_id != self.original_player_id and len(self.children) < 10:
-            hypothetical_game = deepcopy(self.game)
-            
-            # Sample if not the same players turn as before
-            if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
-                hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
-            options = hypothetical_game.get_options_from_state()
-            choice_index = np.random.choice(range(len(options)))
-            options[choice_index].carry_out(hypothetical_game)
-            print("Added child info set from opponent child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", options[choice_index].name )
-            hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
+    def expand_for_opponents(self):
+        max_rep_count = 1
+        hypothetical_game = deepcopy(self.game)
+        # Sample if not the same players turn as before
+        if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
+            hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id])
 
-            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
+        options = hypothetical_game.get_options_from_state()
+        choice_index = np.random.choice(range(len(options)))
+        options[choice_index].carry_out(hypothetical_game)
+        print("Added child info set from opponent child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", options[choice_index].name)
 
-            self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
-            self.strategy = np.append(self.strategy, 0)
-            self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
+        if hypothetical_game.is_end_of_role_pick():
+           max_rep_count = 10
+           hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
 
-            
+        self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
+
+        self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
+        self.strategy = np.append(self.strategy, 0)
+        self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
+
+        return max_rep_count
+
 
     def is_terminal(self):
         return self.game.terminal
@@ -104,7 +136,7 @@ class CFRNode:
                 node = self
             else:
                 node.expand()
-        
+        self.update_strategy()
 
         
 
@@ -121,18 +153,32 @@ class CFRNode:
         for a in range(len(self.children)):
             self.cumulative_regrets[a] += max_reward - actual_rewards[a]
     
+    def print_tree_values(self, node, depth=0):
+        """
+        Recursively print the values of nodes in the tree.
+
+        :param node: The current node being examined.
+        :param depth: The depth of the current node in the tree. Root has depth 0.
+        """
+
+        # Print the node value with an indentation proportional to its depth
+        print(f"Node depth: {depth} (Player {node.current_player_id}): Value = {node.node_value}")
+        if depth > 20:
+            return
+        # Recursively call the function for each child
+        for _, child_node in node.children:
+            self.print_tree_values(child_node, depth + 1)
 
     def backpropagate(self, reward):
-        if self.parent is None:
-            return
-
         # Update the value of this node
         self.node_value += reward
 
         # Calculate regret for this node
         if self.children:
             self.update_regrets()
-
+            
+        if self.parent is None:
+            return
         # Recursively call backpropagate on parent node
         self.parent.backpropagate(reward)
 

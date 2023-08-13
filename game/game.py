@@ -232,9 +232,9 @@ class Game():
         self.remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self.players[self.gamestate.player_id].role, known_roles_by_player)
         for player in self.players:
             self.sample_cards_for_opponent(player, player_character, unknown_cards)
-            self.sample_roles_for_opponent(player, player_character, known_roles_by_player)
+            #self.sample_roles_for_opponent(player, player_character, known_roles_by_player)
 
-        self.refresh_roles_after_sampling_roles()
+        #self.refresh_roles_after_sampling_roles()
 
 
         # Replace the game's deck with the remaining unknown cards
@@ -284,7 +284,6 @@ class Game():
         # Dont sample for original player or the current playing beginning its round
         if original_player == player or (player.id == self.gamestate.player_id and not role_pick_end_sample):
             return
-
         if self.gamestate.state != 0:
             player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
             # Remove the chosen role from all RoleKnowledge objects
@@ -307,14 +306,17 @@ class Game():
 
 
     def sample_private_info_after_role_pick_end(self, original_player):
-        if self.gamestate.state == 1 and self.gamestate.player_id == self.get_player_from_role_id(self.used_roles[0]).id:
-            print("Sampling private information after role pick end")
-            known_roles_by_player = deepcopy(original_player.known_roles)
-            for player in self.players:
-                self.sample_roles_for_opponent(player, original_player, known_roles_by_player, role_pick_end_sample=True)
-            self.refresh_roles_after_sampling_roles(from_role_pick_end_sample=True)
+        print("Sampling private information after role pick end")
+        known_roles_by_player = deepcopy(original_player.known_roles)
+        for player in self.players:
+            self.sample_roles_for_opponent(player, original_player, known_roles_by_player, role_pick_end_sample=True)
+        self.refresh_roles_after_sampling_roles(from_role_pick_end_sample=True)
 
-
+    def is_end_of_role_pick(self):
+        # If someone is bewitched, its not the end of role pick, and witch is also changed
+        if "Bewitched" in [player.role for player in self.players]:
+            return False
+        return self.gamestate.state == 1 and self.gamestate.player_id == self.get_player_from_role_id(self.used_roles[0]).id
 
     def sample_warrants_and_blackmails(self):
         # Sample blackmails
