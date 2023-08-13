@@ -16,8 +16,8 @@ class CFRNode:
         
         # Initialize regrets and strategy
         self.cumulative_regrets = np.array([])
-        self.strategy = np.zeros([])
-        self.cumulative_strategy = np.zeros([])
+        self.strategy = np.array([])
+        self.cumulative_strategy = np.array([])
         self.node_value = np.zeros(player_count) # For the current_player node_value[player_id] = reward
         
 
@@ -79,7 +79,7 @@ class CFRNode:
     def get_reward(self):
         return self.game.rewards
 
-    def cfr(self, max_iterations=10000):
+    def cfr(self, max_iterations=1000):
         # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 
@@ -104,7 +104,7 @@ class CFRNode:
                 node = self
             else:
                 node.expand()
-        
+
 
         
 
@@ -123,9 +123,6 @@ class CFRNode:
     
 
     def backpropagate(self, reward):
-        if self.parent is None:
-            return
-
         # Update the value of this node
         self.node_value += reward
 
@@ -133,6 +130,8 @@ class CFRNode:
         if self.children:
             self.update_regrets()
 
+        if self.parent is None:
+            return
         # Recursively call backpropagate on parent node
         self.parent.backpropagate(reward)
 
