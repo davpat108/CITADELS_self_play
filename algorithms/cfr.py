@@ -96,11 +96,13 @@ class CFRNode:
            max_rep_count = 10
            hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
 
-        self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
+        child_options = [child[0] for child in self.children]
+        if not options[choice_index] in child_options:
+            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
 
-        self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
-        self.strategy = np.append(self.strategy, 0)
-        self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
+            self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
+            self.strategy = np.append(self.strategy, 0)
+            self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
 
         return max_rep_count
 
