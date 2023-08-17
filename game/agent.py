@@ -1,3 +1,5 @@
+import random
+
 from game.deck import Deck, Card
 from game.option import option
 from game.config import role_to_role_id
@@ -439,14 +441,36 @@ class Agent():
     
     def seer_options(self, game):
         return [option(name="seer", perpetrator=self.id)]
-    
+
 
     def seer_give_back_card(self, game):
+        def random_permutations(cards, k, position=0, num_permutations=3):
+            """
+            For each card in cards, place it in the specified position and generate num_permutations random orderings
+            from the remaining cards for the other positions.
+            """
+            all_perms = []
+
+            for card in cards:
+                remaining_cards = [c for c in cards if c != card]
+
+                for _ in range(num_permutations):
+                    random.shuffle(remaining_cards)
+                    perm_with_position = list(remaining_cards[:k-1])  # Take the first k-1 cards after shuffling
+                    perm_with_position.insert(position, card)
+                    all_perms.append(tuple(perm_with_position))
+
+            return all_perms
+
         options = []
-        perms = list(permutations(self.hand.cards, len(game.seer_taken_card_from)))
-        for i in range(0, len(perms), max(round(len(perms)/1e3), 1)):
-            card_handouts = {player_card_pair[0] : player_card_pair[1] for player_card_pair in zip(game.seer_taken_card_from, perms[i])}
-            options.append(option(name="give_back_card", perpetrator=self.id, card_handouts=card_handouts))
+        k = len(game.seer_taken_card_from)
+
+        for pos in range(k):
+            perms = random_permutations(self.hand.cards, k, position=pos)
+            for perm in perms:
+                card_handouts = {player_card_pair[0]: player_card_pair[1] for player_card_pair in zip(game.seer_taken_card_from, perm)}
+                options.append(option(name="give_back_card", perpetrator=self.id, card_handouts=card_handouts))
+
         return options
 
     # ID 3
