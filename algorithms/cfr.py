@@ -53,7 +53,26 @@ class CFRNode:
             expansion_logic(self.expand_for_opponents)
 
 
-
+    def expand_role_pick(self):
+        max_repeat_count = 10
+        for i in range(max_repeat_count):
+            hypothetical_game = deepcopy(self.game)
+            while self.game.gamestate.state != 1:
+                options = hypothetical_game.get_options_from_state()
+                choice_index = np.random.choice(range(len(options)))
+                if self.current_player_id == self.original_player_id:
+                    option_to_carry_out = options[choice_index]
+                options[choice_index].carry_out(hypothetical_game)
+            # Must be at the end of rolepick
+            assert self.game.gamestate.player_id == self.game.get_player_from_role_id(self.used_roles[0]).id
+            # TODO based on strategy
+            hypothetical_game.sample_private_info_after_role_pick_end(hypothetical_game.players[self.original_player_id])
+            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self)))
+        
+            self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
+            self.strategy = np.append(self.strategy, 0)
+            self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
+            
     
     def expand_for_original_player(self):
         max_rep_count = 1
