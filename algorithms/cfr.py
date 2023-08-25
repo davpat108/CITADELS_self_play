@@ -3,7 +3,7 @@ from copy import deepcopy
 from game.checks import check_same_memory_address
 
 class CFRNode:
-    def __init__(self, game, current_player_id, original_player_id, parent=None, player_count = 6, role_count=8, role_pick_node=False):
+    def __init__(self, game, current_player_id, original_player_id, parent=None, player_count = 6, role_pick_node=False):
         self.game = game # Unkown informations are present but counted as dont care
 
         self.parent = parent
@@ -19,26 +19,29 @@ class CFRNode:
         self.strategy = np.array([])
         self.cumulative_strategy = np.array([])
         self.node_value = np.zeros(player_count)
-        
-        self.role_strategy = np.zeros((role_count, len(self.game.players)))
+
         self.role_pick_node = role_pick_node
         
 
 
     def action_choice(self):
-        # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
-        normalized_strategy = self.strategy / self.strategy.sum()
+        if not self.role_pick_node:
+            # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
+            normalized_strategy = self.strategy / self.strategy.sum()
 
-        # Choose an action according to the normalized strategy
-        choice_index = np.random.choice(range(len(self.children)), p=normalized_strategy)
+            # Choose an action according to the normalized strategy
+            choice_index = np.random.choice(range(len(self.children)), p=normalized_strategy)
 
-        # Return the chosen child and option
-        return  self.children[choice_index][1], self.children[choice_index][0]
+            # Return the chosen child and option
+            return self.children[choice_index][1], self.children[choice_index][0]
 
+        else:
+            
+            pick_hierarchy = self.game.turn_orders_for_roles
 
     def expand(self):
         
-        if self.game.gamestate.state == 0:
+        if self.game.gamestate.state == 0 and not self.children:
             self.expand_role_pick()
         elif self.current_player_id == self.original_player_id and not self.children:
             self.expand_for_original_player()
@@ -60,9 +63,9 @@ class CFRNode:
             assert hypothetical_game.gamestate.player_id == hypothetical_game.get_player_from_role_id(hypothetical_game.used_roles[0]).id
             self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=False)))
         
-            self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
-            self.strategy = np.append(self.strategy, 0)
-            self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
+            self.cumulative_regrets = np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
+            self.strategy = np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
+            self.cumulative_strategy = np.concatenate((self.cumulative_strategy, np.zeros((1, 6))), axis=0)
             
     
     def expand_for_original_player(self):
@@ -152,13 +155,11 @@ class CFRNode:
             for a in range(len(self.children)):
                 self.cumulative_regrets[a] += max_reward - actual_rewards[a]
         else:
-            # Calculate the actual rewards for each action
-            actual_rewards = [child[1].node_value for child in self.children]
-            # Get the maximum possible reward
-            max_reward = max(actual_rewards)
-            # Update regrets
-            for a in range(len(self.children)):
-                self.cumulative_regrets[a] += max_reward - actual_rewards[a]
+            actual_rewards = np.array([child[1].node_value for child in self.children]).T
+
+            max_rewards = np.max(actual_rewards, axis=0)
+            regret_values = max_rewards - actual_rewards
+            self.cumulative_regrets += regret_values
     
     def print_tree_values(self, node, depth=0):
         """
@@ -190,8 +191,8 @@ class CFRNode:
         self.parent.backpropagate(reward)
 
     def update_strategy(self):
-        total_regret = np.sum(self.cumulative_regrets)
         if not self.role_pick_node:
+            total_regret = np.sum(self.cumulative_regrets)
             if total_regret > 0:
                 # Normalize the regrets to get a probability distribution
                 self.strategy = self.cumulative_regrets / total_regret
@@ -199,7 +200,15 @@ class CFRNode:
                 # If there is no regret, use a uniform random strategy
                 self.strategy = np.ones(len(self.children)) / len(self.children)
         else:
-            pick_hierarchy = self.game.turn_orders_for_roles
+                
+            # Calculate the total regrets for each child
+            total_regrets = np.sum(self.cumulative_regrets, axis=0)
+
+            positive_regret_mask = total_regrets > 0
+            uniform_strategy = np.ones(6) / 6
+            new_strategies = np.tile(uniform_strategy[:, np.newaxis], (1, len(self.children)))
+            new_strategies[:, positive_regret_mask] = self.cumulative_regrets[:, positive_regret_mask] / total_regrets[positive_regret_mask]
+            self.strategy = new_strategies
 
         # Update the cumulative strategy used for the average strategy output
         self.cumulative_strategy += self.strategy
