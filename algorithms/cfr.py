@@ -23,6 +23,21 @@ class CFRNode:
         self.role_pick_node = role_pick_node
         
 
+    def weighted_average_strategy(strategy_matrix, pick_hierarchy):
+        """
+        strategy_matrix: A numpy array of shape (player_count, len(children)).
+        pick_hierarchy: A list of player indexes representing the order of picking.
+
+        Returns a 1-D numpy array of the weighted average strategy.
+        """
+        player_count = len(pick_hierarchy)
+        weighted_strategy = np.zeros(strategy_matrix.shape[1])
+
+        for i, player_idx in enumerate(pick_hierarchy):
+            weight = player_count - i
+            weighted_strategy += strategy_matrix[player_idx] * weight
+
+        return weighted_strategy / sum(pick_hierarchy)
 
     def action_choice(self):
         if not self.role_pick_node:
@@ -36,8 +51,17 @@ class CFRNode:
             return self.children[choice_index][1], self.children[choice_index][0]
 
         else:
-            
             pick_hierarchy = self.game.turn_orders_for_roles
+            avg_strategy = self.weighted_average_strategy(self.strategy, pick_hierarchy)
+    
+            # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
+            normalized_strategy = avg_strategy / avg_strategy.sum()
+
+            # Choose an action according to the normalized strategy
+            choice_index = np.random.choice(range(len(self.children)), p=normalized_strategy)
+
+            # Return the chosen child and option
+            return self.children[choice_index][1], self.children[choice_index][0]
 
     def expand(self):
         
