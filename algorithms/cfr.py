@@ -23,7 +23,7 @@ class CFRNode:
         self.role_pick_node = role_pick_node
         
 
-    def weighted_average_strategy(strategy_matrix, pick_hierarchy):
+    def weighted_average_strategy(self, strategy_matrix, pick_hierarchy):
         """
         strategy_matrix: A numpy array of shape (player_count, len(children)).
         pick_hierarchy: A list of player indexes representing the order of picking.
@@ -66,6 +66,7 @@ class CFRNode:
     def expand(self):
         
         if self.game.gamestate.state == 0 and not self.children:
+            self.role_pick_node = True
             self.expand_role_pick()
         elif self.current_player_id == self.original_player_id and not self.children:
             self.expand_for_original_player()
@@ -87,9 +88,13 @@ class CFRNode:
             assert hypothetical_game.gamestate.player_id == hypothetical_game.get_player_from_role_id(hypothetical_game.used_roles[0]).id
             self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=False)))
         
-            self.cumulative_regrets = np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
-            self.strategy = np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
-            self.cumulative_strategy = np.concatenate((self.cumulative_strategy, np.zeros((1, 6))), axis=0)
+            self.cumulative_regrets = np.zeros((1, 6)) if self.cumulative_regrets.size == 0 else np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
+            self.strategy = np.zeros((1, 6)) if self.strategy.size == 0 else np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
+            self.cumulative_strategy = np.zeros((1, 6)) if self.cumulative_strategy.size == 0 else np.concatenate((self.cumulative_strategy, np.zeros((1, 6))), axis=0)
+        
+        self.cumulative_regrets = self.cumulative_regrets.T
+        self.strategy = self.strategy.T
+        self.cumulative_strategy = self.cumulative_strategy.T
             
     
     def expand_for_original_player(self):
@@ -137,7 +142,7 @@ class CFRNode:
     def get_reward(self):
         return self.game.rewards
 
-    def cfr(self, max_iterations=10000):
+    def cfr(self, max_iterations=100000):
         # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 
