@@ -48,6 +48,8 @@ class Agent():
     #9 Scholar_give put back cards
     #10 Wizard choose from hand
 
+    
+
     def get_options(self, game):
         if game.gamestate.state == 0:
             return self.pick_role_options(game)
