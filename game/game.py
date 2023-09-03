@@ -136,6 +136,94 @@ class Game():
             return self.players == __value.players and self.deck == __value.deck and self.discard_deck == __value.discard_deck and self.used_cards == __value.used_cards and self.gamestate == __value.gamestate and self.ending == __value.ending and self.terminal == __value.terminal
         return False
         
+    def encode_avalible_roles(self, config_roles):
+        # Create a mapping of roles to their index
+        role_to_index = {}
+        for key, role_list in config_roles.items():
+            for idx, role in enumerate(role_list):
+                role_to_index[role] = idx
+
+        # Create an 8x3 numpy array filled with zeros
+        encoded_array = np.zeros((8, 3), dtype=int)
+
+        # Iterate over the self.roles dictionary and fill in the one-hot encoding
+        for key, role in self.roles.items():
+            encoded_array[key][role_to_index[role]] = 1
+
+        return encoded_array
+    
+    def encode_player_roles(self):
+        # Create a 6x8 numpy array filled with zeros
+        encoded_array = np.zeros((6, 8), dtype=int)
+
+        # Iterate over the players and fill in the one-hot encoding
+        for player in self.players:
+            if player.role is None or player.role == "Bewitched":
+                continue
+            role_index = role_to_role_id.get(player.role)
+            if role_index is not None:
+                encoded_array[player.id][role_index] = 1
+
+        return encoded_array
+
+
+    def encode_role_properties(role_properties):
+        """
+        Encodes the role properties into an 8x5 numpy array.
+        The function checks each attribute of the RoleProperty object in the order:
+        'dead', 'warrant', 'possessed', 'robbed', 'blackmail'. If the attribute is 
+        not None or not False, the corresponding position in the numpy array is set to 1.
+
+        Args:
+        - role_properties (dict): A dictionary where keys are role IDs and values are RoleProperty objects.
+
+        Returns:
+        - numpy.ndarray: An 8x5 numpy array representing the encoded role properties.
+        """
+
+        encoded_array = np.zeros((8, 5), dtype=int)
+        attributes_order = ['dead', 'warrant', 'possessed', 'robbed', 'blackmail']
+
+        for role_id, role_property in role_properties.items():
+            for idx, attribute in enumerate(attributes_order):
+                value = getattr(role_property, attribute)
+                if value:
+                    encoded_array[role_id][idx] = 1
+
+        return encoded_array
+
+    def encode_output(self, player_id):
+        encoded_avalible_roles = self.encode_avalible_roles(roles)
+        player_roles= self.encode_player_roles()
+        encoded_player_hand, encoded_hand_suits = self.players[player_id].hand.encode_deck()
+
+        encoded_built_cards, encoded_buildings_suits = zip(*[player.buildings.encode_deck() for player in self.players])
+        encoded_built_cards = np.vstack(encoded_built_cards)
+        encoded_buildings_suits = np.vstack(encoded_buildings_suits)
+
+        encoded_player_ID = np.zeros(6, dtype=int)
+        encoded_player_ID[player_id] = 1
+
+        encoded_just_drawn_cards, encoded_just_drawn_suits = self.players[player_id].just_drawn_cards.encode_deck()
+
+        encoded_role_properties = self.encode_role_properties()
+
+        encoded_array = np.concatenate([
+        encoded_avalible_roles.flatten(),
+        player_roles.flatten(),
+        encoded_player_hand.flatten(),
+        encoded_hand_suits.flatten(),
+        encoded_built_cards.flatten(),
+        encoded_buildings_suits.flatten(),
+        encoded_player_ID.flatten(),
+        encoded_just_drawn_cards.flatten(),
+        encoded_just_drawn_suits.flatten(),
+        encoded_role_properties.flatten()
+        ])
+
+        return encoded_array
+
+
     def sample_roles_for_player(self, avaible_roles, number_of_used_roles):
         roles = {}
 
