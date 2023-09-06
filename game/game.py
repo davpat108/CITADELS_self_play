@@ -131,6 +131,9 @@ class Game():
         self.ending = False
         self.terminal = False
 
+        #CONST
+        self.game_model_output_size = 413
+
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, Game):
             return self.players == __value.players and self.deck == __value.deck and self.discard_deck == __value.discard_deck and self.used_cards == __value.used_cards and self.gamestate == __value.gamestate and self.ending == __value.ending and self.terminal == __value.terminal
@@ -192,7 +195,7 @@ class Game():
 
         return encoded_array
 
-    def encode_output(self, player_id):
+    def encode_game(self, player_id):
         encoded_avalible_roles = self.encode_avalible_roles(roles)
         player_roles= self.encode_player_roles()
         encoded_player_hand, encoded_hand_suits = self.players[player_id].hand.encode_deck()
