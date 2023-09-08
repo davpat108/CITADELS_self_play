@@ -10,11 +10,12 @@ while 1:
     tota_options = 0
     while not winner:
         i+=1
-        options = game.get_options_from_state()
+        options, _ = game.get_options_from_state()
         tota_options += len(options)
         chosen_option = choice(options)
         print(chosen_option.name)
         winner = chosen_option.carry_out(game)
+        x = game.encode_game()
 
     print(tota_options/i)
     print(winner.id)

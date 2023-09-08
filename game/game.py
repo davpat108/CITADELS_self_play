@@ -1,10 +1,15 @@
-from game.agent import Agent
-from game.deck import Deck, Card
-from game.config import building_cards, unique_building_cards, roles, role_to_role_id
 import random
-from game.helper_classes import RolePropery, GameState
-from copy import deepcopy, copy
+from copy import copy, deepcopy
+
 import numpy as np
+import torch.nn.functional as F
+
+from game.agent import Agent
+from game.config import (building_cards, role_to_role_id, roles,
+                         unique_building_cards)
+from game.deck import Card, Deck
+from game.helper_classes import GameState, RolePropery
+
 
 class Game():
     def __init__(self, avaible_roles=None, debug=False) -> None:
@@ -132,7 +137,7 @@ class Game():
         self.terminal = False
 
         #CONST
-        self.game_model_output_size = 413
+        self.game_model_output_size = 1487
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, Game):
@@ -170,7 +175,7 @@ class Game():
         return encoded_array
 
 
-    def encode_role_properties(role_properties):
+    def encode_role_properties(self):
         """
         Encodes the role properties into an 8x5 numpy array.
         The function checks each attribute of the RoleProperty object in the order:
@@ -183,7 +188,7 @@ class Game():
         Returns:
         - numpy.ndarray: An 8x5 numpy array representing the encoded role properties.
         """
-
+        role_properties = self.role_properties
         encoded_array = np.zeros((8, 5), dtype=int)
         attributes_order = ['dead', 'warrant', 'possessed', 'robbed', 'blackmail']
 
@@ -195,7 +200,8 @@ class Game():
 
         return encoded_array
 
-    def encode_game(self, player_id):
+    def encode_game(self):
+        player_id = self.gamestate.player_id
         encoded_avalible_roles = self.encode_avalible_roles(roles)
         player_roles= self.encode_player_roles()
         encoded_player_hand, encoded_hand_suits = self.players[player_id].hand.encode_deck()
@@ -226,6 +232,11 @@ class Game():
 
         return encoded_array
 
+    def process_model_output(self, model_output):
+        """
+        Processes the model output into a dictionary of options. Output length is 1487.
+        """
+        winning_probabilities = F.softmax(model_output[:6], dim=0)
 
     def sample_roles_for_player(self, avaible_roles, number_of_used_roles):
         roles = {}
@@ -233,7 +244,7 @@ class Game():
         for i in range(number_of_used_roles):
             roles[i] = random.choice(avaible_roles[i])
         
-        return roles
+        return dict(sorted(roles.items()))
     
     def setup_round(self):
         for role_property in self.role_properties.values():
