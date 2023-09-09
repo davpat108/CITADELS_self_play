@@ -74,7 +74,7 @@ class Deck:
         shuffle(self.cards)
 
     def encode_deck(deck):
-        encoded_type_IDs = np.zeros(39, dtype=int)
+        encoded_type_IDs = np.zeros(40, dtype=int)
         encoded_suits = np.zeros(5, dtype=int)
         suit_to_index = {
             "trade": 0,

@@ -153,10 +153,10 @@ class Agent():
 
     # Options from gamestates
     def pick_role_options(self, game):
-        return [option(name="role_pick", perpetrator=self.id, choice=role) for role in game.roles_to_choose_from.values()], [self.create_mask(game.game_model_output_size, 6, 14, list(game.roles_to_choose_from.keys()))]
+        return [option(name="role_pick", perpetrator=self.id, choice=role) for role in game.roles_to_choose_from.values()], [[self.create_mask(game.game_model_output_size, 6, 14, list(game.roles_to_choose_from.keys()))]]
 
     def gold_or_card_options(self, game):
-        return [option(name="gold_or_card", perpetrator=self.id, choice="gold"), option(name="gold_or_card", perpetrator=self.id, choice="card")] if len(game.deck.cards) > 1 else [option(name="gold_or_card", perpetrator=self.id, choice="gold")], [self.create_mask(game.game_model_output_size, 14, 15)]
+        return [option(name="gold_or_card", perpetrator=self.id, choice="gold"), option(name="gold_or_card", perpetrator=self.id, choice="card")] if len(game.deck.cards) > 1 else [option(name="gold_or_card", perpetrator=self.id, choice="gold")], [[self.create_mask(game.game_model_output_size, 14, 15)]]
     
     def which_card_to_keep_options(self, game):
         options = []
@@ -165,18 +165,18 @@ class Agent():
             for card_choice in card_choices:
                 options.append(option(name="which_card_to_keep", perpetrator=self.id, choice=card_choice))
             return options
-        return [option(name="which_card_to_keep", perpetrator=self.id, choice=[card]) for card in self.just_drawn_cards.cards], [self.create_mask(game.game_model_output_size, 15, 54, [card.type_ID for card in self.just_drawn_cards.cards])]
+        return [option(name="which_card_to_keep", perpetrator=self.id, choice=[card]) for card in self.just_drawn_cards.cards], [[self.create_mask(game.game_model_output_size, 15, 55, [card.type_ID for card in self.just_drawn_cards.cards])]]
 
     def blackmail_response_options(self, game) -> list:
         if game.role_properties[role_to_role_id[self.role]].blackmail:
-            return [option(choice="pay", perpetrator=self.id, name="blackmail_response"), option(choice="not_pay", perpetrator=self.id, name="blackmail_response")], [self.create_mask(game.game_model_output_size, 54, 55)]
-        return [option(name="empty_option", perpetrator=self.id, next_gamestate=GameState(state=5, player_id=self.id))], [self.create_mask(game.game_model_output_size, 54, 55)]
+            return [option(choice="pay", perpetrator=self.id, name="blackmail_response"), option(choice="not_pay", perpetrator=self.id, name="blackmail_response")], [[self.create_mask(game.game_model_output_size, 55, 56)]]
+        return [option(name="empty_option", perpetrator=self.id, next_gamestate=GameState(state=5, player_id=self.id))], [[self.create_mask(game.game_model_output_size, 56, 56)]]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer")], [self.create_mask(game.game_model_output_size, 55, 56)]
+        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer")], [[self.create_mask(game.game_model_output_size, 56, 57)]]
     
     def reveal_warrant_as_magistrate_options(self, game) -> list:
-        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate")], [self.create_mask(game.game_model_output_size, 56, 57)]
+        return [option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate")], [[self.create_mask(game.game_model_output_size, 57, 58)]]
 
 
     def ghost_town_color_choice_options(self) -> list:
@@ -188,15 +188,15 @@ class Agent():
         
     def smithy_options(self, game) -> list:
         if Card(**{"suit":"unique", "type_ID":21, "cost": 5}) in self.buildings.cards and self.gold >= 2 and not "smithy" in game.gamestate.already_done_moves:
-            return [option(name="smithy_choice", perpetrator=self.id)], self.create_mask(game.game_model_output_size, 1397, 1398)
-        return [], self.create_mask(game.game_model_output_size, 1397, 1397)
+            return [option(name="smithy_choice", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 1430, 1431)]]
+        return [], [[self.create_mask(game.game_model_output_size, 1397, 1397)]]
     
     def laboratory_options(self, game) -> list:
         options = []
         if Card(**{"suit":"unique", "type_ID":22, "cost": 5}) in self.buildings.cards and not "lab" in game.gamestate.already_done_moves:
             for card in self.hand.cards:
-                options.append(option(name="laboratory_choice", perpetrator=self.id, choice=card)), self.create_mask(game.game_model_output_size, 1398, 1399)
-        return [], self.create_mask(game.game_model_output_size, 1399, 1399)
+                options.append(option(name="laboratory_choice", perpetrator=self.id, choice=card)), self.create_mask(game.game_model_output_size, 1431, 1431)
+        return [], [[self.create_mask(game.game_model_output_size, 1399, 1399)]]
     
     def magic_school_options(self, game) -> list:
         # Every round
@@ -204,8 +204,8 @@ class Agent():
         if not "magic_school" in game.gamestate.already_done_moves:
             if Card(**{"suit":"unique", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"trade", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"war", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"religion", "type_ID":25, "cost": 6}) in self.buildings.cards or Card(**{"suit":"lord", "type_ID":25, "cost": 6}) in self.buildings.cards:
                 return [option(choice="trade", perpetrator=self.id, name="magic_school_choice"), option(choice="war", perpetrator=self.id, name="magic_school_choice"),
-                         option(choice="religion", perpetrator=self.id, name="magic_school_choice"), option(choice="lord", perpetrator=self.id, name="magic_school_choice"), option(choice="unique", perpetrator=self.id, name="magic_school_choice")], [self.create_mask(game.game_model_output_size, 1399, 1400), self.create_mask(game.game_model_output_size, 1400, 1406)]
-        return [], [self.create_mask(game.game_model_output_size, 1406, 1406), self.create_mask(game.game_model_output_size, 1406, 1406)]
+                         option(choice="religion", perpetrator=self.id, name="magic_school_choice"), option(choice="lord", perpetrator=self.id, name="magic_school_choice"), option(choice="unique", perpetrator=self.id, name="magic_school_choice")], [self.create_mask(game.game_model_output_size, 1432, 1433), self.create_mask(game.game_model_output_size, 1433, 1438)]
+        return [], [[self.create_mask(game.game_model_output_size, 1430, 1430), self.create_mask(game.game_model_output_size, 1430, 1430)]]
     
     def weapon_storage_options(self, game) -> list:
         options = []
@@ -215,7 +215,7 @@ class Agent():
                     for card in player.buildings.cards:
                         options.append(option(perpetrator=self.id,target=player.id, choice = card, name="weapon_storage_choice"))
         used_bits = [] if options == [] else [0]
-        return options, [self.create_mask(game.game_model_output_size, 1406, 1407, used_bits)]
+        return options, [[self.create_mask(game.game_model_output_size, 1438, 1439, used_bits)]]
     
     def lighthouse_options(self, game) -> list:
         options = []
@@ -223,7 +223,7 @@ class Agent():
             for card in game.deck.cards:
                 options.append(option(choice=card, perpetrator=self.id, name="lighthouse_choice"))
         used_bits = [] if options == [] else [card.type_ID for card in game.deck.cards]
-        return options, [self.create_mask(game.game_model_output_size, 1407, 1408), self.create_mask(game.game_model_output_size, 1408, 1447, used_bits)]
+        return options, [[self.create_mask(game.game_model_output_size, 1439, 1440), self.create_mask(game.game_model_output_size, 1440, 1480, used_bits)]]
 
     def museum_options(self, game) -> list:
         options = []
@@ -231,7 +231,7 @@ class Agent():
             for card in self.hand.cards:
                 options.append(option(choice=card, perpetrator=self.id, name="museum_choice"))
         used_bits = [] if options == [] else [card.type_ID for card in self.hand.cards]
-        return options, [self.create_mask(game.game_model_output_size, 1447, 1448), self.create_mask(game.game_model_output_size, 1448, 1487, used_bits)]
+        return options, [[self.create_mask(game.game_model_output_size, 1480, 1481), self.create_mask(game.game_model_output_size, 1481, 1521, used_bits)]]
 
     # Main stuff
     def get_builds(self, options) -> list:
@@ -256,8 +256,8 @@ class Agent():
         else:
             if game.gamestate.already_done_moves.count("non_trade_building") < build_limit:
                 self.get_builds(options)
-        build_possibe_bit = [0] if option.name == "build" else []
-        return options, [self.create_mask(game.game_model_output_size, 58, 59, build_possibe_bit), self.create_mask(game.game_model_output_size, 59, 98, list(set([option.built_card.type_ID for option in options])))]  # 0 is for the first bit, whether to build or not
+        build_possibe_bit = [0] if len(options) else []
+        return options, [[self.create_mask(game.game_model_output_size, 60, 61, build_possibe_bit), self.create_mask(game.game_model_output_size, 61, 101, list(set([option.attributes["built_card"].type_ID for option in options])))]]  # 0 is for the first bit, whether to build or not
 
 
     def main_round_options(self, game):
@@ -280,12 +280,12 @@ class Agent():
     
     def graveyard_options(self, game):
         if self.gold > 0:
-            return [option(name="graveyard", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 57, 58)]
-        return [option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)], [self.create_mask(game.game_model_output_size, 57, 57)]
+            return [option(name="graveyard", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 58, 59)]
+        return [option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)], [[self.create_mask(game.game_model_output_size, 57, 57)]]
 
 
     def character_options(self, game):
-        all_options = []
+        decision_dict = {}
         all_masks = []
 
         # ID 0
@@ -324,35 +324,34 @@ class Agent():
 
 
             }
+            
+        if self.role in role_functions:
+            options, masks = role_functions[self.role](game)
+            decision_dict[1] = options
+            all_masks += masks
 
-            if self.role in role_functions:
-                options, masks = role_functions[self.role](game)
-                all_options += options
-                all_masks.append(masks)
+            # If the role is Magician, split the options based on their names
+            if self.role == "Magician":
+                magic_hand_change_options = [opt for opt in options if opt.name == "magic_hand_change"]
+                discard_and_draw_options = [opt for opt in options if opt.name == "discard_and_draw"]
+                decision_dict[1] = magic_hand_change_options
+                decision_dict[2] = discard_and_draw_options
 
-        elif self.role in ["Warlord", "Marshal", "Diplomat"]:
-            options, masks = self.take_gold_for_war_options(game)
-            all_options += options
-            all_masks.append(masks)
-        elif self.role == "Abbot":
+        # Handle Abbot's additional options
+        if self.role == "Abbot":
             options, masks = self.abbot_beg(game)
-            all_options += options
-            all_masks.append(masks)
-        # ID 8
-        # Not yet
+            decision_dict[2] = options
+            all_masks += masks
 
-        # Compute the logical AND of all masks
-        primary_mask = [mask[0] for mask in all_masks]
-        secoundary_mask = [mask[1] for mask in all_masks if len(mask)>1]
-        tetriary_mask = [mask[2] for mask in all_masks if len(mask)>2]
-        cardinal_mask = [mask[3] for mask in all_masks if len(mask)>3]
+        # Handle Warlord, Diplomat, and Marshal's additional options
+        if self.role in ["Warlord", "Marshal", "Diplomat"]:
+            options, masks = self.take_gold_for_war_options(game)
+            decision_dict[2] = options
+            # Compute the logical AND of all masks
+            all_masks += masks
 
-        combined_primary_mask = np.logical_and.reduce(primary_mask).astype(int)
-        combined_secoundary_mask = np.logical_and.reduce(secoundary_mask).astype(int) if secoundary_mask != [] else None
-        combined_tetriary_mask = np.logical_and.reduce(tetriary_mask).astype(int) if tetriary_mask != [] else None
-        combined_cardinal_mask = np.logical_and.reduce(cardinal_mask).astype(int) if cardinal_mask != [] else None
 
-        return all_options, [combined_primary_mask, combined_secoundary_mask, combined_tetriary_mask, combined_cardinal_mask]
+        return decision_dict
 
 
 
@@ -363,7 +362,7 @@ class Agent():
             target_possibilities.pop(next(iter(game.visible_face_up_role.keys())))
         used_bits = list(range(8))
         used_bits.remove(0) #remove the asssasin
-        return [option(name="assassination", perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0], [self.create_mask(game.game_model_output_size, 99, 100), self.create_mask(game.game_model_output_size, 100, 108, used_bits)]
+        return [option(name="assassination", perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0], [[self.create_mask(game.game_model_output_size, 101, 102), self.create_mask(game.game_model_output_size, 102, 110, used_bits)]]
         
         
     def magistrate_options(self, game):
@@ -380,7 +379,7 @@ class Agent():
                     options.append(option(name="magistrate_warrant", perpetrator=self.id, real_target=real_target, fake_targets=list(fake_tagets)))
         used_bits = list(range(8))
         used_bits.remove(0) #remove the magistrate
-        return options, [self.create_mask(game.game_model_output_size, 108, 109), self.create_mask(game.game_model_output_size, 109, 117, used_bits), self.create_mask(game.game_model_output_size, 117, 125, used_bits)]
+        return options, [[self.create_mask(game.game_model_output_size, 110, 111), self.create_mask(game.game_model_output_size, 111, 119, used_bits), self.create_mask(game.game_model_output_size, 119, 127, used_bits)]]
 
     def witch_options(self, game):
         target_possibilities = game.roles.copy()
@@ -388,7 +387,7 @@ class Agent():
             target_possibilities.pop(next(iter(game.visible_face_up_role.keys())))
         used_bits = list(range(8))
         used_bits.remove(0) #remove the witch
-        return [option(name="bewitching",  perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0], [self.create_mask(game.game_model_output_size, 125, 126), self.create_mask(game.game_model_output_size, 126, 134, used_bits)]
+        return [option(name="bewitching",  perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0], [[self.create_mask(game.game_model_output_size, 127, 128), self.create_mask(game.game_model_output_size, 128, 136, used_bits)]]
     
     
     # ID 1
@@ -398,7 +397,7 @@ class Agent():
             target_possibilities.pop(next(iter(game.visible_face_up_role.keys())))
         used_bits = list(range(8))
         used_bits.remove(1) #remove the thief
-        return [option(name="steal", perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 1], [self.create_mask(game.game_model_output_size, 134, 135), self.create_mask(game.game_model_output_size, 135, 143, used_bits)]
+        return [option(name="steal", perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 1], [[self.create_mask(game.game_model_output_size, 136, 137), self.create_mask(game.game_model_output_size, 137, 145, used_bits)]]
     
     def blackmail_options(self, game):
         options = []
@@ -418,8 +417,8 @@ class Agent():
             options.append(option(name="blackmail", perpetrator=self.id, real_target=targets[1], fake_target=targets[0]))
         used_bits = list(range(8))
         used_bits.remove(1) #remove the magistrate
-        return options, [self.create_mask(game.game_model_output_size, 143, 144), self.create_mask(game.game_model_output_size, 144, 152, used_bits), self.create_mask(game.game_model_output_size, 152, 160, used_bits)]
-    
+        return options, [[self.create_mask(game.game_model_output_size, 145, 146), self.create_mask(game.game_model_output_size, 146, 154, used_bits), self.create_mask(game.game_model_output_size, 154, 162, used_bits)]]
+
     def spy_options(self, game):
         options = []
         for player in game.players:
@@ -428,7 +427,7 @@ class Agent():
                     options.append(option(name="spy", perpetrator=self.id, target=player.id, suit=suit))
         used_bits = list(range(6))
         used_bits.remove(self.player_id)
-        return options, [self.create_mask(game.game_model_output_size, 160, 161), self.create_mask(game.game_model_output_size, 161, 167, used_bits)]
+        return options, [[self.create_mask(game.game_model_output_size, 162, 163), self.create_mask(game.game_model_output_size, 163, 169, used_bits)]]
     
     # ID 2
     def magician_options(self, game):
@@ -446,7 +445,7 @@ class Agent():
         used_bits_person_target = list(range(6))
         used_bits_person_target.remove(self.player_i)
         used_bits_which_card = list(set([card.type_ID for card in self.hand.cards]))
-        return options, [self.create_mask(game.game_model_output_size, 167, 169), self.create_mask(game.game_model_output_size, 169, 175, used_bits_person_target), self.create_mask(game.game_model_output_size, 175, 215, used_bits_which_card)]
+        return options, [[self.create_mask(game.game_model_output_size, 169, 170), self.create_mask(game.game_model_output_size, 170, 176, used_bits_person_target)], [self.create_mask(game.game_model_output_size, 176, 177), self.create_mask(game.game_model_output_size, 177, 217, used_bits_which_card)]]
 
     def wizard_look_at_hand_options(self, game):
         options = []
@@ -455,8 +454,8 @@ class Agent():
                 options.append(option(name="look_at_hand", perpetrator=self.id, target=player.id))
         used_bits = list(range(6))
         used_bits.remove(self.player_id)
-        return options, [self.create_mask(game.game_model_output_size, 215, 216, used_bits), self.create_mask(game.game_model_output_size, 216, 222, used_bits)]
-    
+        return options, [[self.create_mask(game.game_model_output_size, 217, 218, used_bits), self.create_mask(game.game_model_output_size, 218, 224, used_bits)]]
+
     def wizard_take_from_hand_options(self, game):
         target_hand = next((hand for hand in self.known_hands if hand.confidence == 5 and hand.player_id != -1 and hand.wizard==True), None)
         options = []
@@ -473,11 +472,11 @@ class Agent():
                 options.append(option(name="take_from_hand", built_card=card, build=True, perpetrator=self.id, target=target_hand.player_id, replica=replica))
         if options == []:
             return [option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)]
-        used_bits = list(set([option.card.type_ID if not option.build else option.built_card.type_ID + 39 for option in options]))
-        return options, [self.create_mask(game.game_model_output_size, 222, 300, used_bits)]
+        used_bits = list(set([option.attributes["card"].type_ID if not option.attributes["build"] else option.attributes["built_card"].type_ID + 39 for option in options]))
+        return options, [[self.create_mask(game.game_model_output_size, 224, 304, used_bits)]]
 
     def seer_options(self, game):
-        return [option(name="seer", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 300, 301)]
+        return [option(name="seer", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 304, 305)]]
 
 
     def seer_give_back_card(self, game):
@@ -509,12 +508,12 @@ class Agent():
                 card_handouts = {player_card_pair[0]: player_card_pair[1] for player_card_pair in zip(game.seer_taken_card_from, perm)}
                 options.append(option(name="give_back_card", perpetrator=self.id, card_handouts=card_handouts))
 
-        return options, [self.create_mask(game.game_model_output_size, 301, 535, [card.type_ID + i * 39 for i in range(6) for card in self.hand.cards])]
+        return options, [[self.create_mask(game.game_model_output_size, 305, 545, [card.type_ID + i * 40 for i in range(6) for card in self.hand.cards])]]
 
     # ID 3
     def king_options(self, game):
         # Nothing you just take the crown
-        return [option(name="take_crown_king", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 535, 536)]
+        return [option(name="take_crown_king", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 545, 546)]]
 
     def emperor_options(self, game, dead_emperor=False):
         options = []
@@ -530,16 +529,16 @@ class Agent():
         used_bits.remove(self.player_id)
         used_bits.remove(self.player_id+6)
         used_bits.remove(self.player_id+12)
-        return options, [self.create_mask(game.game_model_output_size, 536, 537, used_bits), self.create_mask(game.game_model_output_size, 537, 555, used_bits)]
+        return options, [self.create_mask(game.game_model_output_size, 546, 547, used_bits), self.create_mask(game.game_model_output_size, 547, 566, used_bits)]
     
     def patrician_options(self, game):
         # Nothing you just take the crown
-        return [option(name="take_crown_pat", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 555, 556)]
+        return [option(name="take_crown_pat", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 566, 567)]]
 
     # ID 4
     def bishop_options(self, game):
         # Nothing you just can't be warlorded
-        return [option(name="bishop", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 556, 557)]
+        return [option(name="bishop", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 567, 568)]]
 
     def cardinal_options(self, game):
         options = []
@@ -568,10 +567,10 @@ class Agent():
                             options.append(option(name="cardinal_exchange", perpetrator=self.id, target=player.id, built_card=card, cards_to_give=exchange_combinations[i], replica=replica, factory=factory))
         used_bits_whom = list(range(6))
         used_bits_whom.remove(self.player_id)
-        used_bits_build = list(set([option.built_card.card_ID for option in options]))
-        used_bits_give = list(set([card.card_ID for card in self.hand.cards]))
+        #used_bits_build = list(set([option.built_card.card_ID for option in options]))
+        #used_bits_give = list(set([card.card_ID for card in self.hand.cards]))
 
-        return options, [self.create_mask(game.game_model_output_size, 557, 558), self.create_mask(game.game_model_output_size, 558, 564, used_bits_whom)]#, self.create_mask(game.game_model_output_size, 564, 603, used_bits_build), self.create_mask(game.game_model_output_size, 603, 642, used_bits_give)]
+        return options, [[self.create_mask(game.game_model_output_size, 568, 569), self.create_mask(game.game_model_output_size, 569, 575, used_bits_whom)]]#, self.create_mask(game.game_model_output_size, 575, 615, used_bits_build), self.create_mask(game.game_model_output_size, 615, 655, used_bits_give)]]
     
     def abbot_options(self, game):
         options = []
@@ -579,37 +578,37 @@ class Agent():
         gold_or_card_combinations = combinations_with_replacement(["gold", "card"], total_religious_districts)
         for gold_or_card_combination in gold_or_card_combinations:
             options.append(option(name="abbot_gold_or_card", perpetrator=self.id,  gold_or_card_combination=list(gold_or_card_combination)))
-        return options, [self.create_mask(game.game_model_output_size, 642, 643), self.create_mask(game.game_model_output_size, 643, 645)]
+        return options, [[self.create_mask(game.game_model_output_size, 655, 656), self.create_mask(game.game_model_output_size, 656, 658)]]
     
     def abbot_beg(self, game):
         if not "begged" in game.gamestate.already_done_moves:
-            return [option(name="abbot_beg", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 645, 646)]
-        return [], [self.create_mask(game.game_model_output_size, 645, 645)]
+            return [option(name="abbot_beg", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 655, 658)]]
+        return [], [[self.create_mask(game.game_model_output_size, 659, 660)]]
     
     #ID 5
     def merchant_options(self, game):
         # Nothing to choose
-        return [option(name="merchant", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 646, 647)]
+        return [option(name="merchant", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 660, 661)]]
     
     def alchemist_options(self, game):
         # Nothing to choose
-        return [], [self.create_mask(game.game_model_output_size, 647, 647)]
+        return [], [self.create_mask(game.game_model_output_size, 661, 661)]
     
     def trader_options(self, game):
         # Nothing to choose
-        return [option(name="trader", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 647, 648)]
+        return [option(name="trader", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 647, 648)]]
     
     # ID 6
     def architect_options(self, game):
-        return [option(name="architect", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 648, 649)]
+        return [option(name="architect", perpetrator=self.id)], [][self.create_mask(game.game_model_output_size, 661, 662)]
     
     def navigator_options(self, game):
-        return [option(name="navigator_gold_card", perpetrator=self.id, choice="4gold"), option(name="navigator_gold_card", perpetrator=self.id, choice="4card")], [self.create_mask(game.game_model_output_size, 649, 650), self.create_mask(game.game_model_output_size, 650, 651)]
+        return [option(name="navigator_gold_card", perpetrator=self.id, choice="4gold"), option(name="navigator_gold_card", perpetrator=self.id, choice="4card")], [[self.create_mask(game.game_model_output_size, 663, 664), self.create_mask(game.game_model_output_size, 664, 665)]]
 
     def scholar_options(self, game):
         if game.deck.cards:
-            return [option(name="scholar", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 651, 652)]
-        return [], [self.create_mask(game.game_model_output_size, 651, 651)]
+            return [option(name="scholar", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 651, 652)]]
+        return [], [[self.create_mask(game.game_model_output_size, 665, 666)]]
 
     def scholar_give_back_options(self, game):
         options = []
@@ -618,8 +617,8 @@ class Agent():
             unchosen_cards = copy(seven_drawn_cards)
             unchosen_cards.get_a_card_like_it(card)
             options.append(option(name="scholar_card_pick", choice=card, perpetrator=self.id,  unchosen_cards=unchosen_cards))
-        used_bits = list(set([option.choice.type_ID for option in options]))
-        return options, [self.create_mask(game.game_model_output_size, 652, 691, used_bits)]
+        used_bits = list(set([option.attributes["choice"].type_ID for option in options]))
+        return options, [[self.create_mask(game.game_model_output_size, 666, 706, used_bits)]]
 
     # ID 7
     def warlord_options(self, game):
@@ -631,7 +630,7 @@ class Agent():
                         if option(name="warlord_desctruction", target=player.id, perpetrator=self.id, choice=building) not in options:
                             options.append(option(name="warlord_desctruction", target=player.id, perpetrator=self.id, choice=building))
         used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings]
-        return options, [self.create_mask(game.game_model_output_size, 692, 693, used_bits), self.create_mask(game.game_model_output_size, 693, 927, used_bits)]
+        return options, [[self.create_mask(game.game_model_output_size, 707, 708, used_bits), self.create_mask(game.game_model_output_size, 708, 948, used_bits)]]
 
     def marshal_options(self, game):
         options = []
@@ -642,7 +641,7 @@ class Agent():
                         if option(name="marshal_steal", target=player.id, perpetrator=self.id, choice=building) not in options:
                             options.append(option(name="marshal_steal", target=player.id, perpetrator=self.id, choice=building))
         used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings]
-        return options, [self.create_mask(game.game_model_output_size, 927, 928, used_bits), self.create_mask(game.game_model_output_size, 928, 1162, used_bits)]
+        return options, [[self.create_mask(game.game_model_output_size, 948, 949, used_bits), self.create_mask(game.game_model_output_size, 949, 1189, used_bits)]]
 
     def diplomat_options(self, game):
         options = []
@@ -654,12 +653,12 @@ class Agent():
                             if option(name="diplomat_exchange", target=player.id, perpetrator=self.id, choice=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
                                 options.append(option(name="diplomat_exchange", target=player.id, perpetrator=self.id, choice=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
         used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings]
-        return options, [self.create_mask(game.game_model_output_size, 1162, 1163, used_bits), self.create_mask(game.game_model_output_size, 1163, 1397, used_bits)]
+        return options, [[self.create_mask(game.game_model_output_size, 1189, 1190, used_bits), self.create_mask(game.game_model_output_size, 1190, 1430, used_bits)]]
     
     def take_gold_for_war_options(self, game):
         if "take_gold" not in game.gamestate.already_done_moves:
-            return [option(name="take_gold_for_war", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 691, 692)]
-        return [], [self.create_mask(game.game_model_output_size, 691, 691)]
+            return [option(name="take_gold_for_war", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 691, 692)]]
+        return [], [[self.create_mask(game.game_model_output_size, 706, 707)]]
     # ID 8 later for more players
 
 
