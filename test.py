@@ -11,6 +11,7 @@ while 1:
     while not winner:
         i+=1
         options, _ = game.get_options_from_state()
+        options = [option for option_list in options.values() for option in option_list]
         tota_options += len(options)
         chosen_option = choice(options)
         print(chosen_option.name)
