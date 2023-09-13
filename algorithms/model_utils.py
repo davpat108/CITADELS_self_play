@@ -104,7 +104,7 @@ def get_distribution(model_output, model_masks, options):
 
     for i, masks in enumerate(model_masks):
 
-        top_level_bits = model_masks[i][0]
+        top_level_bits = torch.tensor(model_masks[i][0], dtype=torch.bool)    
         top_level_probs = F.softmax(model_output[top_level_bits], dim=0)
 
         if len(masks) > 1 and i in options:
@@ -120,7 +120,7 @@ def get_distribution(model_output, model_masks, options):
 
                 combined_probs = top_level_probs[j] * subsequent_probs
                 final_probs.extend(combined_probs.tolist())
-        elif i in options and len(options[i]) > 1:
+        elif i in options and len(options) > 1:
             # If not represented by the model output, just use uniform distribution
             subsequent_probs = torch.ones(options[i])/len(options[i])
             combined_probs = top_level_probs[j] * subsequent_probs
@@ -128,6 +128,10 @@ def get_distribution(model_output, model_masks, options):
 
         else:
             final_probs.extend(top_level_probs.tolist())
+    
+    final_probs = np.array(final_probs)
+    final_probs /= final_probs.sum()
+
     return final_probs, [option for option_list in options.values() for option in option_list]
 
 def get_deck_probs(mask, distribution):
@@ -190,7 +194,7 @@ def build_targets(model_masks, distribution, winning_probabilities):
     - torch.Tensor: A target tensor for model training.
     """
     # Initialize the target tensor with zeros
-    target = torch.zeros_like(model_masks, dtype=torch.float32)
+    target = torch.zeros_like(model_masks[0], dtype=torch.float32)
     target[:winning_probabilities.shape[0]] = winning_probabilities
     dist_idx = 0
     for i, masks in enumerate(model_masks):

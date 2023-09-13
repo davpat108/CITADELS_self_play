@@ -16,7 +16,7 @@ while 1:
         chosen_option = choice(options)
         print(chosen_option.name)
         winner = chosen_option.carry_out(game)
-        x = game.encode_game()
+        #x = game.encode_game()
 
     print(tota_options/i)
     print(winner.id)

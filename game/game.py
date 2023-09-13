@@ -3,6 +3,7 @@ from copy import copy, deepcopy
 
 import numpy as np
 import torch.nn.functional as F
+import torch
 
 from game.agent import Agent
 from game.config import (building_cards, role_to_role_id, roles,
@@ -230,7 +231,7 @@ class Game():
         encoded_role_properties.flatten()
         ])
 
-        return encoded_array
+        return torch.tensor(encoded_array, dtype=torch.float32)
 
     def process_model_output(self, model_output):
         """

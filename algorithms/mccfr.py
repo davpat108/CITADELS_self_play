@@ -142,7 +142,7 @@ class CFRNode:
     def get_reward(self):
         return self.game.rewards
 
-    def cfr(self, max_iterations=100000):
+    def cfr(self, max_iterations=1000):
         # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 

@@ -23,8 +23,3 @@ class CitadelNetwork(nn.Module):
         x = self.sigmoid(self.fc4(x))
         return x
 
-# Create the model instance
-model = CitadelNetwork()
-
-# Print the model architecture
-print(model)

@@ -43,7 +43,10 @@ class CFRNode:
     def action_choice(self):
         if not self.role_pick_node:
             # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
-            normalized_strategy = self.strategy / self.strategy.sum()
+            if self.cumulative_strategy.sum() == 0:
+                normalized_strategy = np.ones(len(self.children)) / len(self.children)
+            else:
+                normalized_strategy = self.cumulative_strategy / self.cumulative_strategy.sum()
 
             # Choose an action according to the normalized strategy
             choice_index = np.random.choice(range(len(self.children)), p=normalized_strategy)
@@ -53,10 +56,13 @@ class CFRNode:
 
         else:
             pick_hierarchy = self.game.turn_orders_for_roles
-            avg_strategy = self.weighted_average_strategy(self.strategy, pick_hierarchy)
+            avg_strategy = self.weighted_average_strategy(self.cumulative_strategy, pick_hierarchy)
     
             # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
-            normalized_strategy = avg_strategy / avg_strategy.sum()
+            if avg_strategy.sum() == 0:
+                normalized_strategy = np.ones(len(self.children)) / len(self.children)
+            else:
+                normalized_strategy = avg_strategy / avg_strategy.sum()
 
             # Choose an action according to the normalized strategy
             choice_index = np.random.choice(range(len(self.children)), p=normalized_strategy)
@@ -88,7 +94,7 @@ class CFRNode:
                     distribution, options_list = get_distribution(output, masks, options)
                 else:
                     options_list = [option for option_list in options.values() for option in option_list]
-                    distribution = np.ones(len(options)) / len(options)
+                    distribution = np.ones(len(options_list)) / len(options_list)
 
                 choice_index = np.random.choice(range(len(options_list)), p=distribution)
                 if hypothetical_game.gamestate.player_id == self.original_player_id:
@@ -96,7 +102,7 @@ class CFRNode:
                 options_list[choice_index].carry_out(hypothetical_game)
             # Must be at the end of rolepick
             assert hypothetical_game.gamestate.player_id == hypothetical_game.get_player_from_role_id(hypothetical_game.used_roles[0]).id
-            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=False)))
+            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model)))
         
             self.cumulative_regrets = np.zeros((1, 6)) if self.cumulative_regrets.size == 0 else np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
             self.strategy = np.zeros((1, 6)) if self.strategy.size == 0 else np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
@@ -121,7 +127,7 @@ class CFRNode:
             option.carry_out(hypothetical_game)
             
             print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
-            self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0)))
+            self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
 
         if self.model:
             model_input = self.game.encode_game()
@@ -145,15 +151,19 @@ class CFRNode:
             distribution, options_list = get_distribution(output, masks, options)
         else:
             options_list = [option for option_list in options.values() for option in option_list]
-            distribution = np.ones(len(options)) / len(options)
+            distribution = np.ones(len(options_list)) / len(options_list)
 
-        choice_index = np.random.choice(range(len(options_list)), p=distribution)
-        options[choice_index].carry_out(hypothetical_game)
+        # If no only 1 option, choose that one, mask is empty
+        if distribution.size:
+            choice_index = np.random.choice(range(len(options_list)), p=distribution)
+        else:
+            choice_index = 0
+        options_list[choice_index].carry_out(hypothetical_game)
         print("Added child info set from opponent child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", options_list[choice_index].name)
 
         child_options = [child[0] for child in self.children]
-        if not options[choice_index] in child_options:
-            self.children.append((options_list[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0)))
+        if not options_list[choice_index] in child_options:
+            self.children.append((options_list[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
@@ -244,6 +254,7 @@ class CFRNode:
         self.parent.backpropagate(reward)
 
     def update_strategy(self):
+        self.cumulative_strategy += self.strategy
         if not self.role_pick_node:
             total_regret = np.sum(self.cumulative_regrets)
             if total_regret > 0:
@@ -264,7 +275,7 @@ class CFRNode:
             self.strategy = new_strategies
 
         # Update the cumulative strategy used for the average strategy output
-        self.cumulative_strategy += self.strategy
+
     
 
     def built_train_targets(self):
