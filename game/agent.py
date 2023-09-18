@@ -88,11 +88,12 @@ class Agent():
                 if game.gamestate.state == 10:
                     return self.wizard_take_from_hand_options(game)
             else:
-                return {0:[option(name="finish_round", perpetrator=self.id, next_witch=True, crown=True if self.role == "King" or self.role == "Patrician" else False)]}, self.create_mask(game.game_model_output_size, 0, 0)
+                return {0:[option(name="finish_round", perpetrator=self.id, next_witch=True, crown=True if self.role == "King" or self.role == "Patrician" else False)]}, self.create_mask(game.game_model_output_size, 0, 1)
         elif self.role == "Emperor" and "character_ability" not in game.gamestate.already_done_moves:
-            return self.emperor_options(game, dead_emperor=True)
+            options, mask = self.emperor_options(game, dead_emperor=True)
+            return {0:options}, mask
         else:
-            return {0:[option(name="finish_round", perpetrator=self.id, next_witch=False, crown=True if self.role == "King" or self.role == "Patrician" else False)]}, self.create_mask(game.game_model_output_size, 0, 0)
+            return {0:[option(name="finish_round", perpetrator=self.id, next_witch=False, crown=True if self.role == "King" or self.role == "Patrician" else False)]}, self.create_mask(game.game_model_output_size, 0, 1)
 
     # Helper functions for agent
     def get_build_limit(self):
@@ -166,19 +167,19 @@ class Agent():
             card_choices = list(combinations(self.just_drawn_cards.cards, 2))
             for card_choice in card_choices:
                 options.append(option(name="which_card_to_keep", perpetrator=self.id, choice=card_choice))
-            return options
-        return {0:[option(name="which_card_to_keep", perpetrator=self.id, choice=[card]) for card in self.just_drawn_cards.cards]}, [[self.create_mask(game.game_model_output_size, 0, 1), self.create_mask(game.game_model_output_size, 15, 55, [card.type_ID for card in self.just_drawn_cards.cards])]]
+            return {0:options}, [[self.create_mask(game.game_model_output_size, 0, 1)]]
+        return {0:[option(name="which_card_to_keep", perpetrator=self.id, choice=[card]) for card in self.just_drawn_cards.cards]}, [[self.create_mask(game.game_model_output_size, 0, 1), self.create_mask(game.game_model_output_size, 15, 55, [card.type_ID for card in self.just_drawn_cards.cards], type="deck")]]
 
     def blackmail_response_options(self, game) -> list:
         if game.role_properties[role_to_role_id[self.role]].blackmail:
-            return [option(choice="pay", perpetrator=self.id, name="blackmail_response"), option(choice="not_pay", perpetrator=self.id, name="blackmail_response")], [[self.create_mask(game.game_model_output_size, 55, 56)]]
-        return {0:[option(name="empty_option", perpetrator=self.id, next_gamestate=GameState(state=5, player_id=self.id))]}, [[self.create_mask(game.game_model_output_size, 56, 56)]]
+            return{0:[option(choice="pay", perpetrator=self.id, name="blackmail_response"), option(choice="not_pay", perpetrator=self.id, name="blackmail_response")]}, [[self.create_mask(game.game_model_output_size, 309, 311)]]
+        return {0:[option(name="empty_option", perpetrator=self.id, next_gamestate=GameState(state=5, player_id=self.id))]}, [[self.create_mask(game.game_model_output_size, 0, 1)]]
     
     def reveal_blackmail_as_blackmailer_options(self, game) -> list:
-        return {0:[option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer")]}, [[self.create_mask(game.game_model_output_size, 56, 57)]]
+        return {0:[option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_blackmail_as_blackmailer")]}, [[self.create_mask(game.game_model_output_size, 311, 313)]]
     
     def reveal_warrant_as_magistrate_options(self, game) -> list:
-        return {0:[option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate")]}, [[self.create_mask(game.game_model_output_size, 57, 58)]]
+        return {0:[option(choice="reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=self.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate")]}, [[self.create_mask(game.game_model_output_size, 313, 315)]]
 
 
     def ghost_town_color_choice_options(self) -> list:
@@ -226,7 +227,7 @@ class Agent():
             for card in game.deck.cards:
                 options.append(option(choice=card, perpetrator=self.id, name="lighthouse_choice"))
         used_bits = [] if options == [] else [card.type_ID for card in game.deck.cards]
-        return {7:options}, [[self.create_mask(game.game_model_output_size, 1439, 1440), self.create_mask(game.game_model_output_size, 1440, 1480, used_bits)]]
+        return {7:options}, [[self.create_mask(game.game_model_output_size, 1439, 1440), self.create_mask(game.game_model_output_size, 1440, 1480, used_bits, type="deck")]]
 
     def museum_options(self, game) -> list:
         options = []
@@ -234,7 +235,7 @@ class Agent():
             for card in self.hand.cards:
                 options.append(option(choice=card, perpetrator=self.id, name="museum_choice"))
         used_bits = [] if options == [] else [card.type_ID for card in self.hand.cards]
-        return {8:options}, [[self.create_mask(game.game_model_output_size, 1480, 1481), self.create_mask(game.game_model_output_size, 1481, 1521, used_bits)]]
+        return {8:options}, [[self.create_mask(game.game_model_output_size, 1480, 1481), self.create_mask(game.game_model_output_size, 1481, 1521, used_bits, type="deck")]]
 
     # Main stuff
     def get_builds(self, options) -> list:
@@ -260,7 +261,7 @@ class Agent():
             if game.gamestate.already_done_moves.count("non_trade_building") < build_limit:
                 self.get_builds(options)
         build_possibe_bit = [0] if len(options) else []
-        return {0:options}, [[self.create_mask(game.game_model_output_size, 60, 61, build_possibe_bit), self.create_mask(game.game_model_output_size, 61, 101, list(set([option.attributes["built_card"].type_ID for option in options])))]]  # 0 is for the first bit, whether to build or not
+        return {0:options}, [[self.create_mask(game.game_model_output_size, 60, 61, build_possibe_bit), self.create_mask(game.game_model_output_size, 61, 101, list(set([option.attributes["built_card"].type_ID for option in options])), type="deck")]]  # 0 is for the first bit, whether to build or not
 
 
     def main_round_options(self, game):
@@ -287,8 +288,8 @@ class Agent():
     
     def graveyard_options(self, game):
         if self.gold > 0:
-            return [option(name="graveyard", perpetrator=self.id)], [self.create_mask(game.game_model_output_size, 58, 59)]
-        return [option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)], [[self.create_mask(game.game_model_output_size, 57, 57)]]
+            return {0:[option(name="graveyard", perpetrator=self.id)]}, [self.create_mask(game.game_model_output_size, 58, 59)]
+        return {0:[option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)]}, [[self.create_mask(game.game_model_output_size, 0, 1)]]
 
 
     def character_options(self, game):
@@ -330,23 +331,23 @@ class Agent():
                 "Diplomat": self.diplomat_options
             }
             
-        if self.role in role_functions:
-            options, masks = role_functions[self.role](game)
-            decision_dict[1] = options
-            all_masks += masks
+            if self.role in role_functions:
+                options, masks = role_functions[self.role](game)
+                decision_dict[1] = options
+                all_masks += masks
 
-            # If the role is Magician, split the options based on their names
-            if self.role == "Magician":
-                gold = [opt for opt in options if opt.name == "magic_hand_change"]
-                discard_and_draw_options = [opt for opt in options if opt.name == "discard_and_draw"]
-                decision_dict[1] = gold
-                decision_dict[2] = discard_and_draw_options
-            
-            if self.role == "Navigator":
-                gold = [opt for opt in options if opt.attributes["choice"] == "4gold"]
-                card = [opt for opt in options if opt.attributes["choice"] == "4card"]
-                decision_dict[1] = gold
-                decision_dict[2] = card
+                # If the role is Magician, split the options based on their names
+                if self.role == "Magician":
+                    gold = [opt for opt in options if opt.name == "magic_hand_change"]
+                    discard_and_draw_options = [opt for opt in options if opt.name == "discard_and_draw"]
+                    decision_dict[1] = gold
+                    decision_dict[2] = discard_and_draw_options
+
+                if self.role == "Navigator":
+                    gold = [opt for opt in options if opt.attributes["choice"] == "4gold"]
+                    card = [opt for opt in options if opt.attributes["choice"] == "4card"]
+                    decision_dict[1] = gold
+                    decision_dict[2] = card
 
         # Handle Abbot's additional options
         if self.role == "Abbot":
@@ -361,6 +362,11 @@ class Agent():
             # Compute the logical AND of all masks
             all_masks += masks
 
+        if 1 not in decision_dict.keys():
+            all_masks += [[self.create_mask(game.game_model_output_size, 0, 0)]]
+
+        if 2 not in decision_dict.keys():
+            all_masks += [[self.create_mask(game.game_model_output_size, 0, 0)]]
 
         return decision_dict, all_masks
 
@@ -390,7 +396,7 @@ class Agent():
                     options.append(option(name="magistrate_warrant", perpetrator=self.id, real_target=real_target, fake_targets=list(fake_tagets)))
         used_bits = list(range(8))
         used_bits.remove(0) #remove the magistrate
-        return options, [[self.create_mask(game.game_model_output_size, 110, 111), self.create_mask(game.game_model_output_size, 111, 119, used_bits), self.create_mask(game.game_model_output_size, 119, 127, used_bits)]]
+        return options, [[self.create_mask(game.game_model_output_size, 110, 111)]]#, self.create_mask(game.game_model_output_size, 111, 119, used_bits), self.create_mask(game.game_model_output_size, 119, 127, used_bits)]]
 
     def witch_options(self, game):
         target_possibilities = game.roles.copy()
@@ -427,8 +433,8 @@ class Agent():
             options.append(option(name="blackmail", perpetrator=self.id, real_target=targets[0], fake_target=targets[1]))
             options.append(option(name="blackmail", perpetrator=self.id, real_target=targets[1], fake_target=targets[0]))
         used_bits = list(range(8))
-        used_bits.remove(1) #remove the magistrate
-        return options, [[self.create_mask(game.game_model_output_size, 145, 146), self.create_mask(game.game_model_output_size, 146, 154, used_bits), self.create_mask(game.game_model_output_size, 154, 162, used_bits)]]
+        used_bits.remove(1) #remove the blackmailer
+        return options, [[self.create_mask(game.game_model_output_size, 145, 146)]]#, self.create_mask(game.game_model_output_size, 146, 154, used_bits), self.create_mask(game.game_model_output_size, 154, 162, used_bits)]]
 
     def spy_options(self, game):
         options = []
@@ -484,7 +490,7 @@ class Agent():
         if options == []:
             return [option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)]
         used_bits = list(set([option.attributes["card"].type_ID if not option.attributes["build"] else option.attributes["built_card"].type_ID + 39 for option in options]))
-        return options, [[self.create_mask(game.game_model_output_size, 0, 0)]]#[[self.create_mask(game.game_model_output_size, 224, 304, used_bits)]]
+        return {2:options}, [[self.create_mask(game.game_model_output_size, 0, 1)]]#[[self.create_mask(game.game_model_output_size, 224, 304, used_bits)]]
 
     def seer_options(self, game):
         return [option(name="seer", perpetrator=self.id)], [[self.create_mask(game.game_model_output_size, 304, 305)]]
@@ -519,7 +525,7 @@ class Agent():
                 card_handouts = {player_card_pair[0]: player_card_pair[1] for player_card_pair in zip(game.seer_taken_card_from, perm)}
                 options.append(option(name="give_back_card", perpetrator=self.id, card_handouts=card_handouts))
 
-        return options, [[self.create_mask(game.game_model_output_size, 0, 0)]]# [[self.create_mask(game.game_model_output_size, 305, 545, [card.type_ID + i * 40 for i in range(6) for card in self.hand.cards])]]
+        return {2:options}, [[self.create_mask(game.game_model_output_size, 0, 1)]]# [[self.create_mask(game.game_model_output_size, 305, 545, [card.type_ID + i * 40 for i in range(6) for card in self.hand.cards])]]
 
     # ID 3
     def king_options(self, game):
@@ -629,7 +635,7 @@ class Agent():
             unchosen_cards.get_a_card_like_it(card)
             options.append(option(name="scholar_card_pick", choice=card, perpetrator=self.id,  unchosen_cards=unchosen_cards))
         used_bits = list(set([option.attributes["choice"].type_ID for option in options]))
-        return options, [[self.create_mask(game.game_model_output_size, 0, 0)]]#[[self.create_mask(game.game_model_output_size, 666, 706, used_bits)]]
+        return {2:options}, [[self.create_mask(game.game_model_output_size, 0, 0)]]#[[self.create_mask(game.game_model_output_size, 666, 706, used_bits)]]
 
     # ID 7
     def warlord_options(self, game):
@@ -640,8 +646,8 @@ class Agent():
                     if building.cost-1 <= self.gold and building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}) and player.role != "Bishop":
                         if option(name="warlord_desctruction", target=player.id, perpetrator=self.id, choice=building) not in options:
                             options.append(option(name="warlord_desctruction", target=player.id, perpetrator=self.id, choice=building))
-        used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings]
-        return options, [[self.create_mask(game.game_model_output_size, 707, 708, used_bits), self.create_mask(game.game_model_output_size, 708, 948, used_bits)]]
+        used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings.cards]
+        return options, [[self.create_mask(game.game_model_output_size, 707, 708), self.create_mask(game.game_model_output_size, 708, 948, used_bits, type="warlord")]]
 
     def marshal_options(self, game):
         options = []
@@ -651,8 +657,8 @@ class Agent():
                     if building.cost <= self.gold and building.cost <= 3 and building not in self.buildings.cards and building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}) and player.role != "Bishop":
                         if option(name="marshal_steal", target=player.id, perpetrator=self.id, choice=building) not in options:
                             options.append(option(name="marshal_steal", target=player.id, perpetrator=self.id, choice=building))
-        used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings]
-        return options, [[self.create_mask(game.game_model_output_size, 948, 949, used_bits), self.create_mask(game.game_model_output_size, 949, 1189, used_bits)]]
+        used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings.cards]
+        return options, [[self.create_mask(game.game_model_output_size, 948, 949), self.create_mask(game.game_model_output_size, 949, 1189, used_bits, type="warlord")]]
 
     def diplomat_options(self, game):
         options = []
@@ -663,8 +669,8 @@ class Agent():
                         if enemy_building.cost-own_building.cost <= self.gold and enemy_building != Card(**{"suit":"unique", "type_ID":17, "cost": 3}) and player.role != "Bishop" and enemy_building not in self.buildings.cards:
                             if option(name="diplomat_exchange", target=player.id, perpetrator=self.id, choice=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)) not in options:
                                 options.append(option(name="diplomat_exchange", target=player.id, perpetrator=self.id, choice=enemy_building, give=own_building, money_owed=abs(enemy_building.cost-own_building.cost)))
-        used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings]
-        return options, [[self.create_mask(game.game_model_output_size, 1189, 1190, used_bits), self.create_mask(game.game_model_output_size, 1190, 1430, used_bits)]]
+        used_bits = [card.type_ID * (player.id + 1) for player in game.players if player.id != self.id for card in player.buildings.cards]
+        return options, [[self.create_mask(game.game_model_output_size, 1189, 1190), self.create_mask(game.game_model_output_size, 1190, 1430, used_bits, type="warlord")]]
     
     def take_gold_for_war_options(self, game):
         if "take_gold" not in game.gamestate.already_done_moves:
@@ -673,7 +679,7 @@ class Agent():
     # ID 8 later for more players
 
 
-    def create_mask(self, model_output_size, start_index, end_index, pick_indexes=None):
+    def create_mask(self, model_output_size, start_index, end_index, pick_indexes=None, type="normal"):
         """
         Create a mask vector based on the given pick indexes within a specified interval.
 
@@ -690,251 +696,7 @@ class Agent():
         if pick_indexes is None:
             mask[start_index:end_index] = 1
         else:
+            test = mask[start_index:end_index]
             mask[start_index:end_index][pick_indexes] = 1
-        return mask
+        return [mask, type]
     
-    def get_distribtuion_from_deck(self, mask, nn_output):
-        """
-        Get the probability distribution for choices of cards based on the neural network output.
-
-        Args:
-        - mask (torch.Tensor): A binary mask indicating which cards are present.
-        - nn_output (torch.Tensor): The neural network output for the cards.
-
-        Returns:
-        - torch.Tensor: A probability distribution for choices of cards.
-        """
-        # Get the indices of the cards present in the hand
-        card_indices = torch.nonzero(mask).squeeze()
-
-        # Extract the relevant scores from the neural network output
-        card_scores = nn_output[card_indices]
-
-        # Convert the scores to a probability distribution
-        probabilities = card_scores / card_scores.sum()
-    
-        return probabilities
-    
-    def get_combined_deck_choices_for_warlords(self, nn_output, mask, num_decks=6, deck_size=40):
-        """
-        Get the combined choices for all decks based on the neural network output.
-
-        Args:
-        - nn_output (torch.Tensor): The neural network output for the cards, shaped (6*40,).
-        - mask (torch.Tensor): A binary mask indicating which cards are present, shaped (6*40,).
-
-        Returns:
-        - torch.Tensor: A joint probability distribution over all possible combinations of choices.
-        """
-        deck_distributions = []
-
-        # Iterate over each deck
-        for i in range(num_decks):
-            start_idx = i * deck_size
-            end_idx = (i + 1) * deck_size
-
-            # Extract the scores and mask for the current deck
-            deck_scores = nn_output[start_idx:end_idx]
-            deck_mask = mask[start_idx:end_idx]
-
-            # Get the distribution for the current deck
-            deck_distribution = self.get_combination_probabilities(deck_mask, deck_scores)
-            deck_distributions.append(deck_distribution)
-
-        # Compute the joint distribution over all decks
-        joint_distribution = torch.tensor(list(product(*deck_distributions)))
-        joint_distribution = joint_distribution.prod(dim=1)
-        joint_distribution /= joint_distribution.sum()
-
-        return joint_distribution
-
-    def get_distribution(self, model_output, model_masks, options):
-        """
-        Compute a conditional probability distribution for a set of options based on a hierarchical decision-making process.
-
-        The function uses the top-level masks to get a probability distribution for the top-level decisions. For each 
-        top-level decision, if there are subsequent decisions, it uses the corresponding masks to get a probability 
-        distribution conditioned on the top-level decision. The final output is a single vector representing the 
-        conditional probability distribution for all options.
-
-        Parameters:
-        - model_output (torch.Tensor): The output of the model, a vector of size (1487 currently).
-        - model_masks (list of lists of torch.Tensor): A hierarchical list of masks. Each top-level list corresponds to 
-          a top-level decision, and each subsequent list corresponds to subsequent decisions conditioned on the top-level 
-          decision.
-        - options (dict): A dictionary where keys correspond to top-level decisions and values are lists of options 
-          available for each top-level decision.
-
-        Returns:
-        - list: A probability distribution over all the options, taking into account the hierarchical decision-making process.
-        - list: all the options in the same order as the probability distribution
-
-        Example:
-        model_output = torch.tensor([0.2, 0.8, 0.1, 0.3, 0.4, 0.5, 0.6, 0.7])
-        model_bits = [
-            [torch.tensor([True, True, False, False, False, False, False, False]),
-             torch.tensor([False, False, True, True, False, False, False, False])],
-            [torch.tensor([False, False, False, False, True, True, False, False])],
-            [torch.tensor([False, False, False, False, False, False, True, True])]
-        ]
-        options = {0: ["option1", "option2"], 1: ["option3"], 2: ["option4", "option5"]}
-        distribution = get_distribution(model_output, model_bits, options)
-        """
-        final_probs = []
-
-        # Iterate over the top-level masks and corresponding options
-        for i, masks in enumerate(model_masks):
-            # Extract relevant bits for the top-level decision
-            top_level_bits = model_masks[i][0]
-            top_level_probs = F.softmax(model_output[top_level_bits], dim=0)
-    
-            # If there are subsequent decisions for this top-level decision
-            if len(masks) > 1 and i in options:
-                for j, option in enumerate(options[i]):
-                    # Extract relevant bits for the subsequent decision
-                    subsequent_bits = model_masks[i][1]
-                    if len(model_masks[i][1]) == 40:
-                        subsequent_probs = self.get_distribtuion_from_deck(mask=subsequent_bits, nn_output=model_output)
-                    elif len(model_masks[i][1]) == 240:
-                        subsequent_probs = self.get_combined_deck_choices_for_warlords(nn_output=model_output, mask=subsequent_bits)
-                    else:
-                        subsequent_probs = F.softmax(model_output[subsequent_bits], dim=0)
-    
-                    # Multiply the top-level probability with the subsequent probabilities
-                    combined_probs = top_level_probs[j] * subsequent_probs
-                    final_probs.extend(combined_probs.tolist())
-            elif i in options and len(options[i]) > 1:
-                # If not represented by the model output, just use uniform distribution
-                subsequent_probs = torch.ones(options[i])/len(options[i])
-                combined_probs = top_level_probs[j] * subsequent_probs
-                final_probs.extend(combined_probs.tolist())
-            # If there are no subsequent decisions, just use the top-level probabilities
-            else:
-                final_probs.extend(top_level_probs.tolist())
-
-        return final_probs, [option for option_list in options.values() for option in option_list]
-
-    def get_deck_probs(self, mask, distribution):
-        """
-        Reconstruct the neural network output for choices of cards based on the given probability distribution.
-
-        Args:
-        - mask (torch.Tensor): A binary mask indicating which cards are present.
-        - distribution (torch.Tensor): The probability distribution for choices of cards.
-
-        Returns:
-        - torch.Tensor: Reconstructed neural network output for the cards.
-        """
-        # Get the indices of the cards present in the hand
-        card_indices = torch.nonzero(mask).squeeze()
-
-        # Calculate the total score of the cards
-        total_score = distribution.sum()
-
-        # Reconstruct the scores of the cards from the distribution
-        card_scores = distribution * total_score
-
-        # Create an output tensor filled with zeros
-        nn_output = torch.zeros_like(mask, dtype=torch.float32)
-
-        # Place the reconstructed scores at the appropriate positions
-        nn_output[card_indices] = card_scores
-
-        return nn_output
-
-    def get_combined_probs_warlords(self, mask, distribution, num_decks=6, deck_size=40):
-        """
-        Reconstruct the neural network output for choices of cards in multiple decks based on the given joint distribution.
-
-        Args:
-        - joint_distribution (torch.Tensor): The joint probability distribution over all possible combinations of choices.
-        - mask (torch.Tensor): A binary mask indicating which cards are present, shaped (6*40,).
-
-        Returns:
-        - torch.Tensor: Reconstructed neural network output for the cards in multiple decks.
-        """
-        deck_distributions = []
-
-        # Convert the joint distribution to a list of individual distributions for each deck
-        for i in range(num_decks):
-            start_idx = i * deck_size
-            end_idx = (i + 1) * deck_size
-
-            # Extract the mask for the current deck
-            deck_mask = mask[start_idx:end_idx]
-
-            # Get the number of valid cards in the current deck
-            num_valid_cards = deck_mask.sum().item()
-
-            # Extract the distribution for the current deck from the joint distribution
-            deck_distribution = distribution.view(-1, num_valid_cards).sum(dim=0)
-            deck_distribution /= deck_distribution.sum()
-
-            deck_distributions.append(deck_distribution)
-
-        # Reconstruct the original nn_output tensor for each deck
-        nn_outputs = []
-        for i, deck_distribution in enumerate(deck_distributions):
-            start_idx = i * deck_size
-            end_idx = (i + 1) * deck_size
-
-            # Extract the mask for the current deck
-            deck_mask = mask[start_idx:end_idx]
-
-            # Reconstruct the nn_output tensor for the current deck
-            deck_nn_output = self.get_deck_probs(deck_mask, deck_distribution)
-            nn_outputs.append(deck_nn_output)
-
-        # Concatenate the nn_output tensors for all decks to get the final output
-        taget_output = torch.cat(nn_outputs)
-
-        return taget_output
-
-
-    def build_targets(self, model_masks, distribution):
-        """
-        Reconstruct the target tensor for model training based on the given mask and distribution. Inverse of get_distribution.
-
-        Parameters:
-        - mask (torch.Tensor): A binary mask indicating which bits of the model output are relevant.
-        - distribution (list): A probability distribution over the options.
-
-        Returns:
-        - torch.Tensor: A target tensor for model training.
-        """
-        # Initialize the target tensor with zeros
-        target = torch.zeros_like(model_masks, dtype=torch.float32)
-
-        dist_idx = 0  # Index to keep track of where we are in the distribution
-
-        # Iterate over the top-level masks
-        for i, masks in enumerate(model_masks):
-            # Extract relevant bits for the top-level decision
-            top_level_bits = model_masks[i][0]
-
-            # If there are subsequent decisions for this top-level decision
-            if len(masks) > 1:
-                # Sum the lower-level probabilities to get the top-level probability
-                num_subsequent_options = len(masks[1])
-                top_level_probs = sum(distribution[dist_idx:dist_idx+num_subsequent_options])
-                target[top_level_bits] = top_level_probs
-                dist_idx += num_subsequent_options
-
-                # If there are subsequent decisions, set the lower-level probabilities
-                subsequent_bits = model_masks[i][1]
-                if len(subsequent_bits) == 40:
-                    target[subsequent_bits] = self.get_deck_probs(subsequent_bits[dist_idx:dist_idx+40], distribution[dist_idx:dist_idx+40])
-                    dist_idx += 40
-                elif len(subsequent_bits) == 240:
-                    target[subsequent_bits] = self.get_combined_probs_warlords(subsequent_bits[dist_idx:dist_idx+240], distribution[dist_idx:dist_idx+240])
-                    dist_idx += 240
-                else:
-                    target[subsequent_bits] = distribution[dist_idx:dist_idx+num_subsequent_options]
-                    dist_idx += num_subsequent_options
-
-            # If there are no subsequent decisions, just set the top-level probabilities
-            else:
-                target[top_level_bits] = distribution[dist_idx]
-                dist_idx += 1
-
-        return target

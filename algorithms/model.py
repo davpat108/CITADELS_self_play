@@ -8,7 +8,7 @@ class CitadelNetwork(nn.Module):
         self.fc1 = nn.Linear(478, 512)  # Input to Hidden Layer 1
         self.fc2 = nn.Linear(512, 256)  # Hidden Layer 1 to Hidden Layer 2
         self.fc3 = nn.Linear(256, 128)  # Hidden Layer 2 to Hidden Layer 3
-        self.fc4 = nn.Linear(128, 1497)  # Hidden Layer 3 to Output
+        self.fc4 = nn.Linear(128, 1521)  # Hidden Layer 3 to Output
         
         # Define activation function (ReLU for hidden layers)
         self.relu = nn.ReLU()

@@ -81,9 +81,9 @@ def get_distribution(model_output, model_masks, options):
 
     Parameters:
     - model_output (torch.Tensor): The output of the model, a vector of size (1487 currently).
-    - model_masks (list of lists of torch.Tensor): A hierarchical list of masks. Each top-level list corresponds to 
+    - model_masks (list of lists of [np.array, mask_type]): A hierarchical list of masks. Each top-level list corresponds to 
       a top-level decision, and each subsequent list corresponds to subsequent decisions conditioned on the top-level 
-      decision.
+      decision. mask_type is either "normal", "deck" or "warlord"
     - options (dict): A dictionary where keys correspond to top-level decisions and values are lists of options 
       available for each top-level decision.
     Returns:
@@ -102,36 +102,57 @@ def get_distribution(model_output, model_masks, options):
     """
     final_probs = []
 
+    top_level_bits = torch.stack([torch.tensor(mask[0][0], dtype=torch.bool) for mask in model_masks])
+    scores = model_output[torch.any(top_level_bits, dim=0)]
+    top_level_probs = F.softmax(scores, dim=0)
+    top_index = 0
+
     for i, masks in enumerate(model_masks):
-
-        top_level_bits = torch.tensor(model_masks[i][0], dtype=torch.bool)    
-        top_level_probs = F.softmax(model_output[top_level_bits], dim=0)
-
-        if len(masks) > 1 and i in options:
-            for j, option in enumerate(options[i]):
-                subsequent_bits = model_masks[i][1]
-                if len(model_masks[i][1]) == 40:
+        if i in options:
+            # If there are subsequent decisions and the model output represents them, use the model output
+            if len(masks) > 1:
+                subsequent_bits = torch.tensor(model_masks[i][1][0], dtype=torch.bool)  
+                if model_masks[i][1][1] == "deck":
                     subsequent_probs = get_distribtuion_from_deck(mask=subsequent_bits, nn_output=model_output)
-                elif len(model_masks[i][1]) == 240:
+                elif model_masks[i][1][1] == "warlord":
                     subsequent_probs = get_combined_deck_choices_for_warlords(nn_output=model_output, mask=subsequent_bits)
                 else:
                     subsequent_probs = F.softmax(model_output[subsequent_bits], dim=0)
 
 
-                combined_probs = top_level_probs[j] * subsequent_probs
-                final_probs.extend(combined_probs.tolist())
-        elif i in options and len(options) > 1:
-            # If not represented by the model output, just use uniform distribution
-            subsequent_probs = torch.ones(options[i])/len(options[i])
-            combined_probs = top_level_probs[j] * subsequent_probs
-            final_probs.extend(combined_probs.tolist())
+                combined_probs = top_level_probs[top_index] * subsequent_probs
+                top_index += 1
+                # Sometimes combined_probs is just a sclar, sometimes it's a vector
+                final_probs.extend([combined_probs.item()] if combined_probs.dim() == 0 else combined_probs.tolist())
 
-        else:
-            final_probs.extend(top_level_probs.tolist())
+            # if there are subsequent decisions but the model output doesn't represent them, just use uniform distribution
+            # This should catch seer
+            elif (len(options) > 1 or 2 in options.keys()) and len(masks) == 1:
+                # If not represented by the model output, just use uniform distribution
+                subsequent_probs = torch.ones(len(options[i]))/len(options[i])
+                combined_probs = top_level_probs[top_index] * subsequent_probs
+                top_index += 1
+
+                # Sometimes combined_probs is just a sclar, sometimes it's a vector
+                final_probs.extend([combined_probs.item()] if combined_probs.dim() == 0 else combined_probs.tolist())
+
+            # This should catch rolepick
+            elif len(options) == 1 and len(model_masks) == 1:
+                final_probs = top_level_probs.tolist()
+            
+            else:
+                raise Exception("Somehow a problem")
+
+
+# 1 seer so 1 top_lvl_option 1 total mask and 1 mask
+# 2 which card to keep so 1 top_lvl_option 1 total_mask 2 masks
+# 3 unrepresented so multiple  top lvl n total mask 1 masks
+# 4 top level eg rolepick so 1 top lvl 1 total mask 1 mask
+
     
     final_probs = np.array(final_probs)
     final_probs /= final_probs.sum()
-
+    assert len(final_probs) == len([option for option_list in options.values() for option in option_list])
     return final_probs, [option for option_list in options.values() for option in option_list]
 
 def get_deck_probs(mask, distribution):
@@ -188,17 +209,19 @@ def build_targets(model_masks, distribution, winning_probabilities):
     """
     Reconstruct the target tensor for model training based on the given mask and distribution. Inverse of get_distribution.
     Parameters:
-    - mask (torch.Tensor): A binary mask indicating which bits of the model output are relevant.
-    - distribution (list): A probability distribution over the options.
+    - model_masks (list of lists of [np.array, mask_type]): A hierarchical list of masks. Each top-level list corresponds to 
+      a top-level decision, and each subsequent list corresponds to subsequent decisions conditioned on the top-level 
+      decision. mask_type is either "normal", "deck" or "warlord"
+    - winning_probabilities (list): A probability distribution over the options.
     Returns:
     - torch.Tensor: A target tensor for model training.
     """
     # Initialize the target tensor with zeros
-    target = torch.zeros_like(model_masks[0], dtype=torch.float32)
+    target = torch.zeros_like(model_masks[0][0][0], dtype=torch.float32)
     target[:winning_probabilities.shape[0]] = winning_probabilities
     dist_idx = 0
     for i, masks in enumerate(model_masks):
-        top_level_bits = model_masks[i][0]
+        top_level_bits = torch.tensor(model_masks[i][0][0], dtype=torch.bool)  
         if len(masks) > 1:
 
             num_subsequent_options = len(masks[1])
@@ -206,11 +229,11 @@ def build_targets(model_masks, distribution, winning_probabilities):
             target[top_level_bits] = top_level_probs
             dist_idx += num_subsequent_options
 
-            subsequent_bits = model_masks[i][1]
-            if len(subsequent_bits) == 40:
+            subsequent_bits = model_masks[i][1][0]
+            if model_masks[i][1][0] == "deck":
                 target[subsequent_bits] = get_deck_probs(subsequent_bits[dist_idx:dist_idx+40], distribution[dist_idx:dist_idx+40])
                 dist_idx += 40
-            elif len(subsequent_bits) == 240:
+            elif len(subsequent_bits) == "warlord":
                 target[subsequent_bits] = get_combined_probs_warlords(subsequent_bits[dist_idx:dist_idx+240], distribution[dist_idx:dist_idx+240])
                 dist_idx += 240
             else:

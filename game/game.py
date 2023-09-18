@@ -138,7 +138,7 @@ class Game():
         self.terminal = False
 
         #CONST
-        self.game_model_output_size = 1497
+        self.game_model_output_size = 1521
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, Game):
