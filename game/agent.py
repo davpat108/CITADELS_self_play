@@ -486,7 +486,7 @@ class Agent():
         for player in game.players:
             if player.id != self.id and len(player.hand.cards) > 0:
                 options.append(option(name="look_at_hand", perpetrator=self.id, target=player.id))
-            if len(player.hand.cards) == 0:
+            if player.id != self.id and len(player.hand.cards) == 0:
                 used_bits.remove(player.id)
 
         return options, [[create_mask(game.game_model_output_size, 217, 218, type="top_level"), create_mask(game.game_model_output_size, 218, 224, used_bits, type="direct")]]

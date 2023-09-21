@@ -220,7 +220,7 @@ def get_deck_targets(mask, distribution):
     return deck_target
 
 
-def build_targets(model_masks, distribution, winning_probabilities):
+def build_targets(model_masks, distribution, node_value):
     """
     Reconstruct the target tensor for model training based on the given mask and distribution. 
     Inverse of get_distribution.
@@ -234,7 +234,7 @@ def build_targets(model_masks, distribution, winning_probabilities):
     - torch.Tensor: The reconstructed target tensor for model training.
     """
     
-    target = torch.zeros_like(winning_probabilities)
+    target = np.zeros_like(model_masks[0][0].mask, dtype=np.float32)
     dist_index = 0
 
     for i, masks in enumerate(model_masks):
@@ -253,5 +253,14 @@ def build_targets(model_masks, distribution, winning_probabilities):
         elif masks[0].type == "top_level_direct" or masks[0].type == "empty":
             target[masks[0].start_index:masks[0].end_index] = distribution[dist_index:dist_index+(masks[0].end_index - masks[0].start_index)]
             dist_index += (masks[0].end_index - masks[0].start_index)
+
+    node_value_torch = torch.from_numpy(node_value)
+    if node_value_torch.sum() == 0:
+        node_value_torch = torch.ones_like(node_value_torch)
+    else:
+        node_value_torch /= node_value_torch.sum()
+    
+    target = torch.from_numpy(target)
+    target[0:4] = node_value_torch
 
     return target

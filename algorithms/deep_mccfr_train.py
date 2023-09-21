@@ -82,6 +82,8 @@ class CFRNode:
 
 
     def expand_role_pick(self):
+        _, masks = self.game.get_options_from_state()
+        self.masks = masks
         max_repeat_count = 10
         for i in range(max_repeat_count):
             hypothetical_game = deepcopy(self.game)
@@ -139,6 +141,8 @@ class CFRNode:
 
 
     def expand_for_opponents(self):
+        _, masks = self.game.get_options_from_state()
+        self.masks = masks
         hypothetical_game = deepcopy(self.game)
         # Sample if not the same players turn as before
         if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
@@ -224,22 +228,25 @@ class CFRNode:
             regret_values = max_rewards - actual_rewards
             self.cumulative_regrets += regret_values
     
-    def print_tree_values(self, node, depth=0):
+    def get_all_targets(self):
         """
-        Recursively print the values of nodes in the tree.
+        Recursively gather the training targets from each node in the tree.
 
-        :param node: The current node being examined.
-        :param depth: The depth of the current node in the tree. Root has depth 0.
+        Returns:
+        - targets_list (list): List containing targets from all nodes in the tree.
         """
+        targets_list = []
 
-        # Print the node value with an indentation proportional to its depth
-        print(f"Node depth: {depth} (Player {node.current_player_id}): Value = {node.node_value}")
-        if depth > 20:
-            return
-        # Recursively call the function for each child
-        for _, child_node in node.children:
-            self.print_tree_values(child_node, depth + 1)
+        # Get the targets from the current node and append to the list
+        targets_list.append(self.build_train_targets())
 
+        # Recursively gather targets from children nodes
+        for _, child_node in self.children:
+            targets_list.extend(child_node.gather_tree_targets())
+
+        return targets_list
+
+    
     def backpropagate(self, reward):
         # Update the value of this node
         self.node_value += reward
@@ -276,10 +283,9 @@ class CFRNode:
 
         # Update the cumulative strategy used for the average strategy output
 
-    
 
-    def built_train_targets(self):
-        normalized_node_value = self.node_value / self.node_value.sum()
-        targets = build_targets(self.masks, self.strategy, normalized_node_value)
+    def build_train_targets(self):
 
-        return self.game.encode_game(), targets
+        targets = build_targets(self.masks, self.strategy, self.node_value)
+
+        return [self.game.encode_game(), targets]
