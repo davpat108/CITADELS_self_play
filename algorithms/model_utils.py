@@ -235,23 +235,23 @@ def build_targets(model_masks, distribution, node_value):
     """
     
     target = np.zeros_like(model_masks[0][0].mask, dtype=np.float32)
-    dist_index = 0
+
 
     for i, masks in enumerate(model_masks):
         if masks[0].type == "top_level":
             target[masks[0].start_index] = distribution[dist_index]
-            dist_index += 1
+
 
             if len(masks) > 1:
                 if masks[1].type == "deck":
                     target[masks[1].start_index:masks[1].end_index] = get_deck_targets(masks[1], distribution[dist_index:dist_index+(masks[1].end_index - masks[1].start_index)])
-                    dist_index += (masks[1].end_index - masks[1].start_index)
+                    #dist_index += (masks[1].end_index - masks[1].start_index)
                 elif masks[1].type == "direct":
                     target[masks[1].start_index:masks[1].end_index] = distribution[dist_index:dist_index+(masks[1].end_index - masks[1].start_index)]
-                    dist_index += (masks[1].end_index - masks[1].start_index)
+                    #dist_index += (masks[1].end_index - masks[1].start_index)
 
         elif masks[0].type == "top_level_direct" or masks[0].type == "empty":
-            target[masks[0].start_index:masks[0].end_index] = distribution[dist_index:dist_index+(masks[0].end_index - masks[0].start_index)]
+            target[masks[0].mask] = distribution
             dist_index += (masks[0].end_index - masks[0].start_index)
 
     node_value_torch = torch.from_numpy(node_value)

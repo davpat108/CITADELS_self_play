@@ -2,6 +2,8 @@ import numpy as np
 from copy import deepcopy
 from game.checks import check_same_memory_address
 from algorithms.model_utils import create_mask, get_distribution, build_targets
+import torch
+from game.config import role_to_role_id
 
 class CFRNode:
     def __init__(self, game, current_player_id, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None):
@@ -82,8 +84,6 @@ class CFRNode:
 
 
     def expand_role_pick(self):
-        _, masks = self.game.get_options_from_state()
-        self.masks = masks
         max_repeat_count = 10
         for i in range(max_repeat_count):
             hypothetical_game = deepcopy(self.game)
@@ -113,7 +113,8 @@ class CFRNode:
         self.cumulative_regrets = self.cumulative_regrets.T
         self.strategy = self.strategy.T
         self.cumulative_strategy = self.cumulative_strategy.T
-            
+        # Role pick target mask is a full mask
+        self.masks = [[create_mask(self.game.game_model_output_size, 6, 14, type="top_level_direct")]]
     
     def expand_for_original_player(self):
         options, masks = self.game.get_options_from_state()
@@ -137,7 +138,7 @@ class CFRNode:
             distribution, _ = get_distribution(output, masks, options)
         self.cumulative_regrets = np.zeros(len(self.children))
         self.strategy = np.zeros(len(self.children))
-        self.cumulative_strategy = np.zeros(len(self.children))
+        self.cumulative_strategy = distribution if self.model else np.zeros(len(self.children))
 
 
     def expand_for_opponents(self):
@@ -260,6 +261,29 @@ class CFRNode:
         # Recursively call backpropagate on parent node
         self.parent.backpropagate(reward)
 
+    def set_role_favorabilities(self):
+
+        # Initialize a 6x8 matrix filled with zeros
+        role_favorability = np.zeros((6, 8))
+
+        # Iterate over the 10 children of the node
+        for i in range(len(self.children)):
+            child = self.children[i][1]
+
+            # Get the strategy values for this child
+            strategy_values = self.strategy[:, i]
+
+            # Update the role favorability matrix based on this child's strategy values
+            for player_id in range(6):
+                role_id = role_to_role_id[child.game.players[player_id].role]
+                role_favorability[player_id, role_id] += strategy_values[player_id]
+        
+        row_sums = role_favorability.sum(axis=1)[:, np.newaxis]
+        normalized_role_favorability = role_favorability / row_sums
+
+        self.role_favorability = normalized_role_favorability
+
+
     def update_strategy(self):
         self.cumulative_strategy += self.strategy
         if not self.role_pick_node:
@@ -280,12 +304,18 @@ class CFRNode:
             new_strategies = np.tile(uniform_strategy[:, np.newaxis], (1, len(self.children)))
             new_strategies[:, positive_regret_mask] = self.cumulative_regrets[:, positive_regret_mask] / total_regrets[positive_regret_mask]
             self.strategy = new_strategies
+            self.set_role_favorabilities()
 
         # Update the cumulative strategy used for the average strategy output
 
 
     def build_train_targets(self):
-
-        targets = build_targets(self.masks, self.strategy, self.node_value)
+        if self.role_pick_node:
+            full_targets = []
+            for i in range(len(self.game.players)):
+                self.game.gamestate.player_id = i
+                targets = build_targets(self.masks, torch.from_numpy(self.role_favorability[i]), self.node_value)
+                full_targets.append(targets)
+        targets = build_targets(self.masks, torch.from_numpy(self.strategy), self.node_value)
 
         return [self.game.encode_game(), targets]
