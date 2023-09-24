@@ -1,17 +1,18 @@
 import numpy as np
 from copy import deepcopy
-from game.checks import check_same_memory_address
+
 from algorithms.model_utils import create_mask, get_distribution, build_targets
+from algorithms.model_utils import TargetBuildParams, augment_game
 import torch
 from game.config import role_to_role_id
 
 class CFRNode:
-    def __init__(self, game, current_player_id, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None):
+    def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None):
         self.game = game # Unkown informations are present but counted as dont care
         self.model = model
         self.parent = parent
         self.children = [] # (Option that carries the game to the node, NODE)
-        self.current_player_id = current_player_id
+        self.current_player_id = game.gamestate.player_id
         # The player id of the player that started the game
         # It is used to know which player doesn't need private info sampling
         self.original_player_id = original_player_id
@@ -104,7 +105,7 @@ class CFRNode:
                 options_list[choice_index].carry_out(hypothetical_game)
             # Must be at the end of rolepick
             assert hypothetical_game.gamestate.player_id == hypothetical_game.get_player_from_role_id(hypothetical_game.used_roles[0]).id
-            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model)))
+            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model)))
         
             self.cumulative_regrets = np.zeros((1, 6)) if self.cumulative_regrets.size == 0 else np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
             self.strategy = np.zeros((1, 6)) if self.strategy.size == 0 else np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
@@ -114,12 +115,12 @@ class CFRNode:
         self.strategy = self.strategy.T
         self.cumulative_strategy = self.cumulative_strategy.T
         # Role pick target mask is a full mask
-        self.masks = [[create_mask(self.game.game_model_output_size, 6, 14, type="top_level_direct")]]
+        self.target_params = TargetBuildParams(model_masks=[[create_mask(self.game.game_model_output_size, 6, 14, type="top_level_direct")]], options=None)
     
     def expand_for_original_player(self):
         options, masks = self.game.get_options_from_state()
         options_list = [option for option_list in options.values() for option in option_list]
-        self.masks = masks
+        self.target_params = TargetBuildParams(model_masks=deepcopy(masks), options=options)
         for option in options_list:
 
             hypothetical_game = deepcopy(self.game)
@@ -130,7 +131,7 @@ class CFRNode:
             option.carry_out(hypothetical_game)
             
             print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
-            self.children.append((option, CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
+            self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
 
         if self.model:
             model_input = self.game.encode_game()
@@ -142,8 +143,8 @@ class CFRNode:
 
 
     def expand_for_opponents(self):
-        _, masks = self.game.get_options_from_state()
-        self.masks = masks
+
+        self.target_params = None
         hypothetical_game = deepcopy(self.game)
         # Sample if not the same players turn as before
         if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
@@ -168,7 +169,7 @@ class CFRNode:
 
         child_options = [child[0] for child in self.children]
         if not options_list[choice_index] in child_options:
-            self.children.append((options_list[choice_index], CFRNode(game=hypothetical_game, current_player_id=hypothetical_game.gamestate.player_id, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
+            self.children.append((options_list[choice_index], CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
@@ -239,11 +240,11 @@ class CFRNode:
         targets_list = []
 
         # Get the targets from the current node and append to the list
-        targets_list.append(self.build_train_targets())
+        targets_list += self.build_train_targets()
 
         # Recursively gather targets from children nodes
         for _, child_node in self.children:
-            targets_list.extend(child_node.gather_tree_targets())
+            targets_list += child_node.get_all_targets()
 
         return targets_list
 
@@ -310,12 +311,17 @@ class CFRNode:
 
 
     def build_train_targets(self):
-        if self.role_pick_node:
-            full_targets = []
-            for i in range(len(self.game.players)):
-                self.game.gamestate.player_id = i
-                targets = build_targets(self.masks, torch.from_numpy(self.role_favorability[i]), self.node_value)
-                full_targets.append(targets)
-        targets = build_targets(self.masks, torch.from_numpy(self.strategy), self.node_value)
-
-        return [self.game.encode_game(), targets]
+        if self.children and self.target_params:
+            if self.role_pick_node:
+                full_targets = []
+                for i in range(len(self.game.players)):
+                    self.game.gamestate.player_id = i
+                    targets, loss_mask = build_targets(self.target_params.model_masks, self.role_favorability[i], self.node_value)
+                    full_targets.append([self.game.encode_game(), targets, loss_mask])
+                return full_targets
+            else:
+                targets, loss_mask = build_targets(self.target_params.model_masks, self.strategy, self.node_value, options=self.target_params.options)
+                game, loss_mask, targets = augment_game(self.game,loss_mask, targets)
+                return [[game.encode_game(), targets, loss_mask]]
+        else:
+            return []

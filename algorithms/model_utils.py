@@ -2,6 +2,8 @@ import numpy as np
 import torch
 from itertools import product
 import torch.nn.functional as F
+from random import shuffle
+from copy import deepcopy
 
 class Mask():
     def __init__(self, type:str="top_level", model_size:int=1521) -> None:
@@ -26,6 +28,40 @@ class Mask():
 
         self.start_index = start_index
         self.end_index = end_index
+
+class TargetBuildParams():
+    def __init__(self, model_masks:list, options:dict) -> None:
+        """
+        Information build target function needs to create the expected model output
+        """
+        self.model_masks = model_masks
+        self.options = options
+
+def augment_game(game, mask, targets):
+    """
+    Shuffles the players around so the model wont overfit to the original player
+    """
+    new_game = deepcopy(game)
+    new_mask = deepcopy(mask)
+    new_targets = deepcopy(targets)
+
+    shuffled_player_order = [0,1,2,3,4,5]
+    shuffle(shuffled_player_order)
+    for i in range(len(new_game.players)):
+        new_game.players[i].id = shuffled_player_order[i]
+    new_game.players.sort(key=lambda x: x.id)
+    #Node value
+
+    new_targets[0:6] = new_targets[0:6][shuffled_player_order]
+    #Magician
+    new_mask[170:176] = new_mask[170:176][shuffled_player_order]
+    new_targets[170:176] = new_targets[170:176][shuffled_player_order]
+    #Wizard
+    new_mask[218:224] = new_mask[218:224][shuffled_player_order]
+    new_targets[218:224] = new_targets[218:224][shuffled_player_order]
+
+    return new_game, new_mask, new_targets
+
 
 
 def create_mask(model_output_size, start_index, end_index, pick_indexes=None, type="top_level"):
@@ -197,30 +233,32 @@ def get_distribution(model_output, model_masks, options):
     return final_probs, [option for option_list in options.values() for option in option_list]
 
 def get_deck_targets(mask, distribution):
-    """
-    Reconstruct the target tensor for deck choices based on the given mask and distribution.
 
-    Args:
-    - mask (torch.Tensor): A binary mask indicating which cards are present.
-    - distribution (torch.Tensor): The probability distribution over the cards.
-
-    Returns:
-    - torch.Tensor: The reconstructed target tensor for the deck choices.
-    """
-    
-    # Initialize the target tensor for the deck with zeros
-    deck_target = torch.zeros_like(mask, dtype=torch.float32)
+    # Initialize the target array for the deck with zeros
+    deck_target = np.zeros(40, dtype=np.float32)
 
     # Get the indices of the cards present in the hand
-    card_indices = torch.nonzero(mask).squeeze()
+    card_indices = np.nonzero(mask.mask)[0]
+    card_indices -= mask.start_index
 
-    # Assign the probabilities from the distribution to the corresponding positions in the target tensor
+    # Assign the probabilities from the distribution to the corresponding positions in the target array
     deck_target[card_indices] = distribution
 
     return deck_target
 
 
-def build_targets(model_masks, distribution, node_value):
+def combine_masks(model_masks, options):
+
+    combined_mask = np.zeros_like(model_masks[0][0].mask, dtype=bool)
+    for i, masks in enumerate(model_masks):
+        if i in options:
+            for mask in masks:
+                combined_mask = np.logical_or(combined_mask, mask.mask)
+    combined_mask[0:6] = True
+    return combined_mask
+
+
+def build_targets(model_masks, distribution, node_value, options={0:[]}):
     """
     Reconstruct the target tensor for model training based on the given mask and distribution. 
     Inverse of get_distribution.
@@ -235,32 +273,36 @@ def build_targets(model_masks, distribution, node_value):
     """
     
     target = np.zeros_like(model_masks[0][0].mask, dtype=np.float32)
+    dist_index = 0
 
 
     for i, masks in enumerate(model_masks):
-        if masks[0].type == "top_level":
-            target[masks[0].start_index] = distribution[dist_index]
+        if i in options:
+            if masks[0].type == "top_level":
+
+                if len(masks) > 1:
+                    target[masks[1].mask.astype(bool)] = distribution[dist_index:dist_index+masks[1].mask.sum()]
+                    target[masks[1].mask.astype(bool)] /= target[masks[1].mask.astype(bool)].sum()
+
+                    target[masks[0].start_index] = distribution[dist_index:dist_index+masks[1].mask.sum()].sum()
+                    dist_index += masks[1].mask.sum()
+
+                else:
+                    target[masks[0].start_index] = distribution[dist_index:dist_index+len(options[i])].sum()
+                    dist_index += len(options[i])
 
 
-            if len(masks) > 1:
-                if masks[1].type == "deck":
-                    target[masks[1].start_index:masks[1].end_index] = get_deck_targets(masks[1], distribution[dist_index:dist_index+(masks[1].end_index - masks[1].start_index)])
-                    #dist_index += (masks[1].end_index - masks[1].start_index)
-                elif masks[1].type == "direct":
-                    target[masks[1].start_index:masks[1].end_index] = distribution[dist_index:dist_index+(masks[1].end_index - masks[1].start_index)]
-                    #dist_index += (masks[1].end_index - masks[1].start_index)
-
-        elif masks[0].type == "top_level_direct" or masks[0].type == "empty":
-            target[masks[0].mask] = distribution
-            dist_index += (masks[0].end_index - masks[0].start_index)
+            elif masks[0].type == "top_level_direct":
+                target[masks[0].mask.astype(bool)] = distribution
 
     node_value_torch = torch.from_numpy(node_value)
     if node_value_torch.sum() == 0:
         node_value_torch = torch.ones_like(node_value_torch)
-    else:
-        node_value_torch /= node_value_torch.sum()
+
+    node_value_torch /= node_value_torch.sum()
     
     target = torch.from_numpy(target)
-    target[0:4] = node_value_torch
+    target[0:6] = node_value_torch
+    combined_masks = torch.from_numpy(combine_masks(model_masks, options))
 
-    return target
+    return target, combined_masks

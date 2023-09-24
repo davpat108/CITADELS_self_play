@@ -14,8 +14,8 @@ for _ in range(10):
     game = Game()
     game.setup_round()
     winner = False
-    position_root = CFRNode(game, current_player_id=0, original_player_id=0, model=model)
-    position_root.cfr(max_iterations=10)
+    position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True)
+    position_root.cfr(max_iterations=10000)
     targets = position_root.get_all_targets()
     train_model(targets, model, epochs=10, learning_rate=0.001, batch_size=64)
 
