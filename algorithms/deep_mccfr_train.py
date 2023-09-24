@@ -92,8 +92,8 @@ class CFRNode:
                 options, masks = hypothetical_game.get_options_from_state()
 
                 if self.model:
-                    model_input = hypothetical_game.encode_game()
-                    output = self.model(model_input)
+                    model_input = hypothetical_game.encode_game().unsqueeze(0)
+                    output = self.model(model_input).squeeze(0)
                     distribution, options_list = get_distribution(output, masks, options)
                 else:
                     options_list = [option for option_list in options.values() for option in option_list]
@@ -134,8 +134,8 @@ class CFRNode:
             self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
 
         if self.model:
-            model_input = self.game.encode_game()
-            output = self.model(model_input)
+            model_input = self.game.encode_game().unsqueeze(0)
+            output = self.model(model_input).squeeze(0)
             distribution, _ = get_distribution(output, masks, options)
         self.cumulative_regrets = np.zeros(len(self.children))
         self.strategy = np.zeros(len(self.children))
@@ -152,8 +152,8 @@ class CFRNode:
 
         options, masks = hypothetical_game.get_options_from_state()
         if self.model:
-            model_input = hypothetical_game.encode_game()
-            output = self.model(model_input)
+            model_input = hypothetical_game.encode_game().unsqueeze(0)
+            output = self.model(model_input).squeeze(0)
             distribution, options_list = get_distribution(output, masks, options)
         else:
             options_list = [option for option_list in options.values() for option in option_list]

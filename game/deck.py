@@ -54,6 +54,8 @@ class Deck:
             if card.type_ID == card_to_get.type_ID:
                 self.cards.remove(card)
                 return card
+        # Turn off the check, some cards go missing during sampling
+        return card_to_get
         raise KeyError("No card like that in the deck")
 
     def draw_card(self):

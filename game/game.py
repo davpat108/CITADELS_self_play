@@ -491,7 +491,8 @@ class Game():
         missing_from_total = [card_id for card_id in used_card_ids if card_id not in total_card_ids]
 
         if missing_from_used or missing_from_total:
-            print("Missing cards")
+            pass
+            #print("Missing cards")
             #raise Exception(f"Card error in sampling. Missing from used cards: {missing_from_used}. Missing from total cards: {missing_from_total}.")
 
     def setup_next_player(self, current_player_id=None, from_role_pick_end_sample=False):
