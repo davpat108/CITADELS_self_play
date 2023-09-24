@@ -317,7 +317,6 @@ class Game():
         return unknown_cards
 
     def sample_private_information(self, player_character, role_sample = True):
-        print("Sampling private information")
         # Decide whether to use each HandKnowledge based on confidence, (confidence * 20% chance)
         for hk in player_character.known_hands:
             random_chance = random.random()

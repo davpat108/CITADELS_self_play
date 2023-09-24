@@ -5,6 +5,7 @@ from random import choice
 while 1:
     game = Game()
     game.setup_round()
+    
     winner = False
     i =0
     tota_options = 0

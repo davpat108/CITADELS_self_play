@@ -130,7 +130,7 @@ class CFRNode:
                 hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id], role_sample=self.parent.game.gamestate.state != 0 if self.parent else False)
             option.carry_out(hypothetical_game)
             
-            print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
+            #print("Added child info set from orig child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", option.name)
             self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
 
         if self.model:
@@ -165,7 +165,7 @@ class CFRNode:
         else:
             choice_index = 0
         options_list[choice_index].carry_out(hypothetical_game)
-        print("Added child info set from opponent child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", options_list[choice_index].name)
+        #print("Added child info set from opponent child player's role: ", hypothetical_game.players[hypothetical_game.gamestate.player_id].role, " ID: ", hypothetical_game.gamestate.player_id, "Action leading there: ", options_list[choice_index].name)
 
         child_options = [child[0] for child in self.children]
         if not options_list[choice_index] in child_options:
@@ -195,9 +195,11 @@ class CFRNode:
             node.update_strategy()
             node, action = node.action_choice()
             if "role" in action.attributes.keys():
-                print(f"cfr{i}, Traversion: ", action.name, "choice: ", action.attributes["role"])
+                pass
+                #print(f"cfr{i}, Traversion: ", action.name, "choice: ", action.attributes["role"])
             else:
-                print(f"cfr{i}, Traversion: ", action.name)
+                pass
+                #print(f"cfr{i}, Traversion: ", action.name)
             # leaf node
             # terminal node, get rewards, calc regrets, backpropagate
             if node.is_terminal():

@@ -348,10 +348,14 @@ class option():
                 if len(game.players[self.attributes['perpetrator']].hand.cards) == 0:
                     game.players[self.attributes['perpetrator']].gold += 1
 
+
         if self.attributes['crown']:
             confirm_role_knowledges(game.players[self.attributes['perpetrator']], game)
             move_crown(game, self.attributes['perpetrator'])
         # witch
+        elif game.role_properties[role_to_role_id[game.players[self.attributes['perpetrator']].role]].dead:
+            confirm_role_knowledges(game.players[self.attributes['perpetrator']], game)
+
         if self.attributes['next_witch']:
 
             # Witch is making the choices

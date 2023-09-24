@@ -506,7 +506,7 @@ class Agent():
             if cost <= self.gold and option(name="take_from_hand", built_card=card, build=True, perpetrator=self.id, target=target_hand.player_id, replica=replica) not in options:
                 options.append(option(name="take_from_hand", built_card=card, build=True, perpetrator=self.id, target=target_hand.player_id, replica=replica))
         if options == []:
-            return [option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)]
+            return {0:[option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)]}, [[create_mask(game.game_model_output_size, 0, 0, type="empty")]]
         used_bits = list(set([option.attributes["card"].type_ID if not option.attributes["build"] else option.attributes["built_card"].type_ID + 39 for option in options]))
         return {0:options}, [[create_mask(game.game_model_output_size, 0, 1, type="unrepresented")]]#[[create_mask(game.game_model_output_size, 224, 304, used_bits)]]
 
