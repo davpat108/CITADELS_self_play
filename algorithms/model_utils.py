@@ -265,13 +265,17 @@ def build_targets(model_masks, distribution, node_value, options={0:[]}):
 
     Args:
     - model_masks (list of lists of masks): A hierarchical list of masks. Types: "top_level", "top_level_direct", "direct", "deck", "empty"
-    - distribution (torch.Tensor): The probability distribution over all the options.
-    - winning_probabilities (torch.Tensor): The winning probabilities for each option.
+    - distribution (np.array): The probability distribution over all the options.
+    - node_value (np.array): The winning probabilities for each option.
 
     Returns:
     - torch.Tensor: The reconstructed target tensor for model training.
     """
     
+    if distribution.sum() == 0:
+        distribution = np.ones_like(distribution)
+        distribution /= distribution.sum()
+
     target = np.zeros_like(model_masks[0][0].mask, dtype=np.float32)
     dist_index = 0
 
@@ -282,6 +286,10 @@ def build_targets(model_masks, distribution, node_value, options={0:[]}):
 
                 if len(masks) > 1:
                     target[masks[1].mask.astype(bool)] = distribution[dist_index:dist_index+masks[1].mask.sum()]
+
+                    if target[masks[1].mask.astype(bool)].sum() == 0:
+                        target[masks[1].mask.astype(bool)] = np.ones_like(target[masks[1].mask.astype(bool)])
+
                     target[masks[1].mask.astype(bool)] /= target[masks[1].mask.astype(bool)].sum()
 
                     target[masks[0].start_index] = distribution[dist_index:dist_index+masks[1].mask.sum()].sum()

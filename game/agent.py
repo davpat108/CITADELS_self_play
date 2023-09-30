@@ -301,7 +301,7 @@ class Agent():
     
     def graveyard_options(self, game):
         if self.gold > 0:
-            return {0:[option(name="graveyard", perpetrator=self.id)]}, [create_mask(game.game_model_output_size, 58, 59, type="unrepresented")]
+            return {0:[option(name="graveyard", perpetrator=self.id)]}, [[create_mask(game.game_model_output_size, 58, 59, type="unrepresented")]]
         return {0:[option(name="empty_option", perpetrator=self.id, next_gamestate=game.gamestate.next_gamestate)]}, [[create_mask(game.game_model_output_size, 0, 1, type="empty")]]
 
 

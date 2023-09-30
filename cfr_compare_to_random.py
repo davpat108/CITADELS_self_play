@@ -3,7 +3,7 @@ from game.game import Game
 from random import choice
 from algorithms.mccfr import CFRNode
 from algorithms.visualization import visualize_cfr_tree
-from algorithms.model import CitadelNetwork
+from algorithms.models import CitadelNetwork
 import torch
 
 game = Game()
@@ -13,7 +13,7 @@ i = 0
 total_options = 0
 
 model = CitadelNetwork()
-model.load_state_dict(torch.load("model.pt"))
+model.load_state_dict(torch.load("model_old.pt"))
 model.eval()
 while not winner:
     i+=1

@@ -286,7 +286,10 @@ class CFRNode:
                 role_favorability[player_id, role_id] += strategy_values[player_id]
         
         row_sums = role_favorability.sum(axis=1)[:, np.newaxis]
-        normalized_role_favorability = role_favorability / row_sums
+        if row_sums.sum() == 0:
+            normalized_role_favorability = np.ones((6, 8)) / 8
+        else:
+            normalized_role_favorability = role_favorability / row_sums
 
         self.role_favorability = normalized_role_favorability
 

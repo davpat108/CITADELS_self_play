@@ -25,6 +25,11 @@ class option():
     #10 Wizard choose from hand
 
     # others
+    
+    def encode_option(self, game):
+        pass
+
+
     def carry_out(self, game):
         winner = None
         
@@ -574,8 +579,6 @@ class option():
             
     def carry_out_cardinal(self, game):
         # Special way of building
-
-
         # Regular building
         game.players[self.attributes['perpetrator']].buildings.add_card(game.players[self.attributes['perpetrator']].hand.get_a_card_like_it(self.attributes['built_card']))
         game.players[self.attributes['perpetrator']].gold -= self.attributes['built_card'].cost-self.attributes['factory']
