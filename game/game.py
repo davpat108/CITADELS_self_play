@@ -1,10 +1,16 @@
-from game.agent import Agent
-from game.deck import Deck, Card
-from game.config import building_cards, unique_building_cards, roles, role_to_role_id
 import random
-from game.helper_classes import RolePropery, GameState
-from copy import deepcopy, copy
+from copy import copy, deepcopy
+
 import numpy as np
+import torch.nn.functional as F
+import torch
+
+from game.agent import Agent
+from game.config import (building_cards, role_to_role_id, roles,
+                         unique_building_cards)
+from game.deck import Card, Deck
+from game.helper_classes import GameState, RolePropery
+
 
 class Game():
     def __init__(self, avaible_roles=None, debug=False) -> None:
@@ -131,18 +137,115 @@ class Game():
         self.ending = False
         self.terminal = False
 
+        #CONST
+        self.game_model_output_size = 1521
+
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, Game):
             return self.players == __value.players and self.deck == __value.deck and self.discard_deck == __value.discard_deck and self.used_cards == __value.used_cards and self.gamestate == __value.gamestate and self.ending == __value.ending and self.terminal == __value.terminal
         return False
         
+    def encode_avalible_roles(self, config_roles):
+        # Create a mapping of roles to their index
+        role_to_index = {}
+        for key, role_list in config_roles.items():
+            for idx, role in enumerate(role_list):
+                role_to_index[role] = idx
+
+        # Create an 8x3 numpy array filled with zeros
+        encoded_array = np.zeros((8, 3), dtype=int)
+
+        # Iterate over the self.roles dictionary and fill in the one-hot encoding
+        for key, role in self.roles.items():
+            encoded_array[key][role_to_index[role]] = 1
+
+        return encoded_array
+    
+    def encode_player_roles(self):
+        # Create a 6x8 numpy array filled with zeros
+        encoded_array = np.zeros((6, 8), dtype=int)
+
+        # Iterate over the players and fill in the one-hot encoding
+        for player in self.players:
+            if player.role is None or player.role == "Bewitched":
+                continue
+            role_index = role_to_role_id.get(player.role)
+            if role_index is not None:
+                encoded_array[player.id][role_index] = 1
+
+        return encoded_array
+
+
+    def encode_role_properties(self):
+        """
+        Encodes the role properties into an 8x5 numpy array.
+        The function checks each attribute of the RoleProperty object in the order:
+        'dead', 'warrant', 'possessed', 'robbed', 'blackmail'. If the attribute is 
+        not None or not False, the corresponding position in the numpy array is set to 1.
+
+        Args:
+        - role_properties (dict): A dictionary where keys are role IDs and values are RoleProperty objects.
+
+        Returns:
+        - numpy.ndarray: An 8x5 numpy array representing the encoded role properties.
+        """
+        role_properties = self.role_properties
+        encoded_array = np.zeros((8, 5), dtype=int)
+        attributes_order = ['dead', 'warrant', 'possessed', 'robbed', 'blackmail']
+
+        for role_id, role_property in role_properties.items():
+            for idx, attribute in enumerate(attributes_order):
+                value = getattr(role_property, attribute)
+                if value:
+                    encoded_array[role_id][idx] = 1
+
+        return encoded_array
+
+    def encode_game(self):
+        player_id = self.gamestate.player_id
+        encoded_avalible_roles = self.encode_avalible_roles(roles)
+        player_roles= self.encode_player_roles()
+        encoded_player_hand, encoded_hand_suits = self.players[player_id].hand.encode_deck()
+
+        encoded_built_cards, encoded_buildings_suits = zip(*[player.buildings.encode_deck() for player in self.players])
+        encoded_built_cards = np.vstack(encoded_built_cards)
+        encoded_buildings_suits = np.vstack(encoded_buildings_suits)
+
+        encoded_player_ID = np.zeros(6, dtype=int)
+        encoded_player_ID[player_id] = 1
+
+        encoded_just_drawn_cards, encoded_just_drawn_suits = self.players[player_id].just_drawn_cards.encode_deck()
+
+        encoded_role_properties = self.encode_role_properties()
+
+        encoded_array = np.concatenate([
+        encoded_avalible_roles.flatten(),
+        player_roles.flatten(),
+        encoded_player_hand.flatten(),
+        encoded_hand_suits.flatten(),
+        encoded_built_cards.flatten(),
+        encoded_buildings_suits.flatten(),
+        encoded_player_ID.flatten(),
+        encoded_just_drawn_cards.flatten(),
+        encoded_just_drawn_suits.flatten(),
+        encoded_role_properties.flatten()
+        ])
+
+        return torch.tensor(encoded_array, dtype=torch.float32)
+
+    def process_model_output(self, model_output):
+        """
+        Processes the model output into a dictionary of options. Output length is 1487.
+        """
+        winning_probabilities = F.softmax(model_output[:6], dim=0)
+
     def sample_roles_for_player(self, avaible_roles, number_of_used_roles):
         roles = {}
 
         for i in range(number_of_used_roles):
             roles[i] = random.choice(avaible_roles[i])
         
-        return roles
+        return dict(sorted(roles.items()))
     
     def setup_round(self):
         for role_property in self.role_properties.values():
@@ -213,8 +316,7 @@ class Game():
 
         return unknown_cards
 
-    def sample_private_information(self, player_character):
-        print("Sampling private information")
+    def sample_private_information(self, player_character, role_sample = True):
         # Decide whether to use each HandKnowledge based on confidence, (confidence * 20% chance)
         for hk in player_character.known_hands:
             random_chance = random.random()
@@ -229,12 +331,15 @@ class Game():
         self.sample_warrants_and_blackmails()
         # Settle players
         known_roles_by_player = deepcopy(player_character.known_roles)
-        self.remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self.players[self.gamestate.player_id].role, known_roles_by_player)
+        if role_sample:
+            self.remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self.players[self.gamestate.player_id].role, known_roles_by_player)
         for player in self.players:
             self.sample_cards_for_opponent(player, player_character, unknown_cards)
-            self.sample_roles_for_opponent(player, player_character, known_roles_by_player)
+            if role_sample:
+                self.sample_roles_for_opponent(player, player_character, known_roles_by_player)
 
-        self.refresh_roles_after_sampling_roles()
+        if role_sample:
+            self.refresh_roles_after_sampling_roles()
 
 
         # Replace the game's deck with the remaining unknown cards
@@ -284,7 +389,6 @@ class Game():
         # Dont sample for original player or the current playing beginning its round
         if original_player == player or (player.id == self.gamestate.player_id and not role_pick_end_sample):
             return
-
         if self.gamestate.state != 0:
             player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
             # Remove the chosen role from all RoleKnowledge objects
@@ -305,16 +409,20 @@ class Game():
             for role_id in logically_left_out_role_ids:
                 self.remove_role_from_role_knowledge(self.roles[role_id], known_roles_by_player)
 
-
+    # UNUSED
     def sample_private_info_after_role_pick_end(self, original_player):
-        if self.gamestate.state == 1 and self.gamestate.player_id == self.get_player_from_role_id(self.used_roles[0]).id:
-            print("Sampling private information after role pick end")
-            known_roles_by_player = deepcopy(original_player.known_roles)
-            for player in self.players:
-                self.sample_roles_for_opponent(player, original_player, known_roles_by_player, role_pick_end_sample=True)
-            self.refresh_roles_after_sampling_roles(from_role_pick_end_sample=True)
+        print("Sampling private information after role pick end")
+        known_roles_by_player = deepcopy(original_player.known_roles)
+        for player in self.players:
+            self.sample_roles_for_opponent(player, original_player, known_roles_by_player, role_pick_end_sample=True)
+        self.refresh_roles_after_sampling_roles(from_role_pick_end_sample=True)
 
-
+    # UNUSED
+    def is_end_of_role_pick(self):
+        # If someone is bewitched, its not the end of role pick, and witch is also changed
+        if "Bewitched" in [player.role for player in self.players]:
+            return False
+        return self.gamestate.state == 1 and self.gamestate.player_id == self.get_player_from_role_id(self.used_roles[0]).id
 
     def sample_warrants_and_blackmails(self):
         # Sample blackmails
@@ -383,7 +491,8 @@ class Game():
         missing_from_total = [card_id for card_id in used_card_ids if card_id not in total_card_ids]
 
         if missing_from_used or missing_from_total:
-            print("Missing cards")
+            pass
+            #print("Missing cards")
             #raise Exception(f"Card error in sampling. Missing from used cards: {missing_from_used}. Missing from total cards: {missing_from_total}.")
 
     def setup_next_player(self, current_player_id=None, from_role_pick_end_sample=False):

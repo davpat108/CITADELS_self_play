@@ -28,7 +28,7 @@ class GameState():
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, GameState):
-            return self.state == __value.state and self.player_id.id == __value.player_id.id
+            return self.state == __value.state and self.player_id == __value.player_id
         return False
 
 # Confidence: 5 Surely know everyhing, 4 already used a card, 3 used two cards, ... 0

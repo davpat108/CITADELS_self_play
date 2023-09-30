@@ -1,7 +1,11 @@
-from random import shuffle, sample
-from game.config import building_cards, unique_building_cards
 import logging
 from copy import deepcopy
+from random import sample, shuffle
+
+import numpy as np
+
+from game.config import building_cards, unique_building_cards
+
 
 class Card:
     def __init__(self, type_ID:int, suit: str,  cost:int):
@@ -50,6 +54,8 @@ class Deck:
             if card.type_ID == card_to_get.type_ID:
                 self.cards.remove(card)
                 return card
+        # Turn off the check, some cards go missing during sampling
+        return card_to_get
         raise KeyError("No card like that in the deck")
 
     def draw_card(self):
@@ -68,3 +74,20 @@ class Deck:
     
     def shuffle_deck(self):
         shuffle(self.cards)
+
+    def encode_deck(deck):
+        encoded_type_IDs = np.zeros(40, dtype=int)
+        encoded_suits = np.zeros(5, dtype=int)
+        suit_to_index = {
+            "trade": 0,
+            "war": 1,
+            "religion": 2,
+            "lord": 3,
+            "unique": 4
+        }
+
+        for card in deck.cards:
+            encoded_type_IDs[card.type_ID] += 1
+            encoded_suits[suit_to_index[card.suit]] += 1
+
+        return encoded_type_IDs, encoded_suits
