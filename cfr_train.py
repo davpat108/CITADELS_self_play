@@ -13,6 +13,7 @@ model.eval()
 
 for _ in range(10):
     #try:
+    model.to("cpu")
     game = Game()
     game.setup_round()
     winner = False
@@ -27,6 +28,7 @@ for _ in range(10):
 targets = []
 for _ in range(10):
     #try:
+    model.to("cpu")
     game = Game()
     game.setup_round()
     winner = False

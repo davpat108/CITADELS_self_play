@@ -3,10 +3,19 @@ from torch.utils.data import DataLoader, random_split, TensorDataset
 
 
 def train_model(data, model, epochs=10, learning_rate=0.001, batch_size=64):
+    # Check if CUDA is available and select device
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    if torch.cuda.is_available():
+        print(f"Training on {device}")
+    else:
+        print("CUDA is not available. Training on CPU.")
+        
+    # Transfer model to CUDA device
+    model.to(device)
     # Convert data to TensorDataset and DataLoader
-    inputs = torch.stack([item[0] for item in data])
-    labels = torch.stack([item[1] for item in data])
-    loss_masks = torch.stack([item[2] for item in data])  # Including the loss_mask
+    inputs = torch.stack([item[0] for item in data]).to(device)
+    labels = torch.stack([item[1] for item in data]).to(device)
+    loss_masks = torch.stack([item[2] for item in data]).to(device)
     dataset = TensorDataset(inputs, labels, loss_masks)  # Including the loss_mask in dataset
 
     # Split dataset into training and evaluation sets
