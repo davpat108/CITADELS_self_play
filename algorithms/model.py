@@ -29,17 +29,17 @@ class CitadelNetwork(nn.Module):
         x = self.fc1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.dropout1(x)
+        #x = self.dropout1(x)
         
         x = self.fc2(x)
         x = self.bn2(x)
         x = self.relu(x)
-        x = self.dropout2(x)
+        #x = self.dropout2(x)
         
         x = self.fc3(x)
         x = self.bn3(x)
         x = self.relu(x)
-        x = self.dropout3(x)
+        #x = self.dropout3(x)
         
         x = self.fc4(x)
         x = self.sigmoid(x)

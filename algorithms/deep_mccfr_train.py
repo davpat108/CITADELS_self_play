@@ -265,6 +265,10 @@ class CFRNode:
         self.parent.backpropagate(reward)
 
     def set_role_favorabilities(self):
+        """
+        Creating a favorability object that is used
+        to create target policys for the rolepick phase
+        """
 
         # Initialize a 6x8 matrix filled with zeros
         role_favorability = np.zeros((6, 8))

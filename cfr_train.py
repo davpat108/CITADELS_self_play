@@ -12,17 +12,17 @@ model = CitadelNetwork()
 model.eval()
 
 for _ in range(10):
-    #try:
-    game = Game()
-    game.setup_round()
-    winner = False
-    position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True)
-    position_root.cfr(max_iterations=100000)
-    targets = position_root.get_all_targets()
-    train_model(targets, model, epochs=100, learning_rate=0.001, batch_size=64)
-    #except Exception as e:
-    #    print(e)
-    #    continue
+    try:
+        game = Game()
+        game.setup_round()
+        winner = False
+        position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True)
+        position_root.cfr(max_iterations=100000)
+        targets = position_root.get_all_targets()
+        train_model(targets, model, epochs=100, learning_rate=0.001, batch_size=64)
+    except Exception as e:
+        print(e)
+        continue
 
 targets = []
 for _ in range(10):
