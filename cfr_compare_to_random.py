@@ -1,7 +1,7 @@
 from game.game import Game
 
 from random import choice
-from algorithms.deep_mccfr_train_masked_linear import CFRNode
+from algorithms.deep_mccfr_masked_linear import CFRNode
 from algorithms.visualization import visualize_cfr_tree
 from algorithms.models import CitadelNetwork
 import torch

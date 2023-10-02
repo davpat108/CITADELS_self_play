@@ -2,7 +2,7 @@ import pickle
 
 import torch
 
-from algorithms.deep_mccfr_train_masked_linear import CFRNode
+from algorithms.deep_mccfr_masked_linear import CFRNode
 from algorithms.models import CitadelNetwork
 from algorithms.train import train_model
 from algorithms.visualization import visualize_cfr_tree
@@ -14,7 +14,7 @@ model.eval()
 for _ in range(10):
     #try:
     model.to("cpu")
-    game = Game()
+    game = Game(config={"masks": True,})
     game.setup_round()
     winner = False
     position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True)

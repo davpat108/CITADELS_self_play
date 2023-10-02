@@ -71,25 +71,14 @@ class VariableInputNN(nn.Module):
         self.fc2 = nn.Linear(hidden_size, output_size)
         
     def forward(self, x_fixed, x_variable):
-        # x_fixed: fixed size vector [batch_size, input_size]
-        # x_variable: variable length sequence [batch_size, seq_len, input_size]
-        
-        # Get the masks for padding
+
         mask = (x_variable.sum(dim=-1) == 0)
-        
-        # Embed the variable sequences
         x_variable = self.embedding(x_variable)
-        
-        # Process the sequence with the transformer encoder
         x_variable = self.transformer_encoder(x_variable, src_key_padding_mask=mask)
-        
-        # Aggregate over the sequence dimension, e.g., by taking the mean
         x_variable_aggregated = x_variable.mean(dim=1)
         
-        # Combine the aggregated sequence representation with the fixed-size vector
         x_combined = torch.cat([x_fixed, x_variable_aggregated], dim=-1)
-        
-        # Further process the combined representation and produce the output
+    
         x = F.relu(self.fc1(x_combined))
         output = F.softmax(self.fc2(x), dim=-1)
         

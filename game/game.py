@@ -13,7 +13,8 @@ from game.helper_classes import GameState, RolePropery
 
 
 class Game():
-    def __init__(self, avaible_roles=None, debug=False) -> None:
+    def __init__(self, avaible_roles=None, debug=False, config={"masks":False}) -> None:
+        self.masks = config["masks"]
         if debug:
             # For debug purpuses all the unique cards are used
             self.used_cards = building_cards + unique_building_cards
@@ -521,4 +522,5 @@ class Game():
 
     def get_options_from_state(self):
         # returns the next actor.get_options() for the next player
-        return self.players[self.gamestate.player_id].get_options(self)
+        options, masks = self.players[self.gamestate.player_id].get_options(self)
+        return options, masks if self.masks else [option for option_list in options.values() for option in option_list]
