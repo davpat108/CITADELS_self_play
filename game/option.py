@@ -3,11 +3,13 @@ from game.deck import Deck, Card
 from game.helper_classes import GameState, HandKnowledge, RolePropery, RoleKnowlage
 from game.config import role_to_role_id
 import numpy as np
+import torch
 
 class option():
     def __init__(self, name, **kwargs):
         self.name = name
         self.attributes = kwargs
+        self.generate_name_to_id_map(self)
 
     def __eq__(self, other):
         return self.name == other.name and self.attributes == other.attributes
@@ -25,9 +27,75 @@ class option():
     #10 Wizard choose from hand
 
     # others
-    
+    def generate_name_to_id_map(self):
+        actions = [
+            "role_pick", "gold_or_card", "which_card_to_keep", "blackmail_response",
+            "reveal_blackmail_as_blackmailer", "reveal_warrant_as_magistrate", "build", "empty_option",
+            "finish_round", "ghost_town_color_choice", "smithy_choice", "laboratory_choice",
+            "magic_school_choice", "weapon_storage_choice", "lighthouse_choice", "museum_choice",
+            "graveyard", "take_gold_for_war", "assassination", "magistrate_warrant", "bewitching",
+            "steal", "blackmail", "spy", "magic_hand_change", "discard_and_draw", "look_at_hand",
+            "take_from_hand", "seer", "give_back_card", "take_crown_king", "give_crown",
+            "take_crown_pat", "bishop", "cardinal_exchange", "abbot_gold_or_card", "abbot_beg",
+            "merchant", "alchemist", "trader", "architect", "navigator_gold_card", "scholar",
+            "scholar_card_pick", "warlord_desctruction", "marshal_steal", "diplomat_exchange"
+        ]
+
+        # Create a dictionary that maps each action to a unique ID
+        self.name_to_id = {action: idx for idx, action in enumerate(actions)}
+
+
+
     def encode_option(self, game):
-        pass
+        """
+        name
+        perpetrator
+        choice or target or built_card or real_target or fake_targets or fake_target
+        So who did what, and who/what was the target
+        3 bits
+        """
+        encoded_option = torch.zeros([1, 5], dtype=torch.int16)
+        encoded_option[0, 0] = self.name_to_id[self.name]
+        encoded_option[0, 1] = self.attributes['perpetrator']
+
+        names = {
+            "gold": 0,
+            "pay": 1,
+            "reveal": 2,
+            "not_reveal": 3,
+            "4gold" :4,
+            "4card": 5,
+        }
+
+        if "target" in self.attributes.keys():
+            encoded_option[0, 2] = self.attributes['target']
+        elif "choice" in self.attributes.keys() and self.attributes["choice"] in role_to_role_id.keys():
+            encoded_option[0, 3] = role_to_role_id[self.attributes['choice']]
+        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], str):
+            encoded_option[0, 3] = names[self.attributes['choice']]
+        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], Card):
+            encoded_option[0, 3] = self.attributes['choice'].type_ID
+        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], list):
+            encoded_option[0, 3] = self.attributes['choice'][0].type_ID if len(self.attributes['choice']) == 1 else self.attributes['choice'][0].type_ID + self.attributes['choice'][1].type_ID
+        elif "built_card" in self.attributes.keys():
+            encoded_option[0, 3] = self.attributes['built_card'].type_ID
+        elif "real_target" in self.attributes.keys():
+            encoded_option[0, 2] = self.attributes['real_target']
+        elif "fake_targets" in self.attributes.keys():
+            encoded_option[0, 3] = self.attributes['fake_targets'][0]
+            encoded_option[0, 4] = self.attributes['fake_targets'][1]
+        elif "fake_target" in self.attributes.keys():
+            encoded_option[0, 3] = self.attributes['fake_target']
+        elif "replica" in self.attributes.keys():
+            encoded_option[0, 4] = self.attributes['replica']
+        elif "gold_or_card_combination" in self.attributes.keys():
+            encoded_option[0, 4] = self.attributes['gold_or_card_combination'].count("card")
+        elif "chosen_card" in self.attributes.keys():
+            encoded_option[0, 3] = self.attributes['chosen_card'].type_ID
+        elif "cards_to_give" in self.attributes.keys():
+            encoded_option[0, 3] = sum([card.type_ID for card in self.attributes['cards_to_give']])
+
+
 
 
     def carry_out(self, game):
@@ -591,6 +659,7 @@ class option():
             game.players[self.attributes['target']].gold -= len(self.attributes['cards_to_give'])
             for card in self.attributes['cards_to_give']:
                 game.players[self.attributes['target']].hand.add_card(game.players[self.attributes['perpetrator']].hand.get_a_card_like_it(card))
+
         game.gamestate.state = 5
         game.gamestate.player_id = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
@@ -611,7 +680,7 @@ class option():
 
     def carry_out_trader(self, game):
         for building in game.players[self.attributes['perpetrator']].buildings.cards:
-            if building.suit == "religion":
+            if building.suit == "trade":
                 game.players[self.attributes['perpetrator']].gold += 1
         game.gamestate.state = 5
         game.gamestate.player_id = self.attributes['perpetrator']

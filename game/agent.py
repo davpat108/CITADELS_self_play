@@ -653,7 +653,7 @@ class Agent():
         for card in seven_drawn_cards.cards:
             unchosen_cards = copy(seven_drawn_cards)
             unchosen_cards.get_a_card_like_it(card)
-            options.append(option(name="scholar_card_pick", choice=card, perpetrator=self.id,  unchosen_cards=unchosen_cards))
+            options.append(option(name="scholar_card_pick", choice=card, perpetrator=self.id,  unchosen_cards=unchosen_cards, chosen_card=card))
         used_bits = list(set([option.attributes["choice"].type_ID for option in options]))
         return {0:options}, [[create_mask(game.game_model_output_size, 0, 1, type="unrepresented")]]#[[create_mask(game.game_model_output_size, 666, 706, used_bits)]]
 

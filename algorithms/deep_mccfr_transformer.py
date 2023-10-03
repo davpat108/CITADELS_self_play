@@ -1,10 +1,7 @@
 import numpy as np
 from copy import deepcopy
 
-from algorithms.model_utils import create_mask, get_distribution, build_targets
-from algorithms.model_utils import TargetBuildParams, augment_game
 import torch
-from game.config import role_to_role_id
 
 class CFRNode:
     def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None):
@@ -17,7 +14,7 @@ class CFRNode:
         # It is used to know which player doesn't need private info sampling
         self.original_player_id = original_player_id
 
-        
+
         # Initialize regrets and strategy
         self.cumulative_regrets = np.array([])
         self.strategy = np.array([])
@@ -25,7 +22,7 @@ class CFRNode:
         self.node_value = np.zeros(player_count)
 
         self.role_pick_node = role_pick_node
-        
+
 
     def weighted_average_strategy(self, strategy_matrix, pick_hierarchy):
         """
@@ -60,7 +57,7 @@ class CFRNode:
         else:
             pick_hierarchy = self.game.turn_orders_for_roles
             avg_strategy = self.weighted_average_strategy(self.cumulative_strategy, pick_hierarchy)
-    
+
             # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
             if avg_strategy.sum() == 0:
                 normalized_strategy = np.ones(len(self.children)) / len(self.children)
@@ -74,7 +71,7 @@ class CFRNode:
             return self.children[choice_index][1], self.children[choice_index][0]
 
     def expand(self):
-        
+
         if self.game.gamestate.state == 0 and not self.children:
             self.role_pick_node = True
             self.expand_role_pick()
@@ -98,11 +95,11 @@ class CFRNode:
                 options[choice_index].carry_out(hypothetical_game)
             # Must be at the end of rolepick
             self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model)))
-        
+
             self.cumulative_regrets = np.zeros((1, 6)) if self.cumulative_regrets.size == 0 else np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
             self.strategy = np.zeros((1, 6)) if self.strategy.size == 0 else np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
             self.cumulative_strategy = np.zeros((1, 6)) if self.cumulative_strategy.size == 0 else np.concatenate((self.cumulative_strategy, np.zeros((1, 6))), axis=0)
-        
+
         if self.model:
             options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
             model_input = self.game.encode_game().unsqueeze(0)
@@ -115,7 +112,7 @@ class CFRNode:
         self.cumulative_regrets = self.cumulative_regrets.T
         self.strategy = self.strategy.T
         self.cumulative_strategy = distribution if self.model else self.cumulative_strategy.T
-    
+
     def expand_for_original_player(self):
         options = self.game.get_options_from_state()
         for option in options:
@@ -206,7 +203,7 @@ class CFRNode:
                 node.expand()
         self.update_strategy()
 
-        
+
 
     def update_regrets(self):
         # backprops, checks all the other choices it could have made from the parent and calcs reward
@@ -226,7 +223,7 @@ class CFRNode:
             max_rewards = np.max(actual_rewards, axis=0)
             regret_values = max_rewards - actual_rewards
             self.cumulative_regrets += regret_values
-    
+
     def get_all_targets(self):
         """
         Recursively gather the training targets from each node in the tree.
@@ -245,7 +242,7 @@ class CFRNode:
 
         return targets_list
 
-    
+
     def backpropagate(self, reward):
         # Update the value of this node
         if self.training or self.node_value.sum() == 0:
@@ -255,7 +252,7 @@ class CFRNode:
         # Calculate regret for this node
         if self.children:
             self.update_regrets()
-            
+
         if self.parent is None:
             return
         # Recursively call backpropagate on parent node
@@ -283,4 +280,7 @@ class CFRNode:
             self.strategy = new_strategies
 
     def build_train_targets(self):
-        return torch.cat([torch.tensor(self.node_value), torch.tensor(self.strategy)], dim=0).unsqueeze(0)
+        options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
+        model_input = self.game.encode_game().unsqueeze(0)
+        targets = torch.cat([torch.tensor(self.node_value), torch.tensor(self.strategy)], dim=0).unsqueeze(0)
+        return [(model_input, options_input, targets)]

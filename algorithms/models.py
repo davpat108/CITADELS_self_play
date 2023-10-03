@@ -57,29 +57,32 @@ class CitadelNetwork(nn.Module):
         return torch.sigmoid(x)
     
 
-import torch.nn.functional as F
+import torch.nn as nn
+from transformers import Transformer
+
 class VariableInputNN(nn.Module):
-    def __init__(self, input_size, hidden_size, num_heads, num_layers, output_size):
+    def __init__(self, option_encoding_size, variable_item_size, transformer_nhead=2, num_transformer_layers=2):
         super(VariableInputNN, self).__init__()
         
-        self.embedding = nn.Linear(input_size, hidden_size)  # Assumes input is not categorical
-        
-        encoder_layers = nn.TransformerEncoderLayer(d_model=hidden_size, nhead=num_heads)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=num_layers)
-        
-        self.fc1 = nn.Linear(hidden_size, hidden_size)
-        self.fc2 = nn.Linear(hidden_size, output_size)
-        
-    def forward(self, x_fixed, x_variable):
+        self.embedding_fixed = nn.Linear(option_encoding_size, variable_item_size)
+        self.transformer = Transformer(d_model=variable_item_size, nhead=transformer_nhead, num_encoder_layers=num_transformer_layers)
+        self.aggregate = nn.AdaptiveAvgPool1d(1)  # Using average pooling for aggregation
+        self.fc_out = nn.Linear(variable_item_size, 1)  # This produces a scalar output, to be expanded later.
 
-        mask = (x_variable.sum(dim=-1) == 0)
-        x_variable = self.embedding(x_variable)
-        x_variable = self.transformer_encoder(x_variable, src_key_padding_mask=mask)
-        x_variable_aggregated = x_variable.mean(dim=1)
+    def forward(self, x_fixed, x_variable):
+        x_fixed = self.embedding_fixed(x_fixed).unsqueeze(0)  # shape: [1, batch_size, variable_item_size]
         
-        x_combined = torch.cat([x_fixed, x_variable_aggregated], dim=-1)
-    
-        x = F.relu(self.fc1(x_combined))
-        output = F.softmax(self.fc2(x), dim=-1)
+        # Concatenate the fixed vector with variable vectors
+        combined_seq = torch.cat([x_fixed, x_variable], dim=0)
         
-        return output
+        # Pass through the transformer
+        transformer_output = self.transformer(combined_seq, combined_seq)
+        
+        # Aggregate across sequence dimension
+        aggregated_representation = self.aggregate(transformer_output.permute(1, 2, 0)).squeeze(-1)  # shape: [batch_size, variable_item_size]
+
+        # Here's the change. Instead of having a fixed-sized output, the output size is based on the length of x_variable.
+        output_distribution = self.fc_out(aggregated_representation).repeat(1, x_variable.shape[0])
+        output_distribution = nn.functional.softmax(output_distribution, dim=1)
+        
+        return output_distribution
