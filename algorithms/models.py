@@ -58,31 +58,51 @@ class CitadelNetwork(nn.Module):
     
 
 import torch.nn as nn
-from transformers import Transformer
+from torch.nn import Transformer
 
 class VariableInputNN(nn.Module):
-    def __init__(self, option_encoding_size, variable_item_size, transformer_nhead=2, num_transformer_layers=2):
+    def __init__(self, game_encoding_size=478, embedding_size=10, vector_input_size=5, num_heads=3, num_transformer_layers=2):
+        """
+        Hidden size = """
         super(VariableInputNN, self).__init__()
         
-        self.embedding_fixed = nn.Linear(option_encoding_size, variable_item_size)
-        self.transformer = Transformer(d_model=variable_item_size, nhead=transformer_nhead, num_encoder_layers=num_transformer_layers)
+        # Embedding for the fixed input to match variable item size
+        self.embedding_fixed = nn.Linear(game_encoding_size, embedding_size)
+        
+        # Transformer layers
+        self.transformer = nn.Transformer(d_model=embedding_size+vector_input_size, nhead=num_heads, num_encoder_layers=num_transformer_layers)
         self.aggregate = nn.AdaptiveAvgPool1d(1)  # Using average pooling for aggregation
-        self.fc_out = nn.Linear(variable_item_size, 1)  # This produces a scalar output, to be expanded later.
+        # Final layer to produce scores
+        self.fc_out_variable = nn.Linear(embedding_size+vector_input_size, 1)
+        self.fc_out_fixed = nn.Linear(embedding_size + vector_input_size, 6)
 
     def forward(self, x_fixed, x_variable):
-        x_fixed = self.embedding_fixed(x_fixed).unsqueeze(0)  # shape: [1, batch_size, variable_item_size]
+        # Get the sequence length (N) from x_variable
+        N = x_variable.size(1)
         
-        # Concatenate the fixed vector with variable vectors
-        combined_seq = torch.cat([x_fixed, x_variable], dim=0)
+        # Embed the fixed input
+        x_fixed_embedded = self.embedding_fixed(x_fixed).unsqueeze(1)  # shape: [batch_size, 1, variable_item_size]
+        
+        # Repeat the embedded fixed input for concatenation
+        x_fixed_repeated = x_fixed_embedded.repeat(1, N, 1)  # shape: [batch_size, N, variable_item_size]
+        
+        # Concatenate the fixed and variable inputs
+        combined_seq = torch.cat([x_fixed_repeated, x_variable], dim=-1)
+        
+        # The transformer expects input in the shape [seq_len, batch_size, embed_size]. Transpose appropriately.
+        combined_seq = combined_seq.transpose(0, 1)  # shape: [N, batch_size, variable+fixed size]
         
         # Pass through the transformer
-        transformer_output = self.transformer(combined_seq, combined_seq)
-        
-        # Aggregate across sequence dimension
-        aggregated_representation = self.aggregate(transformer_output.permute(1, 2, 0)).squeeze(-1)  # shape: [batch_size, variable_item_size]
+        transformer_output = self.transformer(combined_seq, combined_seq)  # shape: [N, batch_size,  variable+fixed size]
 
-        # Here's the change. Instead of having a fixed-sized output, the output size is based on the length of x_variable.
-        output_distribution = self.fc_out(aggregated_representation).repeat(1, x_variable.shape[0])
-        output_distribution = nn.functional.softmax(output_distribution, dim=1)
+        aggregated_representation = self.aggregate(transformer_output.permute(1, 2, 0)).squeeze(-1)  # shape: [batch_size, variable+fixed size]
         
-        return output_distribution
+        # Create variable-length distribution
+        output_distribution_variable = self.fc_out_variable(aggregated_representation).repeat(1, N)
+        output_distribution_variable = nn.functional.softmax(output_distribution_variable, dim=1)
+
+        # Create fixed-length distribution
+        output_distribution_fixed = self.fc_out_fixed(aggregated_representation)
+        output_distribution_fixed = nn.functional.softmax(output_distribution_fixed, dim=1)
+        
+        return output_distribution_variable, output_distribution_fixed

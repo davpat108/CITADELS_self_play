@@ -9,7 +9,7 @@ class option():
     def __init__(self, name, **kwargs):
         self.name = name
         self.attributes = kwargs
-        self.generate_name_to_id_map(self)
+        self.generate_name_to_id_map()
 
     def __eq__(self, other):
         return self.name == other.name and self.attributes == other.attributes
@@ -46,7 +46,7 @@ class option():
 
 
 
-    def encode_option(self, game):
+    def encode_option(self):
         """
         name
         perpetrator
@@ -60,16 +60,20 @@ class option():
 
         names = {
             "gold": 0,
-            "pay": 1,
-            "reveal": 2,
-            "not_reveal": 3,
-            "4gold" :4,
-            "4card": 5,
+            "card": 1,
+            "pay": 2,
+            "not_pay": 3,
+            "reveal": 4,
+            "not_reveal": 5,
+            "4gold" :6,
+            "4card": 7,
+            "trade": 8,
+            "war": 9,
         }
 
         if "target" in self.attributes.keys():
             encoded_option[0, 2] = self.attributes['target']
-        elif "choice" in self.attributes.keys() and self.attributes["choice"] in role_to_role_id.keys():
+        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], str) and self.attributes["choice"] in role_to_role_id.keys():
             encoded_option[0, 3] = role_to_role_id[self.attributes['choice']]
         elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], str):
             encoded_option[0, 3] = names[self.attributes['choice']]
@@ -95,7 +99,7 @@ class option():
         elif "cards_to_give" in self.attributes.keys():
             encoded_option[0, 3] = sum([card.type_ID for card in self.attributes['cards_to_give']])
 
-
+        return encoded_option
 
 
     def carry_out(self, game):

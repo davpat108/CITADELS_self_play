@@ -4,7 +4,7 @@ from copy import deepcopy
 import torch
 
 class CFRNode:
-    def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None):
+    def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None, training=False):
         self.game = game # Unkown informations are present but counted as dont care
         self.model = model
         self.parent = parent
@@ -13,6 +13,7 @@ class CFRNode:
         # The player id of the player that started the game
         # It is used to know which player doesn't need private info sampling
         self.original_player_id = original_player_id
+        self.training = training
 
 
         # Initialize regrets and strategy
@@ -88,25 +89,31 @@ class CFRNode:
             while hypothetical_game.gamestate.state != 1:
                 options = hypothetical_game.get_options_from_state()
                 distribution = np.ones(len(options)) / len(options)
-
                 choice_index = np.random.choice(range(len(options)), p=distribution)
                 if hypothetical_game.gamestate.player_id == self.original_player_id:
                     option_to_carry_out = options[choice_index]
                 options[choice_index].carry_out(hypothetical_game)
             # Must be at the end of rolepick
-            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model)))
+            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model, training=self.training)))
 
             self.cumulative_regrets = np.zeros((1, 6)) if self.cumulative_regrets.size == 0 else np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
             self.strategy = np.zeros((1, 6)) if self.strategy.size == 0 else np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
             self.cumulative_strategy = np.zeros((1, 6)) if self.cumulative_strategy.size == 0 else np.concatenate((self.cumulative_strategy, np.zeros((1, 6))), axis=0)
 
         if self.model:
-            options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
-            model_input = self.game.encode_game().unsqueeze(0)
-            output = self.model(model_input, options_input).squeeze(0)
-            distribution = output[6:].detach().numpy()
-            if not self.training:
-                self.node_value = output[:6].detach().numpy()
+            distributions = []
+            for i in range(6):
+                hypothetical_game = deepcopy(self.game)
+                hypothetical_game.gamestate.player_id = i
+                options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
+                model_input = hypothetical_game.encode_game().unsqueeze(0)
+                distribution, node_value = self.model(model_input, options_input)
+                distribution = distribution.squeeze(0).detach().numpy()
+                distributions.append(distribution)
+            distribution = np.vstack(distributions)
+            self.node_value = node_value.squeeze(0).detach().numpy()
+        
+
 
 
         self.cumulative_regrets = self.cumulative_regrets.T
@@ -122,15 +129,15 @@ class CFRNode:
             if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
                 hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id], role_sample=self.parent.game.gamestate.state != 0 if self.parent else False)
             option.carry_out(hypothetical_game)
-            self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
+            self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training)))
 
         if self.model:
             options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
             model_input = self.game.encode_game().unsqueeze(0)
-            output = self.model(model_input, options_input).squeeze(0)
-            distribution = output[6:].detach().numpy()
+            distribution, node_value = self.model(model_input, options_input)
+            distribution = distribution.squeeze(0).detach().numpy()
             if not self.training:
-                self.node_value = output[:6].detach().numpy()
+                self.node_value = node_value.squeeze(0).detach().numpy()
 
         self.cumulative_regrets = np.zeros(len(self.children))
         self.strategy = np.zeros(len(self.children))
@@ -148,10 +155,8 @@ class CFRNode:
         if self.model:
             options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
             model_input = self.game.encode_game().unsqueeze(0)
-            output = self.model(model_input, options_input).squeeze(0)
-            distribution = output[6:].detach().numpy()
-            if not self.training:
-                self.node_value = output[:6].detach().numpy()
+            distribution, _ = self.model(model_input, options_input)
+            distribution = distribution.squeeze(0).detach().numpy()
         else:
             distribution = np.ones(len(options)) / len(options)
 
@@ -160,17 +165,17 @@ class CFRNode:
  
         child_options = [child[0] for child in self.children]
         if not options[choice_index] in child_options:
-            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model)))
+            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
             if self.model:
                 options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
                 model_input = self.game.encode_game().unsqueeze(0)
-                output = self.model(model_input, options_input).squeeze(0)
-                distribution = output[6:].detach().numpy()
+                distribution, node_value = self.model(model_input, options_input)
+                distribution = distribution.squeeze(0).detach().numpy()
                 if not self.training:
-                    self.node_value = output[:6].detach().numpy()
+                    self.node_value = node_value.squeeze(0).detach().numpy()
                 self.cumulative_strategy = distribution
             else:
                 self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
@@ -280,7 +285,21 @@ class CFRNode:
             self.strategy = new_strategies
 
     def build_train_targets(self):
-        options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
-        model_input = self.game.encode_game().unsqueeze(0)
-        targets = torch.cat([torch.tensor(self.node_value), torch.tensor(self.strategy)], dim=0).unsqueeze(0)
-        return [(model_input, options_input, targets)]
+        if len(self.children) == 0:
+            return []
+        if self.role_pick_node:
+            model_targets = []
+            for i in range(6):
+                hypothetical_game = deepcopy(self.game)
+                hypothetical_game.gamestate.player_id = i
+                options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
+                model_input = hypothetical_game.encode_game().unsqueeze(0)
+                target = torch.cat([torch.tensor(self.node_value), torch.tensor(self.strategy[i])], dim=0).unsqueeze(0)
+                model_targets.append((model_input, options_input, target))
+            return model_targets
+        else:
+            options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
+            model_input = self.game.encode_game().unsqueeze(0)
+            targets = torch.cat([torch.tensor(self.node_value), torch.tensor(self.strategy)], dim=0).unsqueeze(0)
+            return [(model_input, options_input, targets)]
+ 

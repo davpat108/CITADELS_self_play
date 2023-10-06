@@ -16,7 +16,7 @@ model.eval()
 model.to("cpu")
 winners = [0, 0, 0, 0, 0, 0]
 for _ in range(100):
-    game = Game()
+    game = Game(config={"masks": True})
     game.setup_round()
     winner = False
     try:
