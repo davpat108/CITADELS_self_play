@@ -14,6 +14,7 @@ class CFRNode:
         # It is used to know which player doesn't need private info sampling
         self.original_player_id = original_player_id
         self.training = training
+        self.model_reward_weights = 5
 
 
         # Initialize regrets and strategy
@@ -21,6 +22,7 @@ class CFRNode:
         self.strategy = np.array([])
         self.cumulative_strategy = np.array([])
         self.node_value = np.zeros(player_count)
+        self.winning_probabilities = np.ones(player_count)/player_count
 
         self.role_pick_node = role_pick_node
 
@@ -111,7 +113,7 @@ class CFRNode:
                 distribution = distribution.squeeze(0).detach().numpy()
                 distributions.append(distribution)
             distribution = np.vstack(distributions)
-            self.node_value = node_value.squeeze(0).detach().numpy()
+            self.node_value = self.model_reward_weights * node_value.squeeze(0).detach().numpy()
         
 
 
@@ -137,7 +139,7 @@ class CFRNode:
             distribution, node_value = self.model(model_input, options_input)
             distribution = distribution.squeeze(0).detach().numpy()
             if not self.training:
-                self.node_value = node_value.squeeze(0).detach().numpy()
+                self.node_value = self.model_reward_weights * node_value.squeeze(0).detach().numpy()
 
         self.cumulative_regrets = np.zeros(len(self.children))
         self.strategy = np.zeros(len(self.children))
@@ -175,7 +177,7 @@ class CFRNode:
                 distribution, node_value = self.model(model_input, options_input)
                 distribution = distribution.squeeze(0).detach().numpy()
                 if not self.training:
-                    self.node_value = node_value.squeeze(0).detach().numpy()
+                    self.node_value = self.model_reward_weights * node_value.squeeze(0).detach().numpy()
                 self.cumulative_strategy = distribution
             else:
                 self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
@@ -187,7 +189,29 @@ class CFRNode:
     def get_reward(self):
         return self.game.rewards
 
-    def cfr(self, max_iterations=100000):
+    def cfr_train(self, max_iterations=100000, max_depth=100):
+        # If the cfr is called from a terminal node, return
+        if self.is_terminal():
+            return 
+
+        self.expand()
+        
+        node = self
+        for i in range(max_iterations):
+            # Traverse
+            node.update_strategy()
+            node, _ = node.action_choice()
+            if node.is_terminal():
+                reward = node.get_reward()
+                node.backpropagate(reward) # backpropagate the reward and calculate regrets
+                node.update_strategy()
+                node = self
+            else:
+                node.expand()
+        self.update_strategy()
+
+    
+    def cfr_pred(self, max_iterations=100000, max_depth=100):
         # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 
@@ -216,14 +240,14 @@ class CFRNode:
         if not self.role_pick_node:
             player_id = self.current_player_id
             # Calculate the actual rewards for each action
-            actual_rewards = [child[1].node_value[player_id] for child in self.children]
+            actual_rewards = [child[1].winning_probabilities[player_id] for child in self.children]
             # Get the maximum possible reward
             max_reward = max(actual_rewards)
             # Update regrets
             for a in range(len(self.children)):
                 self.cumulative_regrets[a] += max_reward - actual_rewards[a]
         else:
-            actual_rewards = np.array([child[1].node_value for child in self.children]).T
+            actual_rewards = np.array([child[1].winning_probabilities for child in self.children]).T
 
             max_rewards = np.max(actual_rewards, axis=0)
             regret_values = max_rewards - actual_rewards
@@ -252,8 +276,8 @@ class CFRNode:
         # Update the value of this node
         if self.training or self.node_value.sum() == 0:
             reward /= reward.sum()
-            self.node_value = reward
-
+            self.node_value += reward
+        self.winning_probabilities = self.node_value / self.node_value.sum()
         # Calculate regret for this node
         if self.children:
             self.update_regrets()
@@ -293,13 +317,15 @@ class CFRNode:
                 hypothetical_game = deepcopy(self.game)
                 hypothetical_game.gamestate.player_id = i
                 options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
-                model_input = hypothetical_game.encode_game().unsqueeze(0)
-                target = torch.cat([torch.tensor(self.node_value), torch.tensor(self.strategy[i])], dim=0).unsqueeze(0)
-                model_targets.append((model_input, options_input, target))
+                model_input = hypothetical_game.encode_game()
+                target_win_prob = torch.tensor(self.winning_probabilities)
+                target_decision_dist = torch.tensor(self.strategy[i])
+                model_targets.append((model_input, options_input, target_win_prob, target_decision_dist))
             return model_targets
         else:
             options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
-            model_input = self.game.encode_game().unsqueeze(0)
-            targets = torch.cat([torch.tensor(self.node_value), torch.tensor(self.strategy)], dim=0).unsqueeze(0)
-            return [(model_input, options_input, targets)]
+            model_input = self.game.encode_game()
+            target_win_prob = torch.tensor(self.winning_probabilities)
+            target_decision_dist = torch.tensor(self.strategy)
+            return [(model_input, options_input, target_win_prob, target_decision_dist)]
  

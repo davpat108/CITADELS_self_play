@@ -81,13 +81,13 @@ def train_transformer(data, model, epochs=10, lr=0.001, batch_size=32, device='c
     for epoch in range(epochs):
         model.train()
         random.shuffle(train_data)  # Shuffle the training data each epoch
-
+        total_train_loss = 0
         for i in range(0, len(train_data), batch_size):
             batch = train_data[i:i+batch_size]
-            x_fixed_batch = torch.stack([item[0] for item in batch])
-            x_variable_batch = torch.cat([item[1] for item in batch], dim=1)
-            labels_variable_batch = torch.stack([item[2] for item in batch])
-            labels_fixed_batch = torch.stack([item[3] for item in batch])
+            x_fixed_batch = torch.stack([item[0] for item in batch]).to(device)
+            x_variable_batch = torch.cat([item[1] for item in batch], dim=1).to(device)
+            labels_fixed_batch = torch.stack([item[2] for item in batch]).to(device)
+            labels_variable_batch = torch.stack([item[3] for item in batch]).to(device)
 
             optimizer.zero_grad()
             outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
@@ -96,17 +96,19 @@ def train_transformer(data, model, epochs=10, lr=0.001, batch_size=32, device='c
             total_loss = loss_variable + loss_fixed
             total_loss.backward()
             optimizer.step()
-
+            total_train_loss += total_loss.item()
+        avg_train_loss = total_train_loss / len(train_data)
+        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
         # Evaluation phase
         model.eval()
         total_eval_loss = 0
         with torch.no_grad():
             for i in range(0, len(eval_data), batch_size):
                 batch = eval_data[i:i+batch_size]
-                x_fixed_batch = torch.stack([item[0] for item in batch])
-                x_variable_batch = torch.cat([item[1] for item in batch], dim=1)
-                labels_variable_batch = torch.stack([item[2] for item in batch])
-                labels_fixed_batch = torch.stack([item[3] for item in batch])
+                x_fixed_batch = torch.stack([item[0] for item in batch]).to(device)
+                x_variable_batch = torch.cat([item[1] for item in batch], dim=1).to(device)
+                labels_fixed_batch = torch.stack([item[2] for item in batch]).to(device)
+                labels_variable_batch = torch.stack([item[3] for item in batch]).to(device)
                 
                 outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
                 loss_variable = criterion(outputs_variable, labels_variable_batch)

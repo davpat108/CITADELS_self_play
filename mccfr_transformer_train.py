@@ -13,7 +13,7 @@ embedding_size = 10
 num_heads = 3
 num_transformer_layers = 2
 vector_input_size = 5
-model = VariableInputNN(game_encoding_size=game_encoding_size, vector_input_size=vector_input_size, embedding_size=embedding_size, 
+model = VariableInputNN(game_encoding_size=game_encoding_size, vector_input_size=vector_input_size, embedding_size=embedding_size,
                         num_heads=num_heads, num_transformer_layers=num_transformer_layers)
 model.eval()
 
@@ -23,9 +23,9 @@ for _ in range(10):
     game.setup_round()
     winner = False
     position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True, training=True)
-    position_root.cfr(max_iterations=1000)
+    position_root.cfr_train(max_iterations=100000)
     targets = position_root.get_all_targets()
-    train_transformer(targets, model, epochs=50, lr=0.001, batch_size=1024)
+    train_transformer(targets, model, epochs=50, lr=0.001, batch_size=1)
 
 targets = []
 for _ in range(10):
@@ -35,7 +35,7 @@ for _ in range(10):
         game.setup_round()
         winner = False
         position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True, training=True)
-        position_root.cfr(max_iterations=100000)
+        position_root.cfr_train(max_iterations=100000)
         targets += position_root.get_all_targets()
 
     except Exception as e:
@@ -45,7 +45,7 @@ for _ in range(10):
 with open("trainig_data.pkl", 'wb') as file:
     pickle.dump(targets, file)
 
-train_transformer(targets, model, epochs=50, lr=0.001, batch_size=1024)
+train_transformer(targets, model, epochs=50, lr=0.001, batch_size=1)
 torch.save(model.state_dict(), "model.pt")
 
 

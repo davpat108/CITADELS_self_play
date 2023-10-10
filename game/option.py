@@ -69,6 +69,9 @@ class option():
             "4card": 7,
             "trade": 8,
             "war": 9,
+            "religion": 10,
+            "lord":11,
+            "unique": 12,
         }
 
         if "target" in self.attributes.keys():
