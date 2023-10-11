@@ -16,6 +16,7 @@ vector_input_size = 5
 model = VariableInputNN(game_encoding_size=game_encoding_size, vector_input_size=vector_input_size, embedding_size=embedding_size,
                         num_heads=num_heads, num_transformer_layers=num_transformer_layers)
 model.eval()
+print(sum(p.numel() for p in model.parameters() if p.requires_grad))
 
 for _ in range(10):
     model.to("cpu")
@@ -25,7 +26,7 @@ for _ in range(10):
     position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True, training=True)
     position_root.cfr_train(max_iterations=100000)
     targets = position_root.get_all_targets()
-    train_transformer(targets, model, epochs=50, lr=0.001, batch_size=1)
+    train_transformer(targets, model, epochs=50, lr=0.005, batch_size=1)
 
 targets = []
 for _ in range(10):

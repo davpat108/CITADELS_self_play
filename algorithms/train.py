@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader, random_split, TensorDataset
 
 
-def train_masked_model(data, model, epochs=10, learning_rate=0.001, batch_size=64):
+def train_masked_model(data, model, epochs=10, learning_rate=0.00, batch_size=64):
     # Check if CUDA is available and select device
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     if torch.cuda.is_available():
@@ -68,10 +68,11 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import random
 
-def train_transformer(data, model, epochs=10, lr=0.001, batch_size=32, device='cuda'):
+def train_transformer(data, model, epochs=10, lr=0.005, batch_size=1, device='cuda'):
     model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    criterion = nn.CrossEntropyLoss()  # Assuming you're doing classification
+    criterion = nn.KLDivLoss(reduction='batchmean')
+    log_softmax = nn.LogSoftmax(dim=1)
 
     # Splitting data into training and evaluation sets
     train_size = int(0.8 * len(data))
@@ -91,8 +92,10 @@ def train_transformer(data, model, epochs=10, lr=0.001, batch_size=32, device='c
 
             optimizer.zero_grad()
             outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
-            loss_variable = criterion(outputs_variable, labels_variable_batch)
-            loss_fixed = criterion(outputs_fixed, labels_fixed_batch)
+            outputs_variable_pred = log_softmax(outputs_variable)
+            outputs_fixed_pred = log_softmax(outputs_fixed)
+            loss_variable = criterion(outputs_variable_pred, labels_variable_batch)
+            loss_fixed = criterion(outputs_fixed_pred, labels_fixed_batch)
             total_loss = loss_variable + loss_fixed
             total_loss.backward()
             optimizer.step()
@@ -111,8 +114,11 @@ def train_transformer(data, model, epochs=10, lr=0.001, batch_size=32, device='c
                 labels_variable_batch = torch.stack([item[3] for item in batch]).to(device)
                 
                 outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
-                loss_variable = criterion(outputs_variable, labels_variable_batch)
-                loss_fixed = criterion(outputs_fixed, labels_fixed_batch)
+                outputs_variable_pred = log_softmax(outputs_variable)
+                outputs_fixed_pred = log_softmax(outputs_fixed)
+
+                loss_variable = criterion(outputs_variable_pred, labels_variable_batch)
+                loss_fixed = criterion(outputs_fixed_pred, labels_fixed_batch)
                 total_eval_loss += (loss_variable + loss_fixed).item()
 
         avg_eval_loss = total_eval_loss / len(eval_data)

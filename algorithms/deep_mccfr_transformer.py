@@ -303,7 +303,7 @@ class CFRNode:
             total_regrets = np.sum(self.cumulative_regrets, axis=0)
 
             positive_regret_mask = total_regrets > 0
-            uniform_strategy = np.ones(6) / 6
+            uniform_strategy = np.ones(6) / len(self.children)
             new_strategies = np.tile(uniform_strategy[:, np.newaxis], (1, len(self.children)))
             new_strategies[:, positive_regret_mask] = self.cumulative_regrets[:, positive_regret_mask] / total_regrets[positive_regret_mask]
             self.strategy = new_strategies
