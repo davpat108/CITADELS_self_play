@@ -2,7 +2,7 @@ import numpy as np
 from copy import deepcopy
 
 import torch
-
+import torch.nn as nn
 class CFRNode:
     def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None, training=False):
         self.game = game # Unkown informations are present but counted as dont care
@@ -22,7 +22,6 @@ class CFRNode:
         self.strategy = np.array([])
         self.cumulative_strategy = np.array([])
         self.node_value = np.zeros(player_count)
-        self.winning_probabilities = np.ones(player_count)/player_count
 
         self.role_pick_node = role_pick_node
 
@@ -107,13 +106,12 @@ class CFRNode:
             for i in range(6):
                 hypothetical_game = deepcopy(self.game)
                 hypothetical_game.gamestate.player_id = i
-                options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
-                model_input = hypothetical_game.encode_game().unsqueeze(0)
-                distribution, node_value = self.model(model_input, options_input)
-                distribution = distribution.squeeze(0).detach().numpy()
+                distribution, winning_probabilities = self.model_inference(hypothetical_game)
                 distributions.append(distribution)
             distribution = np.vstack(distributions)
-            self.node_value = self.model_reward_weights * node_value.squeeze(0).detach().numpy()
+            if not self.training:
+                self.node_value = self.model_reward_weights * winning_probabilities
+            
         
 
 
@@ -134,12 +132,9 @@ class CFRNode:
             self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training)))
 
         if self.model:
-            options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
-            model_input = self.game.encode_game().unsqueeze(0)
-            distribution, node_value = self.model(model_input, options_input)
-            distribution = distribution.squeeze(0).detach().numpy()
+            distribution, winning_probabilities = self.model_inference(self.game, options)
             if not self.training:
-                self.node_value = self.model_reward_weights * node_value.squeeze(0).detach().numpy()
+                self.node_value = self.model_reward_weights * winning_probabilities
 
         self.cumulative_regrets = np.zeros(len(self.children))
         self.strategy = np.zeros(len(self.children))
@@ -155,10 +150,7 @@ class CFRNode:
 
         options = hypothetical_game.get_options_from_state()
         if self.model:
-            options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
-            model_input = self.game.encode_game().unsqueeze(0)
-            distribution, _ = self.model(model_input, options_input)
-            distribution = distribution.squeeze(0).detach().numpy()
+            distribution, winning_probabilities = self.model_inference(hypothetical_game, options)
         else:
             distribution = np.ones(len(options)) / len(options)
 
@@ -172,12 +164,9 @@ class CFRNode:
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
             if self.model:
-                options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
-                model_input = self.game.encode_game().unsqueeze(0)
-                distribution, node_value = self.model(model_input, options_input)
-                distribution = distribution.squeeze(0).detach().numpy()
+                distribution, winning_probabilities = self.model_inference(self.game)
                 if not self.training:
-                    self.node_value = self.model_reward_weights * node_value.squeeze(0).detach().numpy()
+                    self.node_value = self.model_reward_weights * winning_probabilities
                 self.cumulative_strategy = distribution
             else:
                 self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
@@ -240,14 +229,14 @@ class CFRNode:
         if not self.role_pick_node:
             player_id = self.current_player_id
             # Calculate the actual rewards for each action
-            actual_rewards = [child[1].winning_probabilities[player_id] for child in self.children]
+            actual_rewards = [child[1].node_value[player_id] for child in self.children]
             # Get the maximum possible reward
             max_reward = max(actual_rewards)
             # Update regrets
             for a in range(len(self.children)):
                 self.cumulative_regrets[a] += max_reward - actual_rewards[a]
         else:
-            actual_rewards = np.array([child[1].winning_probabilities for child in self.children]).T
+            actual_rewards = np.array([child[1].node_value for child in self.children]).T
 
             max_rewards = np.max(actual_rewards, axis=0)
             regret_values = max_rewards - actual_rewards
@@ -277,7 +266,6 @@ class CFRNode:
         if self.training or self.node_value.sum() == 0:
             reward /= reward.sum()
             self.node_value += reward
-        self.winning_probabilities = self.node_value / self.node_value.sum()
         # Calculate regret for this node
         if self.children:
             self.update_regrets()
@@ -318,14 +306,26 @@ class CFRNode:
                 hypothetical_game.gamestate.player_id = i
                 options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
                 model_input = hypothetical_game.encode_game()
-                target_win_prob = torch.tensor(self.winning_probabilities)
-                target_decision_dist = torch.tensor(self.strategy[i])
-                model_targets.append((model_input, options_input, target_win_prob, target_decision_dist))
+                target_node_value = torch.tensor(self.node_value)
+                target_decision_dist = torch.tensor(self.cumulative_regrets[i])
+                model_targets.append((model_input, options_input, target_node_value, target_decision_dist))
             return model_targets
         else:
             options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
             model_input = self.game.encode_game()
-            target_win_prob = torch.tensor(self.winning_probabilities)
-            target_decision_dist = torch.tensor(self.strategy)
-            return [(model_input, options_input, target_win_prob, target_decision_dist)]
- 
+            target_node_value = torch.tensor(self.node_value)
+            target_decision_dist = torch.tensor(self.cumulative_regrets)
+            return [(model_input, options_input, target_node_value, target_decision_dist)]
+
+    def model_inference(self, game, options=None):
+        if options is None:
+            options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
+        else:
+            options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
+        model_input = game.encode_game().unsqueeze(0)
+        distribution, node_value = self.model(model_input, options_input)
+
+        distribution = nn.functional.softmax(distribution, dim=1).squeeze(0).detach().numpy()
+        winning_probabilities = nn.functional.sigmoid(node_value).squeeze(0).detach().numpy()
+        return distribution, winning_probabilities
+

@@ -6,48 +6,43 @@ from algorithms.deep_mccfr_transformer import CFRNode
 from algorithms.models import VariableInputNN
 from algorithms.train import train_transformer
 from game.game import Game
-
+from multiprocessing import Pool, cpu_count
 # Hyperparameter
-game_encoding_size = 478
-embedding_size = 10
-num_heads = 3
-num_transformer_layers = 2
-vector_input_size = 5
-model = VariableInputNN(game_encoding_size=game_encoding_size, vector_input_size=vector_input_size, embedding_size=embedding_size,
-                        num_heads=num_heads, num_transformer_layers=num_transformer_layers)
-model.eval()
-print(sum(p.numel() for p in model.parameters() if p.requires_grad))
 
-for _ in range(10):
+def simulate_game(model, process_index):
+    
+    targets = []
     model.to("cpu")
     game = Game()
     game.setup_round()
-    winner = False
     position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True, training=True)
     position_root.cfr_train(max_iterations=100000)
-    targets = position_root.get_all_targets()
-    train_transformer(targets, model, epochs=50, lr=0.005, batch_size=1)
-
-targets = []
-for _ in range(10):
-    try:
-        model.to("cpu")
-        game = Game()
-        game.setup_round()
-        winner = False
-        position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True, training=True)
-        position_root.cfr_train(max_iterations=100000)
-        targets += position_root.get_all_targets()
-
-    except Exception as e:
-        print(e)
-        continue
-
-with open("trainig_data.pkl", 'wb') as file:
-    pickle.dump(targets, file)
-
-train_transformer(targets, model, epochs=50, lr=0.001, batch_size=1)
-torch.save(model.state_dict(), "model.pt")
+    targets += position_root.get_all_targets()
+    print(f"Process {process_index} finished")
+    return targets
 
 
+def parallel_simulations(num_simulations, model):
+    with Pool(cpu_count()) as pool:
+        results = pool.starmap(simulate_game, [(model, i) for i in range(num_simulations)])
+    return [item for sublist in results for item in sublist]
 
+if __name__ == "__main__":
+    game_encoding_size = 478
+    embedding_size = 10
+    num_heads = 3
+    num_transformer_layers = 2
+    vector_input_size = 5
+    model = VariableInputNN(game_encoding_size=game_encoding_size, vector_input_size=vector_input_size, embedding_size=embedding_size,
+                            num_heads=num_heads, num_transformer_layers=num_transformer_layers)
+    model.eval()
+    #print(sum(p.numel() for p in model.parameters() if p.requires_grad))
+    for i in range(10):
+        targets = parallel_simulations(12, model)
+        print("Finished simulations")
+
+        with open(f"trainig_data{i}.pkl", 'wb') as file:
+            pickle.dump(targets, file)
+
+        train_transformer(targets, model, epochs=15)
+        torch.save(model.state_dict(), f"epoch{i}.pt")

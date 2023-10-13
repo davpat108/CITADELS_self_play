@@ -80,29 +80,16 @@ class VariableInputNN(nn.Module):
         # Get the sequence length (N) from x_variable
         N = x_variable.size(1)
         
-        # Embed the fixed input
         x_fixed_embedded = self.embedding_fixed(x_fixed).unsqueeze(1)  # shape: [batch_size, 1, variable_item_size]
-        
-        # Repeat the embedded fixed input for concatenation
         x_fixed_repeated = x_fixed_embedded.repeat(1, N, 1)  # shape: [batch_size, N, variable_item_size]
-        
-        # Concatenate the fixed and variable inputs
         combined_seq = torch.cat([x_fixed_repeated, x_variable], dim=-1)
         
-        # The transformer expects input in the shape [seq_len, batch_size, embed_size]. Transpose appropriately.
         combined_seq = combined_seq.transpose(0, 1)  # shape: [N, batch_size, variable+fixed size]
-        
-        # Pass through the transformer
         transformer_output = self.transformer(combined_seq, combined_seq)  # shape: [N, batch_size,  variable+fixed size]
 
         aggregated_representation = self.aggregate(transformer_output.permute(1, 2, 0)).squeeze(-1)  # shape: [batch_size, variable+fixed size]
         
-        # Create variable-length distribution
         output_distribution_variable = self.fc_out_variable(aggregated_representation).repeat(1, N)
-        output_distribution_variable = nn.functional.softmax(output_distribution_variable, dim=1)
-
-        # Create fixed-length distribution
         output_distribution_fixed = self.fc_out_fixed(aggregated_representation)
-        output_distribution_fixed = nn.functional.softmax(output_distribution_fixed, dim=1)
         
         return output_distribution_variable, output_distribution_fixed

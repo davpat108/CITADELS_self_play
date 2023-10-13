@@ -68,9 +68,12 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import random
 
-def train_transformer(data, model, epochs=10, lr=0.005, batch_size=1, device='cuda'):
+def train_transformer(data, model, epochs, device='cuda'):
+    # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
+    batch_size = 1
     model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4, nesterov=True)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
     criterion = nn.KLDivLoss(reduction='batchmean')
     log_softmax = nn.LogSoftmax(dim=1)
 
@@ -101,8 +104,10 @@ def train_transformer(data, model, epochs=10, lr=0.005, batch_size=1, device='cu
             optimizer.step()
             total_train_loss += total_loss.item()
         avg_train_loss = total_train_loss / len(train_data)
-        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
         # Evaluation phase
+        scheduler.step()
         model.eval()
         total_eval_loss = 0
         with torch.no_grad():
@@ -122,4 +127,5 @@ def train_transformer(data, model, epochs=10, lr=0.005, batch_size=1, device='cu
                 total_eval_loss += (loss_variable + loss_fixed).item()
 
         avg_eval_loss = total_eval_loss / len(eval_data)
-        print(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
+        if epoch % 10 == 0:
+            print(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
