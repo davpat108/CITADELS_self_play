@@ -70,10 +70,10 @@ import random
 
 def train_transformer(data, model, epochs, device='cuda'):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
-    batch_size = 1
+    batch_size = 8
     model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4, nesterov=True)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
     criterion = nn.KLDivLoss(reduction='batchmean')
     log_softmax = nn.LogSoftmax(dim=1)
 
@@ -82,14 +82,16 @@ def train_transformer(data, model, epochs, device='cuda'):
     train_data = data[:train_size]
     eval_data = data[train_size:]
 
+    train_batches = split_data_to_batches_by_length(train_data, batch_size)
+    eval_batches = split_data_to_batches_by_length(eval_data, batch_size)
+
     for epoch in range(epochs):
         model.train()
-        random.shuffle(train_data)  # Shuffle the training data each epoch
         total_train_loss = 0
-        for i in range(0, len(train_data), batch_size):
-            batch = train_data[i:i+batch_size]
+        random.shuffle(train_batches)
+        for batch in train_batches:
             x_fixed_batch = torch.stack([item[0] for item in batch]).to(device)
-            x_variable_batch = torch.cat([item[1] for item in batch], dim=1).to(device)
+            x_variable_batch = torch.stack([item[1] for item in batch]).squeeze(1).to(device)
             labels_fixed_batch = torch.stack([item[2] for item in batch]).to(device)
             labels_variable_batch = torch.stack([item[3] for item in batch]).to(device)
 
@@ -111,8 +113,7 @@ def train_transformer(data, model, epochs, device='cuda'):
         model.eval()
         total_eval_loss = 0
         with torch.no_grad():
-            for i in range(0, len(eval_data), batch_size):
-                batch = eval_data[i:i+batch_size]
+            for batch in eval_batches:
                 x_fixed_batch = torch.stack([item[0] for item in batch]).to(device)
                 x_variable_batch = torch.cat([item[1] for item in batch], dim=1).to(device)
                 labels_fixed_batch = torch.stack([item[2] for item in batch]).to(device)
@@ -129,3 +130,25 @@ def train_transformer(data, model, epochs, device='cuda'):
         avg_eval_loss = total_eval_loss / len(eval_data)
         if epoch % 10 == 0:
             print(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
+
+
+def split_data_to_batches_by_length(data, batch_size):
+    # Group data by the length of x_variable
+    groups = {}
+    for item in data:
+        key = item[1].shape[1]
+        if key not in groups:
+            groups[key] = []
+        groups[key].append(item)
+
+    # Split grouped data into batches and collect them in a list
+    all_batches = []
+    for key in groups:
+        group = groups[key]
+        random.shuffle(group)
+        
+        for i in range(0, len(group), batch_size):
+            batch = group[i:i+batch_size]
+            all_batches.append(batch)
+
+    return all_batches

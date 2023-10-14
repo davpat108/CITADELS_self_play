@@ -1,7 +1,7 @@
 import pickle
 
 import torch
-
+import timeit
 from algorithms.deep_mccfr_transformer import CFRNode
 from algorithms.models import VariableInputNN
 from algorithms.train import train_transformer
@@ -12,11 +12,10 @@ from multiprocessing import Pool, cpu_count
 def simulate_game(model, process_index):
     
     targets = []
-    model.to("cpu")
     game = Game()
     game.setup_round()
-    position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True, training=True)
-    position_root.cfr_train(max_iterations=100000)
+    position_root = CFRNode(game, original_player_id=0, model=model, role_pick_node=True, training=True, device="cuda:0")
+    position_root.cfr_train(max_iterations=10000)
     targets += position_root.get_all_targets()
     print(f"Process {process_index} finished")
     return targets
@@ -38,7 +37,14 @@ if __name__ == "__main__":
     model.eval()
     #print(sum(p.numel() for p in model.parameters() if p.requires_grad))
     for i in range(10):
+        #
+        #timer = timeit.Timer(lambda: parallel_simulations(12, model))
+        #execution_time = timer.timeit(1)
+        #print(f"Execution time: {execution_time}")
+        #raise
+        #targets = simulate_game(model, 0)
         targets = parallel_simulations(12, model)
+
         print("Finished simulations")
 
         with open(f"trainig_data{i}.pkl", 'wb') as file:
