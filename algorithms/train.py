@@ -68,9 +68,8 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import random
 
-def train_transformer(data, model, epochs, device='cuda'):
+def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
-    batch_size = 8
     model.to(device)
     optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4, nesterov=True)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
@@ -102,12 +101,12 @@ def train_transformer(data, model, epochs, device='cuda'):
             loss_variable = criterion(outputs_variable_pred, labels_variable_batch)
             loss_fixed = criterion(outputs_fixed_pred, labels_fixed_batch)
             total_loss = loss_variable + loss_fixed
+            
             total_loss.backward()
             optimizer.step()
             total_train_loss += total_loss.item()
         avg_train_loss = total_train_loss / len(train_data)
-        if epoch % 10 == 0:
-            print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
+        print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
         # Evaluation phase
         scheduler.step()
         model.eval()
@@ -115,7 +114,7 @@ def train_transformer(data, model, epochs, device='cuda'):
         with torch.no_grad():
             for batch in eval_batches:
                 x_fixed_batch = torch.stack([item[0] for item in batch]).to(device)
-                x_variable_batch = torch.cat([item[1] for item in batch], dim=1).to(device)
+                x_variable_batch = torch.stack([item[1] for item in batch]).squeeze(1).to(device)
                 labels_fixed_batch = torch.stack([item[2] for item in batch]).to(device)
                 labels_variable_batch = torch.stack([item[3] for item in batch]).to(device)
                 
@@ -128,8 +127,7 @@ def train_transformer(data, model, epochs, device='cuda'):
                 total_eval_loss += (loss_variable + loss_fixed).item()
 
         avg_eval_loss = total_eval_loss / len(eval_data)
-        if epoch % 10 == 0:
-            print(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
+        print(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
 
 
 def split_data_to_batches_by_length(data, batch_size):

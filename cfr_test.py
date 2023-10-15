@@ -1,7 +1,7 @@
 from game.game import Game
 
 from random import choice
-from algorithms.mccfr import CFRNode
+from algorithms.deep_mccfr_transformer import CFRNode
 from algorithms.visualization import visualize_cfr_tree
 
 game = Game()
@@ -12,14 +12,14 @@ tota_options = 0
 while not winner:
     i+=1
     if game.gamestate.player_id  == 0:
-        position_root = CFRNode(game, current_player_id=0, original_player_id=0)
-        position_root.cfr()
+        position_root = CFRNode(game,original_player_id=0)
+        position_root.cfr_train(max_iterations=10000)
         _, chosen_option = position_root.action_choice()
         print(chosen_option.name)
         winner = chosen_option.carry_out(game)
 
     else:
-        options,_ = game.get_options_from_state()
+        options = game.get_options_from_state()
         tota_options += len(options)
         chosen_option = choice(options)
         print(chosen_option.name)

@@ -137,9 +137,10 @@ class Game():
         self.gamestate = GameState()
         self.ending = False
         self.terminal = False
-
+        self.rewards = np.zeros(len(self.players))
         #CONST
         self.game_model_output_size = 1521
+
 
     def __eq__(self, __value: object) -> bool:
         if isinstance(__value, Game):
@@ -470,7 +471,6 @@ class Game():
                 points.append(player.count_points())
             self.points = points
             self.terminal = True
-            self.rewards = np.zeros(len(self.players))
             self.rewards[points.index(max(points))] = 1
             return self.players[points.index(max(points))]
         return False
