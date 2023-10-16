@@ -4,7 +4,7 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 class CFRNode:
-    def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None, training=False, device="cuda:0", model_reward_weights=5):
+    def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None, training=False, device="cuda:0", model_reward_weights=5, depth=0):
         self.device = device
         self.model = model
         if self.model:
@@ -13,7 +13,7 @@ class CFRNode:
         self.original_player_id = original_player_id
         self.training = training
 
-
+        self.depth = depth
         self.game = game # Unkown informations are present but counted as dont care
         self.parent = parent
         self.children = [] # (Option that carries the game to the node, NODE)
@@ -90,7 +90,7 @@ class CFRNode:
                     option_to_carry_out = options[choice_index]
                 options[choice_index].carry_out(hypothetical_game)
             # Must be at the end of rolepick
-            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model, training=self.training, device=self.device)))
+            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
 
             self.cumulative_regrets = np.zeros((1, 6)) if self.cumulative_regrets.size == 0 else np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
             self.strategy = np.zeros((1, 6)) if self.strategy.size == 0 else np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
@@ -121,7 +121,7 @@ class CFRNode:
             if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
                 hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id], role_sample=self.parent.game.gamestate.state != 0 if self.parent else False)
             option.carry_out(hypothetical_game)
-            self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training, device=self.device)))
+            self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
 
         if self.model:
             distribution, winning_probabilities = self.model_inference(self.game, options)
@@ -151,7 +151,7 @@ class CFRNode:
  
         child_options = [child[0] for child in self.children]
         if not options[choice_index] in child_options:
-            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training, device=self.device)))
+            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
@@ -204,19 +204,16 @@ class CFRNode:
             # Traverse
             node.update_strategy()
             node, _ = node.action_choice()
-            depth += 1
-            if depth > max_depth and not node.is_terminal():
+            if node.depth > max_depth and not node.is_terminal():
                 node.expand()
                 node.backpropagate(self.node_value)
                 node.update_strategy()
                 node = self
-                depth = 0
             elif node.is_terminal():
                 reward = node.get_reward()
                 node.backpropagate(reward) # backpropagate the reward and calculate regrets
                 node.update_strategy()
                 node = self
-                depth = 0
             else:
                 node.expand()
         self.update_strategy()
@@ -242,7 +239,7 @@ class CFRNode:
             regret_values = max_rewards - actual_rewards
             self.cumulative_regrets += regret_values
 
-    def get_all_targets(self):
+    def get_all_targets(self, usefulness_treshold = 15):
         """
         Recursively gather the training targets from each node in the tree.
 
@@ -256,7 +253,7 @@ class CFRNode:
 
         # Recursively gather targets from children nodes
         for _, child_node in self.children:
-            targets_list += child_node.get_all_targets()
+            targets_list += child_node.get_all_targets(usefulness_treshold)
 
         return targets_list
 
@@ -289,8 +286,8 @@ class CFRNode:
         self.cumulative_strategy += self.strategy
         self.cumulative_strategy = self.cumulative_strategy / self.cumulative_strategy.sum()
 
-    def build_train_targets(self):
-        if len(self.children) == 0:
+    def build_train_targets(self, usefulness_treshold = 15):
+        if len(self.children) == 0 or self.node_value.sum() < usefulness_treshold:
             return []
         if self.role_pick_node:
             model_targets = []
