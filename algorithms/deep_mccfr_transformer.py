@@ -86,10 +86,10 @@ class CFRNode:
                 options = hypothetical_game.get_options_from_state()
                 distribution = np.ones(len(options)) / len(options)
                 choice_index = np.random.choice(range(len(options)), p=distribution)
-                if hypothetical_game.gamestate.player_id == self.original_player_id:
-                    option_to_carry_out = options[choice_index]
+                # last option
+                option_to_carry_out = options[choice_index]
                 options[choice_index].carry_out(hypothetical_game)
-            # Must be at the end of rolepick
+        
             self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
 
             self.cumulative_regrets = np.zeros((1, 6)) if self.cumulative_regrets.size == 0 else np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
@@ -286,6 +286,7 @@ class CFRNode:
         self.cumulative_strategy += self.strategy
         self.cumulative_strategy = self.cumulative_strategy / self.cumulative_strategy.sum()
 
+
     def build_train_targets(self, usefulness_treshold = 15):
         if len(self.children) == 0 or self.node_value.sum() < usefulness_treshold:
             return []
@@ -298,6 +299,9 @@ class CFRNode:
                 model_input = hypothetical_game.encode_game()
                 target_node_value = torch.tensor(self.node_value)
                 target_decision_dist = torch.tensor(self.cumulative_regrets[i])
+                target_node_value /= torch.sum(target_node_value)
+                if not torch.sum(target_decision_dist)==0:
+                    target_decision_dist /= torch.sum(target_decision_dist)
                 model_targets.append((model_input, options_input, target_node_value, target_decision_dist))
             return model_targets
         else:
@@ -305,7 +309,11 @@ class CFRNode:
             model_input = self.game.encode_game()
             target_node_value = torch.tensor(self.node_value)
             target_decision_dist = torch.tensor(self.cumulative_regrets)
+            target_node_value /= torch.sum(target_node_value)
+            if not torch.sum(target_decision_dist)==0:
+                target_decision_dist /= torch.sum(target_decision_dist)
             return [(model_input, options_input, target_node_value, target_decision_dist)]
+
 
     def model_inference(self, game, options=None):
         if options is None:

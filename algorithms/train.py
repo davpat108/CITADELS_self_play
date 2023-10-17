@@ -96,8 +96,12 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
 
             optimizer.zero_grad()
             outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
+            outputs_variable /= torch.sum(outputs_variable, dim=1, keepdim=True)
+            outputs_fixed /= torch.sum(outputs_fixed, dim=1, keepdim=True)
             outputs_variable_pred = log_softmax(outputs_variable)
             outputs_fixed_pred = log_softmax(outputs_fixed)
+
+
             loss_variable = criterion(outputs_variable_pred, labels_variable_batch)
             loss_fixed = criterion(outputs_fixed_pred, labels_fixed_batch)
             total_loss = loss_variable + loss_fixed
@@ -105,6 +109,7 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
             total_loss.backward()
             optimizer.step()
             total_train_loss += total_loss.item()
+            
         avg_train_loss = total_train_loss / len(train_data)
         print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
         # Evaluation phase
@@ -119,6 +124,8 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
                 labels_variable_batch = torch.stack([item[3] for item in batch]).to(device)
                 
                 outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
+                outputs_variable /= torch.sum(outputs_variable, dim=1, keepdim=True)
+                outputs_fixed /= torch.sum(outputs_fixed, dim=1, keepdim=True)
                 outputs_variable_pred = log_softmax(outputs_variable)
                 outputs_fixed_pred = log_softmax(outputs_fixed)
 

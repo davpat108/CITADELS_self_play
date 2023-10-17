@@ -5,12 +5,14 @@ import torch
 
 
 
-Qs = tensor([[0.1667, 0.1667, 0.1667, 0.1667, 0.1667, 0.1667]])
-Ps = tensor([[0.0648, 0.1653, 0.0310, 0.0446, 0.6362, 0.0581]])
+Qs = tensor([[0., 0., 0., 0., 1., 0.]])
+Ps = tensor([[0., 0., 0., 0., 1., 0.]])
 
 
 def kl_div(a1, a2):
     # the individual terms of the KL divergence can be calculated like this
+    a1 = a1/torch.sum(a1)*3
+    a2 = a2/torch.sum(a2)*3
     manual_kl = (a2.softmax(1) * (a2.log_softmax(1) - a1.log_softmax(1)))
 
     # applying necessary transformations

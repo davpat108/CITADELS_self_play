@@ -15,7 +15,7 @@ num_transformer_layers = 2
 vector_input_size = 5
 model = VariableInputNN(game_encoding_size=game_encoding_size, vector_input_size=vector_input_size, embedding_size=embedding_size,
                         num_heads=num_heads, num_transformer_layers=num_transformer_layers)
-model.load_state_dict(torch.load("epoch6.pt"))
+model.load_state_dict(torch.load("epoch1.pt"))
 files = os.listdir()
 
 pkl_files = [file for file in files if file.endswith('.pkl')]
