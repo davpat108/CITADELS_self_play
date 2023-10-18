@@ -3,6 +3,7 @@ from copy import deepcopy
 
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 class CFRNode:
     def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None, training=False, device="cuda:0", model_reward_weights=5, depth=0):
         self.device = device
@@ -297,21 +298,15 @@ class CFRNode:
                 hypothetical_game.gamestate.player_id = i
                 options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
                 model_input = hypothetical_game.encode_game()
-                target_node_value = torch.tensor(self.node_value)
-                target_decision_dist = torch.tensor(self.cumulative_regrets[i])
-                target_node_value /= torch.sum(target_node_value)
-                if not torch.sum(target_decision_dist)==0:
-                    target_decision_dist /= torch.sum(target_decision_dist)
+                target_node_value = F.softmax(torch.tensor(self.node_value))
+                target_decision_dist = F.softmax(torch.tensor(self.cumulative_regrets[i]))
                 model_targets.append((model_input, options_input, target_node_value, target_decision_dist))
             return model_targets
         else:
             options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
             model_input = self.game.encode_game()
-            target_node_value = torch.tensor(self.node_value)
-            target_decision_dist = torch.tensor(self.cumulative_regrets)
-            target_node_value /= torch.sum(target_node_value)
-            if not torch.sum(target_decision_dist)==0:
-                target_decision_dist /= torch.sum(target_decision_dist)
+            target_node_value = F.softmax(torch.tensor(self.node_value))
+            target_decision_dist = F.softmax(torch.tensor(self.cumulative_regrets))
             return [(model_input, options_input, target_node_value, target_decision_dist)]
 
 

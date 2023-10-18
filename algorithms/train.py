@@ -71,7 +71,7 @@ import random
 def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
     model.to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=1e-4, nesterov=True)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
     criterion = nn.KLDivLoss(reduction='batchmean')
     log_softmax = nn.LogSoftmax(dim=1)
@@ -96,8 +96,6 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
 
             optimizer.zero_grad()
             outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
-            outputs_variable /= torch.sum(outputs_variable, dim=1, keepdim=True)
-            outputs_fixed /= torch.sum(outputs_fixed, dim=1, keepdim=True)
             outputs_variable_pred = log_softmax(outputs_variable)
             outputs_fixed_pred = log_softmax(outputs_fixed)
 
@@ -110,7 +108,7 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
             optimizer.step()
             total_train_loss += total_loss.item()
             
-        avg_train_loss = total_train_loss / len(train_data)
+        avg_train_loss = total_train_loss / len(train_batches)
         print(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
         # Evaluation phase
         scheduler.step()
@@ -124,8 +122,6 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
                 labels_variable_batch = torch.stack([item[3] for item in batch]).to(device)
                 
                 outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
-                outputs_variable /= torch.sum(outputs_variable, dim=1, keepdim=True)
-                outputs_fixed /= torch.sum(outputs_fixed, dim=1, keepdim=True)
                 outputs_variable_pred = log_softmax(outputs_variable)
                 outputs_fixed_pred = log_softmax(outputs_fixed)
 
@@ -133,7 +129,7 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
                 loss_fixed = criterion(outputs_fixed_pred, labels_fixed_batch)
                 total_eval_loss += (loss_variable + loss_fixed).item()
 
-        avg_eval_loss = total_eval_loss / len(eval_data)
+        avg_eval_loss = total_eval_loss / len(eval_batches)
         print(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
 
 

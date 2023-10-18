@@ -58,7 +58,7 @@ class CitadelNetwork(nn.Module):
     
 
 import torch.nn as nn
-from torch.nn import Transformer
+
 
 class VariableInputNN(nn.Module):
     def __init__(self, game_encoding_size=478, embedding_size=10, vector_input_size=5, num_heads=3, num_transformer_layers=2):
@@ -89,7 +89,7 @@ class VariableInputNN(nn.Module):
 
         aggregated_representation = self.aggregate(transformer_output.permute(1, 2, 0)).squeeze(-1)  # shape: [batch_size, variable+fixed size]
         
-        output_distribution_variable = self.fc_out_variable(aggregated_representation).repeat(1, N)
+        output_distribution_variable = self.fc_out_variable(transformer_output.permute(1, 0, 2))
         output_distribution_fixed = self.fc_out_fixed(aggregated_representation)
         
         return output_distribution_variable, output_distribution_fixed

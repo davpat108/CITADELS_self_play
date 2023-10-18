@@ -1,5 +1,6 @@
 import math
 import torch.nn.functional as F
+import torch.nn as nn
 from torch import tensor
 import torch
 
@@ -34,9 +35,10 @@ def kl_div(a1, a2):
     print(F.kl_div(a1ready, a2ready, reduction='batchmean'))
 
 
-kl_div(Qs, Ps)
+#kl_div(Qs, Ps)
 
-#loss_terms = [Q * (math.log(Q) - math.log(P)) for Q, P in zip(Qs, Ps)]
-#loss = sum(loss_terms) / len(Qs)
-#
-#print(loss)
+loss = nn.BCEWithLogitsLoss()
+input = torch.randn(3, requires_grad=True)
+target = torch.empty(3).random_(2)
+output = loss(input, target)
+output.backward()
