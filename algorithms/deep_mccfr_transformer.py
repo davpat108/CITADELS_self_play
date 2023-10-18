@@ -319,6 +319,6 @@ class CFRNode:
         distribution, node_value = self.model(model_input, options_input)
 
         distribution = nn.functional.softmax(distribution, dim=1).squeeze(0).detach().cpu().numpy()
-        winning_probabilities = nn.functional.sigmoid(node_value).squeeze(0).detach().cpu().numpy()
+        winning_probabilities = nn.functional.softmax(node_value).squeeze(0).detach().cpu().numpy()
         return distribution, winning_probabilities
 
