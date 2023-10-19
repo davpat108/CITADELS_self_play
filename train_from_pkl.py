@@ -8,13 +8,8 @@ from algorithms.train import train_transformer
 from game.game import Game
 from multiprocessing import Pool, cpu_count
 
-game_encoding_size = 478
-embedding_size = 10
-num_heads = 3
-num_transformer_layers = 2
-vector_input_size = 5
-model = VariableInputNN(game_encoding_size=game_encoding_size, vector_input_size=vector_input_size, embedding_size=embedding_size,
-                        num_heads=num_heads, num_transformer_layers=num_transformer_layers)
+
+model = VariableInputNN()
 model.load_state_dict(torch.load("epoch0.pt"))
 files = os.listdir()
 

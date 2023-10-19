@@ -39,8 +39,8 @@ def simulate_game(model, process_index, pretrain=False):
         game = setup_game(500)
     
     position_root = CFRNode(game, original_player_id=0, model=model if not pretrain else None, role_pick_node=game.gamestate.state==0, training=True, device="cuda:0")
-    position_root.cfr_train(max_iterations=200000)
-    targets += position_root.get_all_targets(usefulness_treshold=15)
+    position_root.cfr_train(max_iterations=3000)
+    targets += position_root.get_all_targets(usefulness_treshold=0)
     print(f"Created {len(targets)} targets for training")
     print(f"Process {process_index} finished")
 
@@ -53,13 +53,7 @@ def parallel_simulations(num_simulations, model, pretrain=False):
     return [item for sublist in results for item in sublist]
 
 if __name__ == "__main__":
-    game_encoding_size = 478
-    embedding_size = 10
-    num_heads = 3
-    num_transformer_layers = 2
-    vector_input_size = 5
-    model = VariableInputNN(game_encoding_size=game_encoding_size, vector_input_size=vector_input_size, embedding_size=embedding_size,
-                            num_heads=num_heads, num_transformer_layers=num_transformer_layers)
+    model = VariableInputNN()
     model.eval()
     for i in range(4):
         #targets = simulate_game(model, 0, pretrain=True)
@@ -69,5 +63,5 @@ if __name__ == "__main__":
         with open(f"naked_mccfr_training_data{i}.pkl", 'wb') as file:
             pickle.dump(targets, file)
 
-        train_transformer(targets, model, epochs=15, batch_size=6)
+        train_transformer(targets, model, epochs=75, batch_size=64)
         torch.save(model.state_dict(), f"epoch{i}.pt")

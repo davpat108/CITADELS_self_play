@@ -48,15 +48,20 @@ class option():
 
     def encode_option(self):
         """
-        name
-        perpetrator
-        choice or target or built_card or real_target or fake_targets or fake_target
-        So who did what, and who/what was the target
-        3 bits
+        bits
+        47 what option 0-47
+        6 who 47-53
+        6 whom 53-60
+        8 what 60-68
+        8 what fake 68-76
+        13 named 76-89
+        40 card 89-129
+        1 replica 129-130
+        1 gold or card 130-131
         """
-        encoded_option = torch.zeros([1, 5], dtype=torch.int16)
-        encoded_option[0, 0] = self.name_to_id[self.name]
-        encoded_option[0, 1] = self.attributes['perpetrator']
+        encoded_option = torch.zeros([1, 131])
+        encoded_option[0, self.name_to_id[self.name]] = 1
+        encoded_option[0, self.attributes['perpetrator'] + 47] = 1
 
         names = {
             "gold": 0,
@@ -74,33 +79,35 @@ class option():
             "unique": 12,
         }
 
-        if "target" in self.attributes.keys():
-            encoded_option[0, 2] = self.attributes['target']
-        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], str) and self.attributes["choice"] in role_to_role_id.keys():
-            encoded_option[0, 3] = role_to_role_id[self.attributes['choice']]
-        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], str):
-            encoded_option[0, 3] = names[self.attributes['choice']]
-        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], Card):
-            encoded_option[0, 3] = self.attributes['choice'].type_ID
-        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], list):
-            encoded_option[0, 3] = self.attributes['choice'][0].type_ID if len(self.attributes['choice']) == 1 else self.attributes['choice'][0].type_ID + self.attributes['choice'][1].type_ID
-        elif "built_card" in self.attributes.keys():
-            encoded_option[0, 3] = self.attributes['built_card'].type_ID
-        elif "real_target" in self.attributes.keys():
-            encoded_option[0, 2] = self.attributes['real_target']
-        elif "fake_targets" in self.attributes.keys():
-            encoded_option[0, 3] = self.attributes['fake_targets'][0]
-            encoded_option[0, 4] = self.attributes['fake_targets'][1]
-        elif "fake_target" in self.attributes.keys():
-            encoded_option[0, 3] = self.attributes['fake_target']
-        elif "replica" in self.attributes.keys():
-            encoded_option[0, 4] = self.attributes['replica']
-        elif "gold_or_card_combination" in self.attributes.keys():
-            encoded_option[0, 4] = self.attributes['gold_or_card_combination'].count("card")
-        elif "chosen_card" in self.attributes.keys():
-            encoded_option[0, 3] = self.attributes['chosen_card'].type_ID
-        elif "cards_to_give" in self.attributes.keys():
-            encoded_option[0, 3] = sum([card.type_ID for card in self.attributes['cards_to_give']])
+        if "target" in self.attributes.keys():# 6 different
+            encoded_option[0, self.attributes['target'] + 53] = 1
+        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], str) and self.attributes["choice"] in role_to_role_id.keys():#8 different
+            encoded_option[0, role_to_role_id[self.attributes['choice']] + 60] = 1
+        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], str):# 13 different
+            encoded_option[0, names[self.attributes['choice']] + 76] = 1
+        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], Card): # 40 different
+            encoded_option[0, self.attributes['choice'].type_ID + 89] = 1
+        elif "choice" in self.attributes.keys() and isinstance(self.attributes['choice'], list): # the same 40 multiple values possible even 2s or more
+            for card in self.attributes['choice']:
+                encoded_option[0, card.type_ID + 89] = 1
+        elif "built_card" in self.attributes.keys():# the same 40
+            encoded_option[0, self.attributes['built_card'].type_ID + 89] = 1
+        elif "real_target" in self.attributes.keys(): # 8 same as the first
+            encoded_option[0, role_to_role_id[self.attributes['real_target']] + 60] = 1
+        elif "fake_targets" in self.attributes.keys(): # 8 different two ones
+            encoded_option[0, role_to_role_id[self.attributes['fake_targets'][0]] + 68] = 1
+            encoded_option[0, role_to_role_id[self.attributes['fake_targets'][1]] + 68] = 1
+        elif "fake_target" in self.attributes.keys():#8 same as the secound but only one
+            encoded_option[0, role_to_role_id[self.attributes['fake_target']] + 68] = 1
+        elif "replica" in self.attributes.keys():# different one bit 1 or 0
+            encoded_option[0, 129] = self.attributes['replica']
+        elif "gold_or_card_combination" in self.attributes.keys():# different one bit same counting
+            encoded_option[0, 130] = self.attributes['gold_or_card_combination'].count("card")
+        elif "chosen_card" in self.attributes.keys():# the same 40
+            encoded_option[0, self.attributes['chosen_card'].type_ID + 89] = 1
+        elif "cards_to_give" in self.attributes.keys():# the same 40 multiple values possible even 2s or more
+            for card in self.attributes['cards_to_give']:
+                encoded_option[0, card.type_ID + 89] = card.type_ID 
 
         return encoded_option
 
@@ -476,7 +483,7 @@ class option():
         return False
     # ID 0
     def carry_out_assasination(self, game):
-        game.role_properties[self.attributes['target']].dead = True
+        game.role_properties[self.attributes['choice']].dead = True
         game.gamestate.state = 5
         game.gamestate.player_id = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")
@@ -490,13 +497,13 @@ class option():
         game.gamestate.already_done_moves.append("character_ability")
 
     def carry_out_bewitching(self, game):
-        game.role_properties[self.attributes['target']].possessed = True
+        game.role_properties[self.attributes['choice']].possessed = True
         game.players[self.attributes['perpetrator']].witch = True
         game.setup_next_player(current_player_id=self.attributes['perpetrator'])
         
     # ID 1
     def carry_out_stealing(self, game):
-        game.role_properties[self.attributes['target']].robbed = True
+        game.role_properties[self.attributes['choice']].robbed = True
         game.gamestate.state = 5
         game.gamestate.player_id = self.attributes['perpetrator']
         game.gamestate.already_done_moves.append("character_ability")

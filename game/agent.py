@@ -392,7 +392,7 @@ class Agent():
             target_possibilities.pop(next(iter(game.visible_face_up_role.keys())))
         used_bits = list(range(8))
         used_bits.remove(0) #remove the asssasin
-        return [option(name="assassination", perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0], [[create_mask(game.game_model_output_size, 101, 102, type="top_level"), create_mask(game.game_model_output_size, 102, 110, used_bits, type="direct")]]
+        return [option(name="assassination", perpetrator=self.id, choice=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0], [[create_mask(game.game_model_output_size, 101, 102, type="top_level"), create_mask(game.game_model_output_size, 102, 110, used_bits, type="direct")]]
         
         
     def magistrate_options(self, game):
@@ -417,7 +417,7 @@ class Agent():
             target_possibilities.pop(next(iter(game.visible_face_up_role.keys())))
         used_bits = list(range(8))
         used_bits.remove(0) #remove the witch
-        return {0:[option(name="bewitching",  perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0]}, [[create_mask(game.game_model_output_size, 127, 128, type="top_level"), create_mask(game.game_model_output_size, 128, 136, used_bits, type="direct")]]
+        return {0:[option(name="bewitching",  perpetrator=self.id, choice=role_ID) for role_ID in target_possibilities.keys() if role_ID > 0]}, [[create_mask(game.game_model_output_size, 127, 128, type="top_level"), create_mask(game.game_model_output_size, 128, 136, used_bits, type="direct")]]
     
     
     # ID 1
@@ -428,7 +428,7 @@ class Agent():
         used_bits = list(range(8))
         used_bits.remove(0)
         used_bits.remove(1) #remove the thief
-        return [option(name="steal", perpetrator=self.id, target=role_ID) for role_ID in target_possibilities.keys() if role_ID > 1], [[create_mask(game.game_model_output_size, 136, 137, type="top_level"), create_mask(game.game_model_output_size, 137, 145, used_bits, type="direct")]]
+        return [option(name="steal", perpetrator=self.id, choice=role_ID) for role_ID in target_possibilities.keys() if role_ID > 1], [[create_mask(game.game_model_output_size, 136, 137, type="top_level"), create_mask(game.game_model_output_size, 137, 145, used_bits, type="direct")]]
     
     def blackmail_options(self, game):
         options = []

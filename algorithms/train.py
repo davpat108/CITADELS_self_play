@@ -68,7 +68,7 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda'):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
     criterion = nn.KLDivLoss(reduction='batchmean')
     log_softmax = nn.LogSoftmax(dim=1)
 
