@@ -298,15 +298,15 @@ class CFRNode:
                 hypothetical_game.gamestate.player_id = i
                 options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
                 model_input = hypothetical_game.encode_game()
-                target_node_value = F.softmax(torch.tensor(self.node_value), dim=-1)
-                target_decision_dist = F.softmax(torch.tensor(self.cumulative_regrets[i]), dim=-1)
+                target_node_value = torch.tensor(self.node_value)
+                target_decision_dist = torch.tensor(self.cumulative_regrets[i])
                 model_targets.append((model_input, options_input, target_node_value, target_decision_dist))
             return model_targets
         else:
             options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
             model_input = self.game.encode_game()
-            target_node_value = F.softmax(torch.tensor(self.node_value), dim=-1)
-            target_decision_dist = F.softmax(torch.tensor(self.cumulative_regrets), dim=-1)
+            target_node_value = torch.tensor(self.node_value)
+            target_decision_dist = torch.tensor(self.cumulative_regrets)
             return [(model_input, options_input, target_node_value, target_decision_dist)]
 
 

@@ -93,12 +93,12 @@ class option():
         elif "built_card" in self.attributes.keys():# the same 40
             encoded_option[0, self.attributes['built_card'].type_ID + 89] = 1
         elif "real_target" in self.attributes.keys(): # 8 same as the first
-            encoded_option[0, role_to_role_id[self.attributes['real_target']] + 60] = 1
+            encoded_option[0, self.attributes['real_target'] + 60] = 1
         elif "fake_targets" in self.attributes.keys(): # 8 different two ones
-            encoded_option[0, role_to_role_id[self.attributes['fake_targets'][0]] + 68] = 1
-            encoded_option[0, role_to_role_id[self.attributes['fake_targets'][1]] + 68] = 1
+            encoded_option[0, self.attributes['fake_targets'][0] + 68] = 1
+            encoded_option[0, self.attributes['fake_targets'][1] + 68] = 1
         elif "fake_target" in self.attributes.keys():#8 same as the secound but only one
-            encoded_option[0, role_to_role_id[self.attributes['fake_target']] + 68] = 1
+            encoded_option[0, self.attributes['fake_target'] + 68] = 1
         elif "replica" in self.attributes.keys():# different one bit 1 or 0
             encoded_option[0, 129] = self.attributes['replica']
         elif "gold_or_card_combination" in self.attributes.keys():# different one bit same counting

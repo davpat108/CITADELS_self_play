@@ -70,7 +70,8 @@ class Deck:
         if isinstance(card, Card):
             self.cards.append(card)
         else:
-            logging.debug("Not a card, deck empty")
+            pass
+            #logging.debug("Not a card, deck empty")
     
     def shuffle_deck(self):
         shuffle(self.cards)
