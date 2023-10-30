@@ -9,8 +9,8 @@ from algorithms.train_utils import square_and_normalize, log_square_and_normaliz
 def train_transformer(data, model, epochs, batch_size=64, device='cuda', best_model_name="best_model.pt", verbose=False):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
     model.to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=5, gamma=0.8)
     criterion = nn.KLDivLoss(reduction='batchmean')
     #log_softmax = nn.LogSoftmax(dim=1)
 

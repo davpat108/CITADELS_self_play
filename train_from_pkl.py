@@ -37,8 +37,8 @@ for i in range(base_usefullness_treshold, max_usefullness_theshold):
         break
     results += train_transformer(sub_targets, model, epochs=75, batch_size=256, best_model_name=f"best_pretrain_model{i}.pt", verbose=False)
     lengths.append(len(sub_targets))
-#draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_loss_plot.png")
-#draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_length_plot.png")
+draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_loss_plot.png")
+draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_length_plot.png")
 
 best_index = results.index(min(results))+ base_usefullness_treshold
 os.rename(f"best_pretrain_model{best_index}.pt", "best_from_pretrain.pt")

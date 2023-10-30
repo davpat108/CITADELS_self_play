@@ -8,7 +8,7 @@ from algorithms.train import train_transformer
 from game.game import Game
 from multiprocessing import Pool, cpu_count
 from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold
-# Hyperparameter
+import os
 
 def setup_game(max_move_num):
     move_stop_num = randint(1, max_move_num)
@@ -32,7 +32,7 @@ def setup_game(max_move_num):
         return None
 
 
-def simulate_game(model, process_index, usefulness_treshold, pretrain=False):
+def simulate_game(model, process_index, usefulness_treshold, pretrain=False, max_iterations=200000):
 
     targets = []
     game = None
@@ -40,7 +40,7 @@ def simulate_game(model, process_index, usefulness_treshold, pretrain=False):
         game = setup_game(500)
 
     position_root = CFRNode(game, original_player_id=0, model=model if not pretrain else None, role_pick_node=game.gamestate.state==0, training=True, device="cuda:0")
-    position_root.cfr_train(max_iterations=200000)
+    position_root.cfr_train(max_iterations=max_iterations)
     targets += position_root.get_all_targets(usefulness_treshold=usefulness_treshold)
     print(f"Created {len(targets)} targets for training")
     print(f"Process {process_index} finished")
@@ -48,13 +48,13 @@ def simulate_game(model, process_index, usefulness_treshold, pretrain=False):
     return targets
 
 
-def parallel_simulations(num_simulations, model, base_usefullness_treshold, pretrain=False):
+def parallel_simulations(num_simulations, model, base_usefullness_treshold, pretrain=False, max_iterations=200000):
     with Pool(cpu_count()) as pool:
-        results = pool.starmap(simulate_game, [(model, i, base_usefullness_treshold, pretrain) for i in range(num_simulations)])
+        results = pool.starmap(simulate_game, [(model, i, base_usefullness_treshold, pretrain, max_iterations) for i in range(num_simulations)])
     return [item for sublist in results for item in sublist]
 
 
-def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold, pretrain=False):
+def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold, pretrain=False, max_iterations=200000):
     """
     args:
         model: the model to pretrain
@@ -64,7 +64,7 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
     targets = []
     while len(targets) < minimum_sufficient_nodes:
         try:
-            targets += parallel_simulations(4, model, base_usefullness_treshold=base_usefullness_treshold, pretrain=pretrain)
+            targets += parallel_simulations(4, model, base_usefullness_treshold=base_usefullness_treshold, pretrain=pretrain, max_iterations=max_iterations)
             print(f"Total targets: {len(targets)}")
         except MemoryError:
             print("Memory Error")
@@ -81,6 +81,7 @@ if __name__ == "__main__":
     max_usefullness_theshold = 200
     # pretrain
     if not f"10k_50thresh_pretrain.pkl" in os.listdir():
+        print("Pretraining")
         #targets = simulate_game(model, 0, 0, pretrain=True)
 
         targets = get_mccfr_targets(model, minimum_sufficient_nodes=10000, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
@@ -110,8 +111,10 @@ if __name__ == "__main__":
     # train 
     for u in range(3):
         if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
-            model.load_state_dict(torch.load(f"best_pretrain_model.pt"))
-            targets = get_mccfr_targets(model, minimum_sufficient_nodes=10000, base_usefullness_treshold=base_usefullness_treshold)
+            print(f"training {u}")
+            modelname = f"best_from_train_{u-1}.pt" if u > 0 else "best_pretrain_model.pt"
+            model.load_state_dict(torch.load(modelname))
+            targets = get_mccfr_targets(model, minimum_sufficient_nodes=10000, base_usefullness_treshold=base_usefullness_treshold, max_iterations=100000)
             
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)
