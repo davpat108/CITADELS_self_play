@@ -4,6 +4,7 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from algorithms.train_utils import square_and_normalize
 class CFRNode:
     def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None, training=False, device="cuda:0", model_reward_weights=5, depth=0):
         self.device = device
@@ -318,7 +319,7 @@ class CFRNode:
         model_input = game.encode_game().unsqueeze(0).to(self.device)
         distribution, node_value = self.model(model_input, options_input)
 
-        distribution = nn.functional.softmax(distribution, dim=1).squeeze(0).detach().cpu().numpy()
-        winning_probabilities = nn.functional.softmax(node_value, dim=1).squeeze(0).detach().cpu().numpy()
+        distribution = square_and_normalize(distribution, dim=1).squeeze(0).detach().cpu().numpy()
+        winning_probabilities = square_and_normalize(node_value, dim=1).squeeze(0).detach().cpu().numpy()
         return distribution, winning_probabilities
 

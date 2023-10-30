@@ -6,14 +6,12 @@ import torch
 
 
 
-Qs = tensor([[0., 0., 0., 0., 1., 0.]])
-Ps = tensor([[0., 0., 0., 0., 1., 0.]])
+Qs = tensor([[36., 49., 29., 15., 53., 27.]], dtype=torch.float64)*100
+Ps = tensor([[-0.0765,  0.1868,  0.1787, -0.7810, -0.0509,  0.3807]], dtype=torch.float64)
 
 
 def kl_div(a1, a2):
     # the individual terms of the KL divergence can be calculated like this
-    a1 = a1/torch.sum(a1)*3
-    a2 = a2/torch.sum(a2)*3
     manual_kl = (a2.softmax(1) * (a2.log_softmax(1) - a1.log_softmax(1)))
 
     # applying necessary transformations
@@ -35,10 +33,10 @@ def kl_div(a1, a2):
     print(F.kl_div(a1ready, a2ready, reduction='batchmean'))
 
 
-#kl_div(Qs, Ps)
+kl_div(Qs, Ps)
 
-loss = nn.BCEWithLogitsLoss()
-input = torch.randn(3, requires_grad=True)
-target = torch.empty(3).random_(2)
-output = loss(input, target)
-output.backward()
+#loss = nn.BCEWithLogitsLoss()
+#input = torch.randn(3, requires_grad=True)
+#target = torch.empty(3).random_(2)
+#output = loss(input, target)
+#output.backward()

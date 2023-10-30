@@ -4,15 +4,15 @@ from torch.utils.data import DataLoader, TensorDataset
 import random
 import logging
 import torch.nn.functional as F
+from algorithms.train_utils import square_and_normalize, log_square_and_normalize
 
-
-def train_transformer(data, model, epochs, batch_size=64, device='cuda', train_index=0):
+def train_transformer(data, model, epochs, batch_size=64, device='cuda', best_model_name="best_model.pt", verbose=False):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
     criterion = nn.KLDivLoss(reduction='batchmean')
-    log_softmax = nn.LogSoftmax(dim=1)
+    #log_softmax = nn.LogSoftmax(dim=1)
 
     # Splitting data into training and evaluation sets
     train_size = int(0.8 * len(data))
@@ -29,13 +29,13 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda', train_i
         for batch in train_batches:
             x_fixed_batch = torch.stack([item[0] for item in batch]).to(device)
             x_variable_batch = torch.stack([item[1] for item in batch]).squeeze(1).to(device)
-            labels_fixed_batch = torch.stack([F.softmax(item[2], dim=-1) for item in batch]).to(device)
-            labels_variable_batch = torch.stack([F.softmax(item[3], dim=-1) for item in batch]).to(device)
+            labels_fixed_batch = torch.stack([square_and_normalize(item[2], dim=-1) for item in batch]).to(device)
+            labels_variable_batch = torch.stack([square_and_normalize(item[3], dim=-1) for item in batch]).to(device)
 
             optimizer.zero_grad()
             outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
-            outputs_variable_pred = log_softmax(outputs_variable)
-            outputs_fixed_pred = log_softmax(outputs_fixed)
+            outputs_variable_pred = log_square_and_normalize(outputs_variable)
+            outputs_fixed_pred = log_square_and_normalize(outputs_fixed)
 
 
             loss_variable = criterion(outputs_variable_pred, labels_variable_batch)
@@ -47,7 +47,8 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda', train_i
             total_train_loss += total_loss.item()
             
         avg_train_loss = total_train_loss / len(train_batches)
-        logging.info(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
+        if verbose:
+            logging.info(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
         # Evaluation phase
         scheduler.step()
         model.eval()
@@ -56,12 +57,12 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda', train_i
             for batch in eval_batches:
                 x_fixed_batch = torch.stack([item[0] for item in batch]).to(device)
                 x_variable_batch = torch.stack([item[1] for item in batch]).squeeze(1).to(device)
-                labels_fixed_batch = torch.stack([F.softmax(item[2], dim=-1) for item in batch]).to(device)
-                labels_variable_batch = torch.stack([F.softmax(item[3], dim=-1) for item in batch]).to(device)
+                labels_fixed_batch = torch.stack([square_and_normalize(item[2], dim=-1) for item in batch]).to(device)
+                labels_variable_batch = torch.stack([square_and_normalize(item[3], dim=-1) for item in batch]).to(device)
                 
                 outputs_variable, outputs_fixed = model(x_fixed_batch, x_variable_batch)
-                outputs_variable_pred = log_softmax(outputs_variable)
-                outputs_fixed_pred = log_softmax(outputs_fixed)
+                outputs_variable_pred = log_square_and_normalize(outputs_variable)
+                outputs_fixed_pred = log_square_and_normalize(outputs_fixed)
 
                 loss_variable = criterion(outputs_variable_pred, labels_variable_batch)
                 loss_fixed = criterion(outputs_fixed_pred, labels_fixed_batch)
@@ -70,11 +71,11 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda', train_i
         avg_eval_loss = total_eval_loss / len(eval_batches)
 
         if avg_eval_loss < best_eval_loss:
-            torch.save(model.state_dict(), f"best_model{train_index}.pt")
+            torch.save(model.state_dict(), best_model_name)
             best_eval_loss = avg_eval_loss
             logging.info("New best model saved")
-
-        logging.info(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
+        if verbose:
+            logging.info(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
 
     return [best_eval_loss]
 
