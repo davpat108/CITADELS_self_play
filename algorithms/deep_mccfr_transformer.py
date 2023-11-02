@@ -4,7 +4,10 @@ from copy import deepcopy
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from algorithms.train_utils import square_and_normalize
+from algorithms.train_utils import square_and_normalize, RanOutOfMemory
+
+
+
 class CFRNode:
     def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None, training=False, device="cuda:0", model_reward_weights=5, depth=0):
         self.device = device
@@ -107,7 +110,7 @@ class CFRNode:
                 distributions.append(distribution)
             distribution = np.vstack(distributions)
             if not self.training:
-                self.node_value = self.model_reward_weights * winning_probabilities
+                self.pred_node_value = self.model_reward_weights * winning_probabilities
             
 
         self.cumulative_regrets = self.cumulative_regrets.T
@@ -128,7 +131,7 @@ class CFRNode:
         if self.model:
             distribution, winning_probabilities = self.model_inference(self.game, options)
             if not self.training:
-                self.node_value = self.model_reward_weights * winning_probabilities
+                self.pred_node_value = self.model_reward_weights * winning_probabilities
 
         self.cumulative_regrets = np.zeros(len(self.children))
         self.strategy = np.zeros(len(self.children))
@@ -160,7 +163,7 @@ class CFRNode:
             if self.model:
                 distribution, winning_probabilities = self.model_inference(self.game)
                 if not self.training:
-                    self.node_value = self.model_reward_weights * winning_probabilities
+                    self.pred_node_value = self.model_reward_weights * winning_probabilities
                 self.cumulative_strategy = distribution
             else:
                 self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
@@ -208,7 +211,7 @@ class CFRNode:
             node, _ = node.action_choice()
             if node.depth > max_depth and not node.is_terminal():
                 node.expand()
-                node.backpropagate(self.node_value)
+                node.backpropagate(self.pred_node_value)
                 node.update_strategy()
                 node = self
             elif node.is_terminal():
@@ -317,7 +320,12 @@ class CFRNode:
         else:
             options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0).to(self.device)
         model_input = game.encode_game().unsqueeze(0).to(self.device)
-        distribution, node_value = self.model(model_input, options_input)
+        
+        if self.device != "cpu" and torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated() < 500 * 1024**2: # 1000 MB
+            raise RanOutOfMemory
+        
+        with torch.no_grad():
+            distribution, node_value = self.model(model_input, options_input)
 
         distribution = square_and_normalize(distribution, dim=1).squeeze(0).detach().cpu().numpy()
         winning_probabilities = square_and_normalize(node_value, dim=1).squeeze(0).detach().cpu().numpy()

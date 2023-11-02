@@ -15,6 +15,8 @@ def draw_eval_results(results, base_usefullness_treshold, max_usefullness_thesho
     plt.savefig(name)
     plt.close()
 
+class RanOutOfMemory(Exception):
+    pass
 
 def draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name="length_plot.png"):
     sns.set(style="whitegrid")

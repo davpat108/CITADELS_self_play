@@ -7,7 +7,7 @@ from algorithms.models import VariableInputNN
 from algorithms.train import train_transformer
 from game.game import Game
 from multiprocessing import Pool, cpu_count
-from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold
+from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, RanOutOfMemory
 import os
 
 def setup_game(max_move_num):
@@ -66,8 +66,9 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
         try:
             targets += parallel_simulations(4, model, base_usefullness_treshold=base_usefullness_treshold, pretrain=pretrain, max_iterations=max_iterations)
             print(f"Total targets: {len(targets)}")
-        except MemoryError:
+        except RanOutOfMemory:
             print("Memory Error")
+            torch.cuda.empty_cache()
             continue
     return targets
 
@@ -110,11 +111,12 @@ if __name__ == "__main__":
 
     # train 
     for u in range(3):
+        base_usefullness_treshold = 30
         if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
             print(f"training {u}")
             modelname = f"best_from_train_{u-1}.pt" if u > 0 else "best_pretrain_model.pt"
             model.load_state_dict(torch.load(modelname))
-            targets = get_mccfr_targets(model, minimum_sufficient_nodes=10000, base_usefullness_treshold=base_usefullness_treshold, max_iterations=100000)
+            targets = get_mccfr_targets(model, minimum_sufficient_nodes=5000, base_usefullness_treshold=base_usefullness_treshold, max_iterations=60000)
             
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)
