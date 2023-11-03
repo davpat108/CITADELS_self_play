@@ -78,14 +78,14 @@ if __name__ == "__main__":
     print("Starting training")
     model = VariableInputNN(game_encoding_size=478, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
     model.eval()
-    base_usefullness_treshold = 50
+    base_usefullness_treshold = 30
     max_usefullness_theshold = 200
     # pretrain
     if not f"10k_50thresh_pretrain.pkl" in os.listdir():
         print("Pretraining")
         #targets = simulate_game(model, 0, 0, pretrain=True)
 
-        targets = get_mccfr_targets(model, minimum_sufficient_nodes=10000, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
+        targets = get_mccfr_targets(model, minimum_sufficient_nodes=2500, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
 
@@ -99,24 +99,27 @@ if __name__ == "__main__":
                 print(f"Usefulness treshold {i} has no targets")
                 max_usefullness_theshold = i
                 break
-            
-            results += train_transformer(sub_targets, model, epochs=75, batch_size=256, best_model_name=f"best_pretrain_model{i}.pt", verbose=False)
+            model = VariableInputNN(game_encoding_size=478, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
+            eval_results, train_results = train_transformer(sub_targets, model, epochs=75, best_model_name=f"best_train{0}_model{i}.pt", batch_size=256, verbose=False)
+            results += eval_results
+            results_train += train_results
             lengths.append(len(sub_targets))
             
         best_index = results.index(min(results)) + base_usefullness_treshold
         os.rename(f"best_pretrain_model{best_index}.pt", f"best_pretrain_model.pt")
         
-        draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_loss_plot.png")
+        draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_eval_loss_plot.png")
+        draw_eval_results(results_train, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_train_loss_plot.png")
         draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_length_plot.png")
 
     # train 
-    for u in range(3):
-        base_usefullness_treshold = 30
+    for u in range(5):
+        base_usefullness_treshold = 20
         if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
             print(f"training {u}")
             modelname = f"best_from_train_{u-1}.pt" if u > 0 else "best_pretrain_model.pt"
             model.load_state_dict(torch.load(modelname))
-            targets = get_mccfr_targets(model, minimum_sufficient_nodes=5000, base_usefullness_treshold=base_usefullness_treshold, max_iterations=60000)
+            targets = get_mccfr_targets(model, minimum_sufficient_nodes=1500, base_usefullness_treshold=base_usefullness_treshold, max_iterations=60000)
             
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)
@@ -130,14 +133,17 @@ if __name__ == "__main__":
                     print(f"Usefulness treshold {i} has no targets")
                     max_usefullness_theshold = i
                     break
-                
-                results += train_transformer(sub_targets, model, epochs=75, best_model_name=f"best_train{u}_model{i}.pt", batch_size=256, verbose=False)
+                model.load_state_dict(torch.load(modelname))
+                eval_results, train_results = train_transformer(sub_targets, model, epochs=75, best_model_name=f"best_train{0}_model{i}.pt", batch_size=256, verbose=False)
+                results += eval_results
+                results_train += train_results
                 lengths.append(len(sub_targets))
                 
             best_index = results.index(min(results))+base_usefullness_treshold
             os.rename(f"best_train{u}_model{best_index}.pt", f"best_from_train_{u}.pt")
             
-            draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name=f"train{u}_loss_plot.png")
+            draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name=f"eval{u}_loss_plot.png")
+            draw_eval_results(results_train, base_usefullness_treshold, max_usefullness_theshold, name=f"train{u}_loss_plot.png")
             draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name=f"train{u}_length_plot.png")
 
     logging.shutdown()

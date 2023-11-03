@@ -22,6 +22,7 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda', best_mo
     train_batches = split_data_to_batches_by_length(train_data, batch_size)
     eval_batches = split_data_to_batches_by_length(eval_data, batch_size)
     best_eval_loss = float('inf')
+    best_train_loss = float('inf')
     for epoch in range(epochs):
         model.train()
         total_train_loss = 0
@@ -47,6 +48,9 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda', best_mo
             total_train_loss += total_loss.item()
             
         avg_train_loss = total_train_loss / len(train_batches)
+        
+        if avg_train_loss < best_train_loss:
+            best_train_loss = avg_train_loss
         if verbose:
             logging.info(f"Epoch {epoch+1}/{epochs} - Train Loss: {avg_train_loss:.4f}")
         # Evaluation phase
@@ -77,7 +81,7 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda', best_mo
         if verbose:
             logging.info(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
 
-    return [best_eval_loss]
+    return [best_eval_loss], [best_train_loss]
 
 
 def split_data_to_batches_by_length(data, batch_size):
