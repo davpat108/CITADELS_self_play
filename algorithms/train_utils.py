@@ -39,6 +39,54 @@ def get_nodes_with_usefulness_treshold(targets, treshold):
     """
     return [target for target in targets if target[3].sum() >= treshold]
 
+def get_average_regrets(targets):
+    """
+    args:
+        targets: list of targets
+    returns:
+        list of average regrets
+    """
+    return [target[3].mean() for target in targets]
+
+
+def calculate_means(list_of_lists):
+    # Sum each 3rd and 4th element tensor
+    summed_third_elements = torch.tensor([int(lst[2].sum()) for lst in list_of_lists])
+    summed_fourth_elements = torch.tensor([lst[3].sum() for lst in list_of_lists])
+
+    # Find the maximum sum among the 3rd elements to set as the max threshold
+    max_sum = summed_third_elements.max().item()
+
+    # Calculate the means for each threshold
+    means = []
+    thresholds = range(max_sum, -1, -1)
+
+    for threshold in thresholds:
+        # Select the summed 4th elements where the corresponding 3rd element sum is above the threshold
+        valid_sums = summed_fourth_elements[summed_third_elements >= threshold]
+        # Calculate the mean of these valid sums
+        mean_value = valid_sums.mean().item() if len(valid_sums) > 0 else 0
+        means.append(mean_value)
+
+    return list(thresholds), means
+
+# This function will plot the data using seaborn
+def plot_threshold_means(thresholds, means, name="threshold_means.png"):
+    sns.lineplot(x=thresholds, y=means)
+    plt.xlabel('Threshold')
+    plt.ylabel('Mean of Sums')
+    plt.title('Mean of the 4th Element Sums by Threshold')
+    plt.savefig(name)
+    
+
+def plot_avg_regrets(targets, name="avg_regrets.png"):
+    # Calculate means
+    thresholds, means = calculate_means(targets)
+
+    # Plot the results
+    plot_threshold_means(thresholds, means, name=name)
+
+
 def square_and_normalize(input_tensor, dim=-1):
     squared = torch.pow(input_tensor, 2)
     return squared / squared.sum(dim=dim, keepdim=True)

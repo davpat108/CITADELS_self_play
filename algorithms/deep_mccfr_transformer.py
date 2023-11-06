@@ -224,7 +224,6 @@ class CFRNode:
         self.update_strategy()
 
 
-
     def update_regrets(self):
         # backprops, checks all the other choices it could have made from the parent and calcs reward
         # pay attention to player id
@@ -243,6 +242,7 @@ class CFRNode:
             max_rewards = np.max(actual_rewards, axis=0)
             regret_values = max_rewards - actual_rewards
             self.cumulative_regrets += regret_values
+
 
     def get_all_targets(self, usefulness_treshold = 15):
         """

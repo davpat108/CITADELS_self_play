@@ -7,7 +7,7 @@ from algorithms.models import VariableInputNN
 from algorithms.train import train_transformer
 from game.game import Game
 from multiprocessing import Pool, cpu_count
-from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, RanOutOfMemory
+from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, plot_avg_regrets, RanOutOfMemory
 import os
 
 def setup_game(max_move_num):
@@ -88,6 +88,7 @@ if __name__ == "__main__":
         targets = get_mccfr_targets(model, minimum_sufficient_nodes=2500, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
+        plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
 
 
         results = []
@@ -123,7 +124,8 @@ if __name__ == "__main__":
             
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)
-                
+            
+            plot_avg_regrets(targets, name=f"avg_regrets_train{u}.png")
             results = []
             lengths = []
             

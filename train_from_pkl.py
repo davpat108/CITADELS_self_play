@@ -7,7 +7,7 @@ from algorithms.models import VariableInputNN
 from algorithms.train import train_transformer
 from game.game import Game
 from multiprocessing import Pool, cpu_count
-from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold
+from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, plot_avg_regrets
 import os
 
 model = VariableInputNN(game_encoding_size=478, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
@@ -23,7 +23,7 @@ combined_targets = []
 with open("10k_50thresh_pretrain.pkl", 'rb') as file:
     targets = pkl.load(file)
     combined_targets.extend(targets)
-
+plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
 results = []
 results_train = []
 lengths = []
