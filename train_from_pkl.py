@@ -11,7 +11,7 @@ from algorithms.train_utils import draw_eval_results, draw_length_results, get_n
 import os
 
 model = VariableInputNN(game_encoding_size=478, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
-#model.load_state_dict(torch.load("best_pretrain_model.pt"))
+model.load_state_dict(torch.load("best_pretrain_model.pt"))
 files = os.listdir()
 logging.basicConfig(level=logging.INFO)
 
@@ -20,15 +20,15 @@ combined_targets = []
 
 # Iterate over each .pkl file and append its contents to the combined_targets list
 #for pkl_file in pkl_files:
-with open("10k_50thresh_pretrain.pkl", 'rb') as file:
+with open("10k_50thresh_train_0.pkl", 'rb') as file:
     targets = pkl.load(file)
     combined_targets.extend(targets)
-plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
+#plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
 results = []
 results_train = []
 lengths = []
 
-base_usefullness_treshold = 30
+base_usefullness_treshold = 20
 max_usefullness_theshold = 200
 for i in range(base_usefullness_treshold, max_usefullness_theshold):
     sub_targets = get_nodes_with_usefulness_treshold(targets, i)
