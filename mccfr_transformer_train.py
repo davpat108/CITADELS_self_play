@@ -72,11 +72,19 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
             continue
     return targets
 
+model_config = {
+    'game_encoding_size': 478,
+    'fixed_embedding_size': 256,
+    'variable_embedding_size': 256,
+    'vector_input_size': 131,
+    'num_heads': 4,
+    'num_transformer_layers': 2
+}
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     print("Starting training")
-    model = VariableInputNN(game_encoding_size=478, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
+    model = VariableInputNN(**model_config)
     model.eval()
     base_usefullness_treshold = 30
     max_usefullness_theshold = 200
@@ -101,7 +109,7 @@ if __name__ == "__main__":
                 print(f"Usefulness treshold {i} has no targets")
                 max_usefullness_theshold = i
                 break
-            model = VariableInputNN(game_encoding_size=478, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
+            model = VariableInputNN(**model_config)
             eval_results, train_results = train_transformer(sub_targets, model, epochs=75, best_model_name=f"best_train{0}_model{i}.pt", batch_size=256, verbose=False)
             results += eval_results
             results_train += train_results
@@ -119,6 +127,8 @@ if __name__ == "__main__":
         base_usefullness_treshold = 20
         if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
             print(f"training {u}")
+            model = VariableInputNN(**model_config)
+            model.eval()
             modelname = f"train{u-1}/best_from_train.pt" if u > 0 else "best_pretrain_model.pt"
             model.load_state_dict(torch.load(modelname))
             targets = get_mccfr_targets(model, minimum_sufficient_nodes=1500, base_usefullness_treshold=base_usefullness_treshold, max_iterations=60000)

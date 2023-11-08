@@ -20,10 +20,10 @@ combined_targets = []
 
 # Iterate over each .pkl file and append its contents to the combined_targets list
 #for pkl_file in pkl_files:
-with open("10k_50thresh_train_0.pkl", 'rb') as file:
+with open("10k_50thresh_pretrain.pkl", 'rb') as file:
     targets = pkl.load(file)
     combined_targets.extend(targets)
-#plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
+plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
 results = []
 results_train = []
 lengths = []
