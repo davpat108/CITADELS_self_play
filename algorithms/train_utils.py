@@ -125,7 +125,7 @@ def plot_threshold_means(thresholds, means, cat_2_means, cat_3_6_means, cat_7_30
     plt.ylim(0, 500)
     plt.title('Count of Elements by Length Category')
     plt.legend()
-    plt.savefig("lengths_" + name)
+    plt.savefig(name+"_length.png")
 
 def plot_avg_regrets(targets, name="avg_regrets.png"):
     # Calculate means
