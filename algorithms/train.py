@@ -6,7 +6,7 @@ import logging
 import torch.nn.functional as F
 from algorithms.train_utils import square_and_normalize, log_square_and_normalize
 
-def train_transformer(data, model, epochs, batch_size=64, device='cuda', best_model_name="best_model.pt", verbose=False):
+def train_transformer(train_data, val_data, model, epochs, batch_size=64, device='cuda', best_model_name="best_model.pt", verbose=False):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
@@ -14,13 +14,9 @@ def train_transformer(data, model, epochs, batch_size=64, device='cuda', best_mo
     criterion = nn.KLDivLoss(reduction='batchmean')
     #log_softmax = nn.LogSoftmax(dim=1)
 
-    # Splitting data into training and evaluation sets
-    train_size = int(0.8 * len(data))
-    train_data = data[:train_size]
-    eval_data = data[train_size:]
 
     train_batches = split_data_to_batches_by_length(train_data, batch_size)
-    eval_batches = split_data_to_batches_by_length(eval_data, batch_size)
+    eval_batches = split_data_to_batches_by_length(val_data, batch_size)
     best_eval_loss = float('inf')
     best_train_loss = float('inf')
     for epoch in range(epochs):

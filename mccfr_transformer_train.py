@@ -14,15 +14,17 @@ def setup_game(max_move_num):
     move_stop_num = randint(1, max_move_num)
     game = Game()
     game.setup_round()
+    games = []
+    games.append(deepcopy(game))
     winner = False
-    i = 0
-    tota_options = 0
-    while not winner and i < move_stop_num:
+    while not winner:
         options = game.get_options_from_state()
-        tota_options += len(options)
         chosen_option = choice(options)
         winner = chosen_option.carry_out(game)
-        i+=1
+        games.append(deepcopy(game))
+    
+    game = games[-move_stop_num]
+
 
     if not winner:
         print(f"Game created with {move_stop_num} moves in")
@@ -37,7 +39,7 @@ def simulate_game(model, process_index, usefulness_treshold, pretrain=False, max
     targets = []
     game = None
     while not game:
-        game = setup_game(500)
+        game = setup_game(100)
 
     position_root = CFRNode(game, original_player_id=0, model=model if not pretrain else None, role_pick_node=game.gamestate.state==0, training=True, device="cuda:0")
     position_root.cfr_train(max_iterations=max_iterations)
@@ -97,7 +99,8 @@ if __name__ == "__main__":
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
         plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
-
+        with open(f"validation_targets.pkl", 'rb') as file:
+            val_targets = pickle.load(file)
 
         results = []
         lengths = []
@@ -110,7 +113,7 @@ if __name__ == "__main__":
                 max_usefullness_theshold = i
                 break
             model = VariableInputNN(**model_config)
-            eval_results, train_results = train_transformer(sub_targets, model, epochs=75, best_model_name=f"best_train{0}_model{i}.pt", batch_size=256, verbose=False)
+            eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"best_train{0}_model{i}.pt", batch_size=256, verbose=False)
             results += eval_results
             results_train += train_results
             lengths.append(len(sub_targets))
@@ -135,6 +138,10 @@ if __name__ == "__main__":
             
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)
+                
+            with open(f"validation_targets.pkl", 'rb') as file:
+                val_targets = pickle.load(file)
+            
             os.makedirs(f"train{u}", exist_ok=True)
             plot_avg_regrets(targets, name=f"train{u}/avg_regrets_train.png")
             results = []
@@ -148,7 +155,7 @@ if __name__ == "__main__":
                     max_usefullness_theshold = i
                     break
                 model.load_state_dict(torch.load(modelname))
-                eval_results, train_results = train_transformer(sub_targets, model, epochs=75, best_model_name=f"train{u}/best_train_model{i}.pt", batch_size=256, verbose=False)
+                eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"train{u}/best_train_model{i}.pt", batch_size=256, verbose=False)
                 results += eval_results
                 results_train += train_results
                 lengths.append(len(sub_targets))

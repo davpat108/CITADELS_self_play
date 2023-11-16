@@ -300,10 +300,14 @@ class CFRNode:
             for i in range(6):
                 hypothetical_game = deepcopy(self.game)
                 hypothetical_game.gamestate.player_id = i
+                
                 options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
                 model_input = hypothetical_game.encode_game()
                 target_node_value = torch.tensor(self.node_value)
                 target_decision_dist = torch.tensor(self.cumulative_regrets[i])
+                if torch.sum(target_decision_dist) == 0:
+                    target_decision_dist = torch.ones_like(target_decision_dist)
+                    
                 model_targets.append((model_input, options_input, target_node_value, target_decision_dist))
             return model_targets
         else:
@@ -311,6 +315,9 @@ class CFRNode:
             model_input = self.game.encode_game()
             target_node_value = torch.tensor(self.node_value)
             target_decision_dist = torch.tensor(self.cumulative_regrets)
+            if torch.sum(target_decision_dist) == 0:
+                target_decision_dist = torch.ones_like(target_decision_dist)
+                
             return [(model_input, options_input, target_node_value, target_decision_dist)]
 
 

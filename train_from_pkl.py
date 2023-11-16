@@ -9,21 +9,22 @@ from game.game import Game
 from multiprocessing import Pool, cpu_count
 from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, plot_avg_regrets
 import os
+import glob
 
 model = VariableInputNN(game_encoding_size=478, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
-model.load_state_dict(torch.load("best_pretrain_model.pt"))
-files = os.listdir()
+#model.load_state_dict(torch.load("best_pretrain_model.pt"))
 logging.basicConfig(level=logging.INFO)
 
 
 combined_targets = []
 
 # Iterate over each .pkl file and append its contents to the combined_targets list
-#for pkl_file in pkl_files:
-with open("10k_50thresh_pretrain.pkl", 'rb') as file:
-    targets = pkl.load(file)
-    combined_targets.extend(targets)
-plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
+pkl_files = [file for file in glob.glob('C:/repos/CITADELS_self_play/extra/*.pkl')]
+for pkl_file in pkl_files:
+    with open(pkl_file, 'rb') as file:
+        targets = pkl.load(file)
+        combined_targets.extend(targets)
+plot_avg_regrets(combined_targets, name=f"avg_regrets_pretrain.png")
 results = []
 results_train = []
 lengths = []
@@ -31,14 +32,17 @@ lengths = []
 base_usefullness_treshold = 20
 max_usefullness_theshold = 200
 for i in range(base_usefullness_treshold, max_usefullness_theshold):
-    sub_targets = get_nodes_with_usefulness_treshold(targets, i)
+    sub_targets = get_nodes_with_usefulness_treshold(combined_targets, i)
     if len(sub_targets) == 0:
         print(f"Usefulness treshold {i} has no targets")
         max_usefullness_theshold = i
         break
-
+    
+    with open(f"validation_targets.pkl", 'rb') as file:
+        val_targets = pkl.load(file)
+    
     model = VariableInputNN(game_encoding_size=478, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
-    eval_results, train_results = train_transformer(sub_targets, model, epochs=75, best_model_name=f"best_train{0}_model{i}.pt", batch_size=256, verbose=False)
+    eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"best_train{0}_model{i}.pt", batch_size=256, verbose=True)
     results += eval_results
     results_train += train_results
     lengths.append(len(sub_targets))
