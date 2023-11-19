@@ -9,6 +9,9 @@ from game.game import Game
 from multiprocessing import Pool, cpu_count
 from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, plot_avg_regrets, RanOutOfMemory
 import os
+from copy import deepcopy
+import sys
+sys.setrecursionlimit(5000)  
 
 def setup_game(max_move_num):
     move_stop_num = randint(1, max_move_num)
@@ -26,12 +29,8 @@ def setup_game(max_move_num):
     game = games[-move_stop_num]
 
 
-    if not winner:
-        print(f"Game created with {move_stop_num} moves in")
-        return game
-    else:
-        print("Accidental winner")
-        return None
+    return game
+
 
 
 def simulate_game(model, process_index, usefulness_treshold, pretrain=False, max_iterations=200000):
@@ -41,7 +40,7 @@ def simulate_game(model, process_index, usefulness_treshold, pretrain=False, max
     while not game:
         game = setup_game(100)
 
-    position_root = CFRNode(game, original_player_id=0, model=model if not pretrain else None, role_pick_node=game.gamestate.state==0, training=True, device="cuda:0")
+    position_root = CFRNode(game, original_player_id=game.gamestate.player_id, model=model if not pretrain else None, role_pick_node=game.gamestate.state==0, training=True, device="cuda:0")
     position_root.cfr_train(max_iterations=max_iterations)
     targets += position_root.get_all_targets(usefulness_treshold=usefulness_treshold)
     print(f"Created {len(targets)} targets for training")
@@ -75,7 +74,7 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
     return targets
 
 model_config = {
-    'game_encoding_size': 478,
+    'game_encoding_size': 439,
     'fixed_embedding_size': 256,
     'variable_embedding_size': 256,
     'vector_input_size': 131,
@@ -98,7 +97,7 @@ if __name__ == "__main__":
         targets = get_mccfr_targets(model, minimum_sufficient_nodes=2500, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
-        plot_avg_regrets(targets, name=f"avg_regrets_pretrain.png")
+        plot_avg_regrets(targets, name=f"pretrain/avg_regrets_pretrain.png")
         with open(f"validation_targets.pkl", 'rb') as file:
             val_targets = pickle.load(file)
 
@@ -106,24 +105,24 @@ if __name__ == "__main__":
         lengths = []
         results_train = []
         
-        for i in range(base_usefullness_treshold, max_usefullness_theshold):
+        for i in range(base_usefullness_treshold, max_usefullness_theshold,5):
             sub_targets = get_nodes_with_usefulness_treshold(targets, i)
             if len(sub_targets) == 0:
                 print(f"Usefulness treshold {i} has no targets")
                 max_usefullness_theshold = i
                 break
             model = VariableInputNN(**model_config)
-            eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"best_train{0}_model{i}.pt", batch_size=256, verbose=False)
+            eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"pretrain/best_pretrain_model{i}.pt", batch_size=256, verbose=False)
             results += eval_results
             results_train += train_results
             lengths.append(len(sub_targets))
             
         best_index = results.index(min(results)) + base_usefullness_treshold
-        os.rename(f"best_pretrain_model{best_index}.pt", f"best_pretrain_model.pt")
+        os.rename(f"pretrain/best_pretrain_model{best_index}.pt", f"pretrain/best_pretrain_model.pt")
         
-        draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_eval_loss_plot.png")
-        draw_eval_results(results_train, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_train_loss_plot.png")
-        draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name="pretrain_length_plot.png")
+        draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="pretrain/pretrain_eval_loss_plot.png")
+        draw_eval_results(results_train, base_usefullness_treshold, max_usefullness_theshold, name="pretrain/pretrain_train_loss_plot.png")
+        draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name="pretrain/pretrain_length_plot.png")
 
     # train 
     for u in range(5):
@@ -132,7 +131,7 @@ if __name__ == "__main__":
             print(f"training {u}")
             model = VariableInputNN(**model_config)
             model.eval()
-            modelname = f"train{u-1}/best_from_train.pt" if u > 0 else "best_pretrain_model.pt"
+            modelname = f"train{u-1}/best_from_train.pt" if u > 0 else "pretrain/best_pretrain_model.pt"
             model.load_state_dict(torch.load(modelname))
             targets = get_mccfr_targets(model, minimum_sufficient_nodes=1500, base_usefullness_treshold=base_usefullness_treshold, max_iterations=60000)
             
@@ -148,7 +147,7 @@ if __name__ == "__main__":
             lengths = []
             results_train = []
             
-            for i in range(base_usefullness_treshold, max_usefullness_theshold):
+            for i in range(base_usefullness_treshold, max_usefullness_theshold, 5):
                 sub_targets = get_nodes_with_usefulness_treshold(targets, i)
                 if len(sub_targets) == 0:
                     print(f"Usefulness treshold {i} has no targets")

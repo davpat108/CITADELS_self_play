@@ -7,7 +7,7 @@ import torch.nn.functional as F
 sns.set(style="darkgrid") 
 
 def draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="loss_plot.png"):
-    x_values = list(range(base_usefullness_treshold, max_usefullness_theshold))
+    x_values = list(range(base_usefullness_treshold, max_usefullness_theshold, 5))
     sns.set(style="whitegrid")
     plt.figure(figsize=(10, 6))  # Adjust the figure size as needed
     sns.lineplot(x=x_values, y=results)
@@ -23,7 +23,7 @@ class RanOutOfMemory(Exception):
 def draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name="length_plot.png"):
     sns.set(style="whitegrid")
     plt.figure(figsize=(10, 6))  # Adjust the figure size as needed
-    sns.lineplot(x=list(range(base_usefullness_treshold, max_usefullness_theshold)), y=lengths)
+    sns.lineplot(x=list(range(base_usefullness_treshold, max_usefullness_theshold, 5)), y=lengths)
     plt.xlabel("Usefulness Treshold")
     plt.ylabel("Number of Targets")
     plt.title("Number of Targets vs Usefulness Treshold")

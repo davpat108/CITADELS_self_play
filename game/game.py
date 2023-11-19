@@ -172,7 +172,8 @@ class Game():
             if player.role is None or player.role == "Bewitched":
                 continue
             role_index = role_to_role_id.get(player.role)
-            if role_index is not None:
+            # Check if the player here is supposed to know the role of the other player
+            if role_index is not None and self.players[self.gamestate.player_id].known_roles[player.id].confirmed:
                 encoded_array[player.id][role_index] = 1
 
         return encoded_array
@@ -207,12 +208,13 @@ class Game():
         player_id = self.gamestate.player_id
         encoded_avalible_roles = self.encode_avalible_roles(roles)
         player_roles= self.encode_player_roles()
-        encoded_player_hand, encoded_hand_suits = self.players[player_id].hand.encode_deck()
+        #encoded_player_hand, encoded_hand_suits = self.players[player_id].hand.encode_deck()
 
         encoded_built_cards, encoded_buildings_suits = zip(*[player.buildings.encode_deck() for player in self.players])
         encoded_built_cards = np.vstack(encoded_built_cards)
         encoded_buildings_suits = np.vstack(encoded_buildings_suits)
-
+        player_points = np.array([player.count_points() for player in self.players])
+        
         encoded_player_ID = np.zeros(6, dtype=int)
         encoded_player_ID[player_id] = 1
 
@@ -223,8 +225,9 @@ class Game():
         encoded_array = np.concatenate([
         encoded_avalible_roles.flatten(),
         player_roles.flatten(),
-        encoded_player_hand.flatten(),
-        encoded_hand_suits.flatten(),
+        #encoded_player_hand.flatten(),
+        #encoded_hand_suits.flatten(),
+        player_points.flatten(),
         encoded_built_cards.flatten(),
         encoded_buildings_suits.flatten(),
         encoded_player_ID.flatten(),
@@ -411,20 +414,6 @@ class Game():
             for role_id in logically_left_out_role_ids:
                 self.remove_role_from_role_knowledge(self.roles[role_id], known_roles_by_player)
 
-    # UNUSED
-    def sample_private_info_after_role_pick_end(self, original_player):
-        print("Sampling private information after role pick end")
-        known_roles_by_player = deepcopy(original_player.known_roles)
-        for player in self.players:
-            self.sample_roles_for_opponent(player, original_player, known_roles_by_player, role_pick_end_sample=True)
-        self.refresh_roles_after_sampling_roles(from_role_pick_end_sample=True)
-
-    # UNUSED
-    def is_end_of_role_pick(self):
-        # If someone is bewitched, its not the end of role pick, and witch is also changed
-        if "Bewitched" in [player.role for player in self.players]:
-            return False
-        return self.gamestate.state == 1 and self.gamestate.player_id == self.get_player_from_role_id(self.used_roles[0]).id
 
     def sample_warrants_and_blackmails(self):
         # Sample blackmails
