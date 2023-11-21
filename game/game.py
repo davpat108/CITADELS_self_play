@@ -205,7 +205,6 @@ class Game():
         return encoded_array
 
     def encode_game(self):
-        player_id = self.gamestate.player_id
         encoded_avalible_roles = self.encode_avalible_roles(roles)
         player_roles= self.encode_player_roles()
         #encoded_player_hand, encoded_hand_suits = self.players[player_id].hand.encode_deck()
@@ -215,10 +214,15 @@ class Game():
         encoded_buildings_suits = np.vstack(encoded_buildings_suits)
         player_points = np.array([player.count_points() for player in self.players])
         
+        
         encoded_player_ID = np.zeros(6, dtype=int)
-        encoded_player_ID[player_id] = 1
-
-        encoded_just_drawn_cards, encoded_just_drawn_suits = self.players[player_id].just_drawn_cards.encode_deck()
+        encoded_player_ID[self.gamestate.player_id] = 1
+        encoded_gamestate_ID = np.zeros(11, dtype=int)
+        encoded_gamestate_ID[self.gamestate.state] = 1
+        
+        encoded_is_ending = np.ones(1, dtype=int) if self.ending else np.zeros(1, dtype=int)
+        
+        #encoded_just_drawn_cards, encoded_just_drawn_suits = self.players[player_id].just_drawn_cards.encode_deck()
 
         encoded_role_properties = self.encode_role_properties()
 
@@ -231,8 +235,10 @@ class Game():
         encoded_built_cards.flatten(),
         encoded_buildings_suits.flatten(),
         encoded_player_ID.flatten(),
-        encoded_just_drawn_cards.flatten(),
-        encoded_just_drawn_suits.flatten(),
+        encoded_gamestate_ID.flatten(),
+        encoded_is_ending.flatten(),
+        #encoded_just_drawn_cards.flatten(),
+        #encoded_just_drawn_suits.flatten(),
         encoded_role_properties.flatten()
         ])
 
@@ -282,7 +288,7 @@ class Game():
             player.reset_known_roles()
 
     def is_last_round(self, player:Agent):
-        "Returns whether its the games last round or not"
+        "Sets whether its the games last round or not"
         if not self.ending:
             for player in self.players:
                 if len(player.buildings.cards) == 7:

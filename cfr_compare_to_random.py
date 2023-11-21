@@ -10,7 +10,7 @@ import torch
 i = 0
 
 model = VariableInputNN()
-model.load_state_dict(torch.load("epoch_long1.pt"))
+#model.load_state_dict(torch.load("epoch_long1.pt"))
 model.eval()
 winners = [0, 0, 0, 0, 0, 0]
 for _ in range(100):

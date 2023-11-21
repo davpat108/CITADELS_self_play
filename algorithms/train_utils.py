@@ -4,9 +4,9 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 
-sns.set(style="darkgrid") 
 
 def draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="loss_plot.png"):
+    sns.set(style="darkgrid") 
     x_values = list(range(base_usefullness_treshold, max_usefullness_theshold, 5))
     sns.set(style="whitegrid")
     plt.figure(figsize=(10, 6))  # Adjust the figure size as needed
@@ -21,6 +21,7 @@ class RanOutOfMemory(Exception):
     pass
 
 def draw_length_results(lengths, base_usefullness_treshold, max_usefullness_theshold, name="length_plot.png"):
+    sns.set(style="darkgrid") 
     sns.set(style="whitegrid")
     plt.figure(figsize=(10, 6))  # Adjust the figure size as needed
     sns.lineplot(x=list(range(base_usefullness_treshold, max_usefullness_theshold, 5)), y=lengths)
@@ -101,6 +102,7 @@ def calculate_means(list_of_lists):
 
 # This function will plot the data using seaborn
 def plot_threshold_means(thresholds, means, cat_2_means, cat_3_6_means, cat_7_30_means, cat_30_plus_means, cat_2_lengths, cat_3_6_lengths, cat_7_30_lengths, cat_30_plus_lengths, name="threshold_means.png"):
+    sns.set(style="darkgrid") 
     # Plot for the means
     plt.figure(figsize=(10, 8))
     sns.lineplot(x=thresholds, y=means, label='All')

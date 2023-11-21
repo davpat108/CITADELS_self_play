@@ -11,11 +11,13 @@ from algorithms.train_utils import draw_eval_results, draw_length_results, get_n
 import os
 from copy import deepcopy
 import sys
+import matplotlib
 sys.setrecursionlimit(5000)  
+matplotlib.use('Agg') 
 
 def setup_game(max_move_num):
     move_stop_num = randint(1, max_move_num)
-    game = Game()
+    game = Game(debug=False)
     game.setup_round()
     games = []
     games.append(deepcopy(game))
@@ -74,7 +76,7 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
     return targets
 
 model_config = {
-    'game_encoding_size': 439,
+    'game_encoding_size': 406,
     'fixed_embedding_size': 256,
     'variable_embedding_size': 256,
     'vector_input_size': 131,
@@ -94,9 +96,11 @@ if __name__ == "__main__":
         print("Pretraining")
         #targets = simulate_game(model, 0, 0, pretrain=True)
 
-        targets = get_mccfr_targets(model, minimum_sufficient_nodes=2500, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
+        targets = get_mccfr_targets(model, minimum_sufficient_nodes=5000, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
+        
+        os.makedirs(f"pretrain", exist_ok=True)
         plot_avg_regrets(targets, name=f"pretrain/avg_regrets_pretrain.png")
         with open(f"validation_targets.pkl", 'rb') as file:
             val_targets = pickle.load(file)
@@ -112,12 +116,12 @@ if __name__ == "__main__":
                 max_usefullness_theshold = i
                 break
             model = VariableInputNN(**model_config)
-            eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"pretrain/best_pretrain_model{i}.pt", batch_size=256, verbose=False)
+            eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=150, best_model_name=f"pretrain/best_pretrain_model{i}.pt", batch_size=256, verbose=False)
             results += eval_results
             results_train += train_results
             lengths.append(len(sub_targets))
             
-        best_index = results.index(min(results)) + base_usefullness_treshold
+        best_index = results.index(min(results))*5 + base_usefullness_treshold
         os.rename(f"pretrain/best_pretrain_model{best_index}.pt", f"pretrain/best_pretrain_model.pt")
         
         draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="pretrain/pretrain_eval_loss_plot.png")
@@ -133,7 +137,7 @@ if __name__ == "__main__":
             model.eval()
             modelname = f"train{u-1}/best_from_train.pt" if u > 0 else "pretrain/best_pretrain_model.pt"
             model.load_state_dict(torch.load(modelname))
-            targets = get_mccfr_targets(model, minimum_sufficient_nodes=1500, base_usefullness_treshold=base_usefullness_treshold, max_iterations=60000)
+            targets = get_mccfr_targets(model, minimum_sufficient_nodes=3000, base_usefullness_treshold=base_usefullness_treshold, max_iterations=60000)
             
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)
@@ -154,12 +158,12 @@ if __name__ == "__main__":
                     max_usefullness_theshold = i
                     break
                 model.load_state_dict(torch.load(modelname))
-                eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"train{u}/best_train_model{i}.pt", batch_size=256, verbose=False)
+                eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=150, best_model_name=f"train{u}/best_train_model{i}.pt", batch_size=256, verbose=False)
                 results += eval_results
                 results_train += train_results
                 lengths.append(len(sub_targets))
 
-            best_index = results.index(min(results))+base_usefullness_treshold
+            best_index = results.index(min(results))*5 + base_usefullness_treshold
             os.rename(f"train{u}/best_train_model{best_index}.pt", f"train{u}/best_from_train.pt")
 
             draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name=f"train{u}/eval_loss_plot.png")
