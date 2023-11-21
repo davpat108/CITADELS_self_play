@@ -215,6 +215,10 @@ class Game():
         player_points = np.array([player.count_points() for player in self.players])
         
         
+        player_golds = np.array([player.gold for player in self.players])
+        player_card_counts = np.array([len(player.hand.cards) for player in self.players])
+        
+        
         encoded_player_ID = np.zeros(6, dtype=int)
         encoded_player_ID[self.gamestate.player_id] = 1
         encoded_gamestate_ID = np.zeros(11, dtype=int)
@@ -232,6 +236,8 @@ class Game():
         #encoded_player_hand.flatten(),
         #encoded_hand_suits.flatten(),
         player_points.flatten(),
+        player_golds.flatten(),
+        player_card_counts.flatten(),
         encoded_built_cards.flatten(),
         encoded_buildings_suits.flatten(),
         encoded_player_ID.flatten(),
