@@ -43,7 +43,7 @@ for i in range(base_usefullness_treshold, max_usefullness_theshold, 5):
     with open(f"validation_targets.pkl", 'rb') as file:
         val_targets = pkl.load(file)
     
-    model = VariableInputNN(game_encoding_size=439, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
+    model = VariableInputNN(game_encoding_size=406, fixed_embedding_size=256, variable_embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
     eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"pretrain/best_pretrain_model{i}.pt", batch_size=256, verbose=True)
     results += eval_results
     results_train += train_results

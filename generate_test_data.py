@@ -52,10 +52,11 @@ def setup_game(game_index):
         target_decision_dist = torch.tensor(position_root.cumulative_regrets)
         
         # Handle no ragrets, and rolepick
-        if torch.sum(target_decision_dist) == 0:
-            target_decision_dist = torch.ones_like(target_decision_dist)
+
         if target_decision_dist.size() == torch.Size([6, 10]):
             target_decision_dist=target_decision_dist[almost_won_game.gamestate.player_id]
+        if torch.sum(target_decision_dist) == 0:
+            target_decision_dist = torch.ones_like(target_decision_dist)
         
         return [(game_input, options_input, torch.tensor(position_root.node_value), target_decision_dist)]
     
