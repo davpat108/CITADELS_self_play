@@ -17,7 +17,7 @@ matplotlib.use('Agg')
 
 def setup_game(max_move_num):
     move_stop_num = randint(1, max_move_num)
-    game = Game(debug=False)
+    game = Game(debug=True)
     game.setup_round()
     games = []
     games.append(deepcopy(game))
@@ -35,7 +35,7 @@ def setup_game(max_move_num):
 
 
 
-def simulate_game(model, process_index, usefulness_treshold, pretrain=False, max_iterations=200000):
+def simulate_game(model, process_index, usefulness_treshold, pretrain=False, max_iterations=300000):
 
     targets = []
     game = None
@@ -96,7 +96,7 @@ if __name__ == "__main__":
         print("Pretraining")
         #targets = simulate_game(model, 0, 0, pretrain=True)
 
-        targets = get_mccfr_targets(model, minimum_sufficient_nodes=5000, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
+        targets = get_mccfr_targets(model, minimum_sufficient_nodes=20000, base_usefullness_treshold=base_usefullness_treshold, pretrain=True)
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
         
@@ -130,14 +130,14 @@ if __name__ == "__main__":
 
     # train 
     for u in range(5):
-        base_usefullness_treshold = 20
+        base_usefullness_treshold = 30
         if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
             print(f"training {u}")
             model = VariableInputNN(**model_config)
             model.eval()
             modelname = f"train{u-1}/best_from_train.pt" if u > 0 else "pretrain/best_pretrain_model.pt"
             model.load_state_dict(torch.load(modelname))
-            targets = get_mccfr_targets(model, minimum_sufficient_nodes=3000, base_usefullness_treshold=base_usefullness_treshold, max_iterations=60000)
+            targets = get_mccfr_targets(model, minimum_sufficient_nodes=20000, base_usefullness_treshold=base_usefullness_treshold, max_iterations=200000)
             
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)

@@ -18,7 +18,7 @@ def setup_game(game_index):
         #Running the game
         #print(f"Starting game {game_index}")
         move_stop_num = randint(1, 30)
-        game = Game()
+        game = Game(debug=True)
         game.setup_round()
         winner = False
         tota_options = 0

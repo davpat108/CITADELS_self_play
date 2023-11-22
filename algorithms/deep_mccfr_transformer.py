@@ -31,6 +31,7 @@ class CFRNode:
         self.node_value = np.zeros(player_count)
         self.winning_probabilities = np.zeros(player_count)
         self.role_pick_node = role_pick_node
+        self.regret_gradient = float("inf")
 
 
     def weighted_average_strategy(self, strategy_matrix, pick_hierarchy):
@@ -234,14 +235,21 @@ class CFRNode:
             # Get the maximum possible reward
             max_reward = max(actual_rewards)
             # Update regrets
+            sum_of_regrets_old = np.sum(self.cumulative_regrets)
             for a in range(len(self.children)):
                 self.cumulative_regrets[a] += max_reward - actual_rewards[a]
+                
+            self.regret_gradient = np.sum(self.cumulative_regrets) - sum_of_regrets_old
         else:
             actual_rewards = np.array([child[1].winning_probabilities for child in self.children]).T
 
             max_rewards = np.max(actual_rewards, axis=0)
             regret_values = max_rewards - actual_rewards
+            
+            sum_of_regrets_old = np.sum(self.cumulative_regrets)
             self.cumulative_regrets += regret_values
+            self.regret_gradient = np.sum(self.cumulative_regrets) - sum_of_regrets_old
+            
 
 
     def get_all_targets(self, usefulness_treshold = 15):
