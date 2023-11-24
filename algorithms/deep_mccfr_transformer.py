@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from algorithms.train_utils import square_and_normalize, RanOutOfMemory
+from random import randint
 
 
 
@@ -20,6 +21,7 @@ class CFRNode:
 
         self.depth = depth
         self.game = game # Unkown informations are present but counted as dont care
+        
         self.parent = parent
         self.children = [] # (Option that carries the game to the node, NODE)
         self.current_player_id = game.gamestate.player_id
@@ -33,6 +35,17 @@ class CFRNode:
         self.role_pick_node = role_pick_node
         self.regret_gradient = float("inf")
 
+    def skip_false_choice(self):
+        """
+        Checks if it would only have one children and if yes it would move the game on
+        """
+        options = self.game.get_options_from_state()
+        terminal = False
+        while len(options) == 1 and not terminal:
+            terminal = options[0].carry_out(self.game)
+            options = self.game.get_options_from_state()
+            
+            
 
     def weighted_average_strategy(self, strategy_matrix, pick_hierarchy):
         """
@@ -304,20 +317,18 @@ class CFRNode:
         if len(self.children) == 0 or self.node_value.sum() < usefulness_treshold:
             return []
         if self.role_pick_node:
-            model_targets = []
-            for i in range(6):
-                hypothetical_game = deepcopy(self.game)
-                hypothetical_game.gamestate.player_id = i
-                
-                options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
-                model_input = hypothetical_game.encode_game()
-                target_node_value = torch.tensor(self.node_value)
-                target_decision_dist = torch.tensor(self.cumulative_regrets[i])
-                if torch.sum(target_decision_dist) == 0:
-                    target_decision_dist = torch.ones_like(target_decision_dist)
-                    
-                model_targets.append((model_input, options_input, target_node_value, target_decision_dist))
-            return model_targets
+            i = randint(0, 5)
+            hypothetical_game = deepcopy(self.game)
+            hypothetical_game.gamestate.player_id = i
+            
+            options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
+            model_input = hypothetical_game.encode_game()
+            target_node_value = torch.tensor(self.node_value)
+            target_decision_dist = torch.tensor(self.cumulative_regrets[i])
+            if torch.sum(target_decision_dist) == 0:
+                target_decision_dist = torch.ones_like(target_decision_dist)
+            
+            return [(model_input, options_input, target_node_value, target_decision_dist)]
         else:
             options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0)
             model_input = self.game.encode_game()

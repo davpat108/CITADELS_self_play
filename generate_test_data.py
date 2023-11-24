@@ -32,10 +32,14 @@ def setup_game(game_index):
             games.append(deepcopy(game))
 
         #Picking a game
-        almost_won_game = games[-move_stop_num]
-        result  = np.zeros(6)
-        result[winner.id] = 1
-        #print(f"Winner: {winner.id}, so node value should be {result}")
+        options = []
+        limit = 0
+        while len(options) < 2 and limit < 100:
+            almost_won_game = games[-move_stop_num]
+            options = almost_won_game.get_options_from_state()
+            move_stop_num -= 1
+            limit += 1
+
         
         #Encoding the game
         game_input = almost_won_game.encode_game()
@@ -54,7 +58,7 @@ def setup_game(game_index):
         # Handle no ragrets, and rolepick
 
         if target_decision_dist.size() == torch.Size([6, 10]):
-            target_decision_dist=target_decision_dist[almost_won_game.gamestate.player_id]
+            target_decision_dist=target_decision_dist[randint(0,5)]
         if torch.sum(target_decision_dist) == 0:
             target_decision_dist = torch.ones_like(target_decision_dist)
         

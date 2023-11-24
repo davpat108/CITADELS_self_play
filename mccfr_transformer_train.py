@@ -77,8 +77,7 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
 
 model_config = {
     'game_encoding_size': 418,
-    'fixed_embedding_size': 256,
-    'variable_embedding_size': 256,
+    'embedding_size': 256,
     'vector_input_size': 131,
     'num_heads': 4,
     'num_transformer_layers': 2

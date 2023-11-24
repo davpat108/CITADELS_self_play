@@ -205,26 +205,26 @@ class Game():
         return encoded_array
 
     def encode_game(self):
-        encoded_avalible_roles = self.encode_avalible_roles(roles)
-        player_roles= self.encode_player_roles()
+        encoded_avalible_roles = self.encode_avalible_roles(roles) #24
+        player_roles= self.encode_player_roles() #48
         #encoded_player_hand, encoded_hand_suits = self.players[player_id].hand.encode_deck()
 
-        encoded_built_cards, encoded_buildings_suits = zip(*[player.buildings.encode_deck() for player in self.players])
+        encoded_built_cards, encoded_buildings_suits = zip(*[player.buildings.encode_deck() for player in self.players])#240+30
         encoded_built_cards = np.vstack(encoded_built_cards)
         encoded_buildings_suits = np.vstack(encoded_buildings_suits)
-        player_points = np.array([player.count_points() for player in self.players])
+        player_points = np.array([player.count_points() for player in self.players])#6
         
         
-        player_golds = np.array([player.gold for player in self.players])
-        player_card_counts = np.array([len(player.hand.cards) for player in self.players])
+        player_golds = np.array([player.gold for player in self.players])#6
+        player_card_counts = np.array([len(player.hand.cards) for player in self.players])#666
         
         
-        encoded_player_ID = np.zeros(6, dtype=int)
+        encoded_player_ID = np.zeros(6, dtype=int)#6
         encoded_player_ID[self.gamestate.player_id] = 1
-        encoded_gamestate_ID = np.zeros(11, dtype=int)
+        encoded_gamestate_ID = np.zeros(11, dtype=int)#11
         encoded_gamestate_ID[self.gamestate.state] = 1
         
-        encoded_is_ending = np.ones(1, dtype=int) if self.ending else np.zeros(1, dtype=int)
+        encoded_is_ending = np.ones(1, dtype=int) if self.ending else np.zeros(1, dtype=int)#1
         
         #encoded_just_drawn_cards, encoded_just_drawn_suits = self.players[player_id].just_drawn_cards.encode_deck()
 
