@@ -6,11 +6,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from algorithms.train_utils import square_and_normalize, RanOutOfMemory
 from random import randint
-
+from tqdm import tqdm
 
 
 class CFRNode:
-    def __init__(self, game, original_player_id, parent=None, player_count = 6, role_pick_node=False, model=None, training=False, device="cuda:0", model_reward_weights=5, depth=0):
+    def __init__(self, game, original_player_id, parent=None, player_count = 6, model=None, training=False, device="cuda:0", model_reward_weights=5, depth=0):
         self.device = device
         self.model = model
         if self.model:
@@ -21,6 +21,7 @@ class CFRNode:
 
         self.depth = depth
         self.game = game # Unkown informations are present but counted as dont care
+        self.skip_false_choice()
         
         self.parent = parent
         self.children = [] # (Option that carries the game to the node, NODE)
@@ -32,8 +33,35 @@ class CFRNode:
         self.cumulative_strategy = np.array([])
         self.node_value = np.zeros(player_count)
         self.winning_probabilities = np.zeros(player_count)
-        self.role_pick_node = role_pick_node
+        self.role_pick_node = game.gamestate.state == 0
         self.regret_gradient = float("inf")
+        self.total_gradients = []
+        
+        
+        
+    def draw_gradients(self, name="gradients.png"):
+        """
+        Draws the gradients of the node
+        """
+        import seaborn as sns
+        import matplotlib.pyplot as plt
+        sns.set(style="darkgrid")
+
+        # Creating a figure and axis object
+        plt.figure(figsize=(10, 6))
+    
+        # Plotting
+        sns.lineplot(x=range(len(self.total_gradients)), y=self.total_gradients)
+    
+        # Setting the title and labels
+        plt.title("Gradient Plot")
+        plt.xlabel("Index")
+        plt.ylabel("Gradients")
+    
+        # Display the plot
+        plt.savefig(name)
+        plt.close()
+        
 
     def skip_false_choice(self):
         """
@@ -109,7 +137,7 @@ class CFRNode:
                 option_to_carry_out = options[choice_index]
                 options[choice_index].carry_out(hypothetical_game)
         
-            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=False, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
+            self.children.append((option_to_carry_out, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
 
             self.cumulative_regrets = np.zeros((1, 6)) if self.cumulative_regrets.size == 0 else np.concatenate((self.cumulative_regrets, np.zeros((1, 6))), axis=0)
             self.strategy = np.zeros((1, 6)) if self.strategy.size == 0 else np.concatenate((self.strategy, np.zeros((1, 6))), axis=0)
@@ -140,7 +168,7 @@ class CFRNode:
             if self.parent is None or hypothetical_game.gamestate.player_id != self.parent.game.gamestate.player_id:
                 hypothetical_game.sample_private_information(hypothetical_game.players[self.original_player_id], role_sample=self.parent.game.gamestate.state != 0 if self.parent else False)
             option.carry_out(hypothetical_game)
-            self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
+            self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
 
         if self.model:
             distribution, winning_probabilities = self.model_inference(self.game, options)
@@ -170,7 +198,7 @@ class CFRNode:
  
         child_options = [child[0] for child in self.children]
         if not options[choice_index] in child_options:
-            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, role_pick_node=hypothetical_game.gamestate.state == 0, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
+            self.children.append((options[choice_index], CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
 
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
@@ -197,7 +225,7 @@ class CFRNode:
         self.expand()
         
         node = self
-        for i in range(max_iterations):
+        for i in tqdm(range(max_iterations), desc="Processing"):
             # Traverse
             node.update_strategy()
             node, _ = node.action_choice()
@@ -253,6 +281,7 @@ class CFRNode:
                 self.cumulative_regrets[a] += max_reward - actual_rewards[a]
                 
             self.regret_gradient = np.sum(self.cumulative_regrets) - sum_of_regrets_old
+            self.total_gradients.append(self.regret_gradient)
         else:
             actual_rewards = np.array([child[1].winning_probabilities for child in self.children]).T
 
@@ -262,6 +291,7 @@ class CFRNode:
             sum_of_regrets_old = np.sum(self.cumulative_regrets)
             self.cumulative_regrets += regret_values
             self.regret_gradient = np.sum(self.cumulative_regrets) - sum_of_regrets_old
+            self.total_gradients.append(self.regret_gradient)
             
 
 

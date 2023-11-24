@@ -43,7 +43,7 @@ def setup_game(game_index):
         
         #Encoding the game
         game_input = almost_won_game.encode_game()
-        position_root = CFRNode(almost_won_game, original_player_id=almost_won_game.gamestate.player_id, model=None, role_pick_node=almost_won_game.gamestate.state==0, training=True, device="cuda:0")
+        position_root = CFRNode(almost_won_game, original_player_id=almost_won_game.gamestate.player_id, model=None, training=True, device="cuda:0")
         position_root.cfr_train(max_iterations=20000)
 
         options = [option for option, _ in position_root.children]

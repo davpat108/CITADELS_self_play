@@ -19,11 +19,14 @@ for _ in range(100):
     winner = False
     while not winner:
         i+=1
-        if game.gamestate.player_id  == 0:
-            position_root = CFRNode(game, original_player_id=0, model=model)
-            position_root.cfr_pred()
+        if i % 100 == 0:
+            position_root = CFRNode(game, original_player_id=game.gamestate.player_id)
+            position_root.cfr_train()
+            position_root.draw_gradients()
+            position_root.children[0][1].draw_gradients(name="child.png")
             _, chosen_option = position_root.action_choice()
             winner = chosen_option.carry_out(game)
+            1/0
 
         else:
             options = game.get_options_from_state()

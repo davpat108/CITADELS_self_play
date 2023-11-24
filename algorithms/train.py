@@ -9,7 +9,7 @@ from algorithms.train_utils import square_and_normalize, log_square_and_normaliz
 def train_transformer(train_data, val_data, model, epochs, batch_size=64, device='cuda', best_model_name="best_model.pt", verbose=False):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
     model.to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=0.005)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.8)
     criterion = nn.KLDivLoss(reduction='batchmean')
     #log_softmax = nn.LogSoftmax(dim=1)
@@ -90,7 +90,8 @@ def train_transformer(train_data, val_data, model, epochs, batch_size=64, device
             best_eval_loss = avg_eval_loss
             logging.info("New best model saved")
         if verbose:
-            logging.info(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f} of which variable: {avg_eval_loss_variable:.4f}, and fixed: {avg_eval_loss_fixed:.4f}")
+            pass
+            #logging.info(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f} of which variable: {avg_eval_loss_variable:.4f}, and fixed: {avg_eval_loss_fixed:.4f}")
 
     return [best_eval_loss], [best_train_loss]
 

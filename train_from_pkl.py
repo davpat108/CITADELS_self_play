@@ -25,7 +25,7 @@ combined_targets = []
 #        targets = pkl.load(file)
 #        combined_targets.extend(targets)
 #plot_avg_regrets(combined_targets, name=f"avg_regrets_pretrain.png")
-with open(f"10k_50thresh_pretrain.pkl", 'rb') as file:
+with open(f"validation_targets.pkl", 'rb') as file:
     combined_targets = pkl.load(file)
 results = []
 results_train = []
@@ -43,8 +43,8 @@ for i in range(base_usefullness_treshold, max_usefullness_theshold, 5):
     with open(f"validation_targets.pkl", 'rb') as file:
         val_targets = pkl.load(file)
     
-    model = VariableInputNN(game_encoding_size=418, embedding_size=256, vector_input_size=131, num_heads=4, num_transformer_layers=2)
-    eval_results, train_results = train_transformer(sub_targets, val_targets, model, epochs=75, best_model_name=f"pretrain/best_pretrain_model{i}.pt", batch_size=256, verbose=True)
+    model = VariableInputNN(game_encoding_size=418, embedding_size=32, vector_input_size=131, num_heads=2, num_transformer_layers=1)
+    eval_results, train_results = train_transformer(val_targets, val_targets, model, epochs=1000, best_model_name=f"pretrain/best_pretrain_model{i}.pt", batch_size=256, verbose=True)
     results += eval_results
     results_train += train_results
     lengths.append(len(sub_targets))

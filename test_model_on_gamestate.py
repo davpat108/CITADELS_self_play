@@ -41,7 +41,7 @@ def predict_game(model, game):
     while not game:
         game = setup_game(500)
 
-    position_root = CFRNode(game, original_player_id=0, model=model if not pretrain else None, role_pick_node=game.gamestate.state==0, training=True, device="cuda:0")
+    position_root = CFRNode(game, original_player_id=0, model=model if not pretrain else None, training=True, device="cuda:0")
     position_root.cfr_train(max_iterations=max_iterations)
     targets += position_root.get_all_targets(usefulness_treshold=usefulness_treshold)
     print(f"Created {len(targets)} targets for training")
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     winning_probabilities = square_and_normalize(node_value, dim=1).squeeze(0).detach().numpy()
     print(f"Winning probabilities: {winning_probabilities}")
     
-    position_root = CFRNode(game, original_player_id=game.gamestate.player_id, model=None, role_pick_node=game.gamestate.state==0, training=True, device="cuda:0")
+    position_root = CFRNode(game, original_player_id=game.gamestate.player_id, model=None, training=True, device="cuda:0")
     position_root.cfr_train(max_iterations=10000)
     print(f"value: {position_root.node_value}, strategy: {position_root.strategy}")
     
