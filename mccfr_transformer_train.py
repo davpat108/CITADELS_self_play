@@ -88,13 +88,13 @@ if __name__ == "__main__":
     print("Starting training")
     model = VariableInputNN(**model_config)
     model.eval()
-    base_usefullness_treshold = 50
+    usefullness_treshold = 150
     # pretrain
     if not f"10k_50thresh_pretrain.pkl" in os.listdir():
         print("Pretraining")
         #targets = simulate_game(model, 0, 0, pretrain=True)
 
-        targets = get_mccfr_targets(model, minimum_sufficient_nodes=20000, base_usefullness_treshold=usefullness_treshold, pretrain=True)
+        targets = get_mccfr_targets(model, minimum_sufficient_nodes=2000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000, pretrain=True)
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
         
@@ -104,19 +104,19 @@ if __name__ == "__main__":
             val_targets = pickle.load(file)
         
 
-        eval_results, train_results = train_transformer(targets, val_targets, model, epochs=150, best_model_name=f"pretrain/best_pretrain_model{i}.pt", batch_size=256, verbose=False)
+        eval_results, train_results = train_transformer(targets, val_targets, model, epochs=1000, best_model_name=f"pretrain/best_pretrain_model.pt", batch_size=256, verbose=False)
 
         
-    # train 
+    # train
     for u in range(5):
-        usefullness_treshold = 30
+        usefullness_treshold = 150
         if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
             print(f"training {u}")
             model = VariableInputNN(**model_config)
             model.eval()
             modelname = f"train{u-1}/best_from_train.pt" if u > 0 else "pretrain/best_pretrain_model.pt"
             model.load_state_dict(torch.load(modelname))
-            targets = get_mccfr_targets(model, minimum_sufficient_nodes=20000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000)
+            targets = get_mccfr_targets(model, minimum_sufficient_nodes=2000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000)
             
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
 
             model.load_state_dict(torch.load(modelname))
-            eval_results, train_results = train_transformer(targets, val_targets, model, epochs=150, best_model_name=f"train{u}/best_train_model{i}.pt", batch_size=256, verbose=False)
+            eval_results, train_results = train_transformer(targets, val_targets, model, epochs=150, best_model_name=f"train{u}/best_train_model.pt", batch_size=256, verbose=False)
 
 
     logging.shutdown()

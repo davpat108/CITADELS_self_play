@@ -91,16 +91,19 @@ class CFRNode:
 
         return weighted_strategy / sum(pick_hierarchy)
 
-    def action_choice(self):
+    def action_choice(self, live=False):
         if not self.role_pick_node:
             # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
-            normalized_strategy = self.cumulative_strategy / self.cumulative_strategy.sum()
-            choice_index = np.random.choice(range(len(self.children)), p=normalized_strategy)
+            #normalized_strategy = self.cumulative_strategy / self.cumulative_strategy.sum()
+            choice_index = np.random.choice(range(len(self.children)), p=self.strategy)
             return self.children[choice_index][1], self.children[choice_index][0]
 
+        elif live:
+            return _ , self.game.get_option_from_role_preference(self.strategy[self.game.gamestate.player_id])
+        
         else:
             pick_hierarchy = self.game.turn_orders_for_roles
-            avg_strategy = self.weighted_average_strategy(self.cumulative_strategy, pick_hierarchy)
+            avg_strategy = self.weighted_average_strategy(self.strategy, pick_hierarchy)
 
             # Normalize the strategy to ensure it sums to 1 (due to numerical issues)
             if avg_strategy.sum() == 0:

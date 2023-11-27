@@ -21,10 +21,11 @@ for _ in range(100):
         i+=1
         if i % 100 == 0:
             position_root = CFRNode(game, original_player_id=game.gamestate.player_id)
-            position_root.cfr_train()
+            position_root.cfr_train(max_iterations=300000)
             position_root.draw_gradients()
             position_root.children[0][1].draw_gradients(name="child.png")
-            _, chosen_option = position_root.action_choice()
+            print(position_root.cumulative_regrets)
+            _, chosen_option = position_root.action_choice(live=True)
             winner = chosen_option.carry_out(game)
             1/0
 
