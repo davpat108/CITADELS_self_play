@@ -5,8 +5,10 @@ import random
 import logging
 import torch.nn.functional as F
 from algorithms.train_utils import square_and_normalize, log_square_and_normalize
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-def train_transformer(train_data, val_data, model, epochs, batch_size=64, device='cuda', best_model_name="best_model.pt", verbose=False):
+def train_transformer(train_data, val_data, model, epochs, batch_size=64, device='cuda', parent_folder="pretrain", verbose=False):
     # Have to figure it how to train with differerent sized inputs and labels while batchsize > 1
     model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=0.01)
@@ -17,6 +19,8 @@ def train_transformer(train_data, val_data, model, epochs, batch_size=64, device
 
     train_batches = split_data_to_batches_by_length(train_data, batch_size)
     eval_batches = split_data_to_batches_by_length(val_data, batch_size)
+
+    train_losses, eval_losses, learning_rates = [], [], []
     best_eval_loss = float('inf')
     best_train_loss = float('inf')
     for epoch in range(epochs):
@@ -86,14 +90,35 @@ def train_transformer(train_data, val_data, model, epochs, batch_size=64, device
         avg_eval_loss_fixed = total_eval_loss_fixed / len(eval_batches)
 
         if avg_eval_loss < best_eval_loss:
-            torch.save(model.state_dict(), best_model_name)
+            torch.save(model.state_dict(), parent_folder+"/best_model.pt")
             best_eval_loss = avg_eval_loss
             logging.info("New best model saved")
         if verbose:
-            pass
-            #logging.info(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f} of which variable: {avg_eval_loss_variable:.4f}, and fixed: {avg_eval_loss_fixed:.4f}")
+            logging.info(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f} of which variable: {avg_eval_loss_variable:.4f}, and fixed: {avg_eval_loss_fixed:.4f}")
+    
+        train_losses.append(avg_train_loss)
+        eval_losses.append(avg_eval_loss)
+        learning_rates.append(scheduler.get_last_lr()[0])
+        
+    plot_metrics(train_losses, eval_losses, learning_rates, epochs, parent_folder)
+        
 
-    return [best_eval_loss], [best_train_loss]
+def plot_metrics(train_losses, eval_losses, learning_rates, epochs, folder):
+    plt.figure(figsize=(12, 8))
+    
+    # Plotting training and evaluation losses
+    sns.lineplot(x=range(1, epochs + 1), y=train_losses, label='Train Loss')
+    sns.lineplot(x=range(1, epochs + 1), y=eval_losses, label='Eval Loss')
+
+    # Plotting learning rate
+    plt.twinx()
+    sns.lineplot(x=range(1, epochs + 1), y=learning_rates, label='Learning Rate', color='green')
+
+    plt.title('Training and Evaluation Losses and Learning Rate per Epoch')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig(folder + '/train_metrics.png')
 
 
 def split_data_to_batches_by_length(data, batch_size):

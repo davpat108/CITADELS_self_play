@@ -68,7 +68,7 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
     while len(targets) < minimum_sufficient_nodes:
         try:
             targets += parallel_simulations(4, model, base_usefullness_treshold=base_usefullness_treshold, pretrain=pretrain, max_iterations=max_iterations)
-            print(f"Total targets: {len(targets)}")
+            print(f"Total targets: {len(targets)}/{minimum_sufficient_nodes}")
         except RanOutOfMemory:
             print("Memory Error")
             torch.cuda.empty_cache()
@@ -88,7 +88,7 @@ if __name__ == "__main__":
     print("Starting training")
     model = VariableInputNN(**model_config)
     model.eval()
-    usefullness_treshold = 150
+    usefullness_treshold = 200
     # pretrain
     if not f"10k_50thresh_pretrain.pkl" in os.listdir():
         print("Pretraining")
@@ -102,19 +102,19 @@ if __name__ == "__main__":
         plot_avg_regrets(targets, name=f"pretrain/avg_regrets_pretrain.png")
         with open(f"validation_targets.pkl", 'rb') as file:
             val_targets = pickle.load(file)
-        
 
-        eval_results, train_results = train_transformer(targets, val_targets, model, epochs=1000, best_model_name=f"pretrain/best_pretrain_model.pt", batch_size=256, verbose=False)
+
+        train_transformer(targets, val_targets, model, epochs=1000, parent_folder=f"pretrain", batch_size=256, verbose=False)
 
         
     # train
     for u in range(5):
-        usefullness_treshold = 150
+        usefullness_treshold = 200
         if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
             print(f"training {u}")
             model = VariableInputNN(**model_config)
             model.eval()
-            modelname = f"train{u-1}/best_from_train.pt" if u > 0 else "pretrain/best_pretrain_model.pt"
+            modelname = f"train{u-1}/best_model.pt" if u > 0 else "pretrain/best_model.pt"
             model.load_state_dict(torch.load(modelname))
             targets = get_mccfr_targets(model, minimum_sufficient_nodes=2000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000)
             
@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
 
             model.load_state_dict(torch.load(modelname))
-            eval_results, train_results = train_transformer(targets, val_targets, model, epochs=150, best_model_name=f"train{u}/best_train_model.pt", batch_size=256, verbose=False)
+            train_transformer(targets, val_targets, model, epochs=1000, parent_folder=f"train{u}", batch_size=256, verbose=False)
 
 
     logging.shutdown()
