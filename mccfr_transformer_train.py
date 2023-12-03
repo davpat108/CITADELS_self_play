@@ -3,8 +3,8 @@ from random import choice, randint
 import torch
 import logging
 from algorithms.deep_mccfr_transformer import CFRNode
-from algorithms.models import VariableInputNN
-from algorithms.train import train_transformer
+from algorithms.models import ValueOnlyNN, VariableInputNN
+from algorithms.train import train_transformer, train_node_value_only
 from game.game import Game
 from multiprocessing import Pool, cpu_count
 from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, plot_avg_regrets, RanOutOfMemory
@@ -75,18 +75,12 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
             continue
     return targets
 
-model_config = {
-    'game_encoding_size': 418,
-    'embedding_size': 32,
-    'vector_input_size': 131,
-    'num_heads': 2,
-    'num_transformer_layers': 1
-}
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     print("Starting training")
-    model = VariableInputNN(**model_config)
+    model = ValueOnlyNN(418, hidden_size = 512)
     model.eval()
     usefullness_treshold = 200
     # pretrain
@@ -94,7 +88,7 @@ if __name__ == "__main__":
         print("Pretraining")
         #targets = simulate_game(model, 0, 0, pretrain=True)
 
-        targets = get_mccfr_targets(model, minimum_sufficient_nodes=2000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000, pretrain=True)
+        targets = get_mccfr_targets(model, minimum_sufficient_nodes=20000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000, pretrain=True)
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
         
@@ -103,23 +97,26 @@ if __name__ == "__main__":
         with open(f"validation_targets.pkl", 'rb') as file:
             val_targets = pickle.load(file)
 
-
-        train_transformer(targets, val_targets, model, epochs=1000, parent_folder=f"pretrain", batch_size=256, verbose=False)
+        train_node_value_only(targets, val_targets, lr=0.3703517140136571, hidden_size=512, gamma=0.8851980333411889, epochs=1000, parent_folder=f"pretrain", batch_size=2048, verbose=False)
 
         
     # train
     for u in range(5):
         usefullness_treshold = 200
-        if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
+        if f"10k_50thresh_train_{u}.pkl" in os.listdir():
             print(f"training {u}")
-            model = VariableInputNN(**model_config)
+            model = ValueOnlyNN(418, hidden_size = 512)
             model.eval()
             modelname = f"train{u-1}/best_model.pt" if u > 0 else "pretrain/best_model.pt"
+            modelname = "pretrain/best_model.pt"
             model.load_state_dict(torch.load(modelname))
-            targets = get_mccfr_targets(model, minimum_sufficient_nodes=2000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000)
+            #targets = get_mccfr_targets(model, minimum_sufficient_nodes=20000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000)
             
-            with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
-                pickle.dump(targets, file)
+            #with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
+            #    pickle.dump(targets, file)
+                
+            with open(f"10k_50thresh_train_{u}.pkl", 'rb') as file:
+                targets = pickle.load(file)
                 
             with open(f"validation_targets.pkl", 'rb') as file:
                 val_targets = pickle.load(file)
@@ -128,8 +125,8 @@ if __name__ == "__main__":
             plot_avg_regrets(targets, name=f"train{u}/avg_regrets_train.png")
 
 
-            model.load_state_dict(torch.load(modelname))
-            train_transformer(targets, val_targets, model, epochs=1000, parent_folder=f"train{u}", batch_size=256, verbose=False)
+
+            train_node_value_only(targets, val_targets, lr=0.02, hidden_size=512, gamma=0.8851980333411889, epochs=1000, parent_folder=f"train{u}", batch_size=2048, verbose=False)
 
 
     logging.shutdown()

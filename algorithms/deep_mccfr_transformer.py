@@ -147,20 +147,18 @@ class CFRNode:
             self.cumulative_strategy = np.zeros((1, 6)) if self.cumulative_strategy.size == 0 else np.concatenate((self.cumulative_strategy, np.zeros((1, 6))), axis=0)
 
         if self.model:
-            distributions = []
             for i in range(6):
                 hypothetical_game = deepcopy(self.game)
                 hypothetical_game.gamestate.player_id = i
-                distribution, winning_probabilities = self.model_inference(hypothetical_game)
-                distributions.append(distribution)
-            distribution = np.vstack(distributions)
+                winning_probabilities = self.model_inference(hypothetical_game)
+
             if not self.training:
                 self.pred_node_value = self.model_reward_weights * winning_probabilities
             
 
         self.cumulative_regrets = self.cumulative_regrets.T
         self.strategy = self.strategy.T
-        self.cumulative_strategy = distribution if self.model else self.cumulative_strategy.T
+        self.cumulative_strategy = self.cumulative_strategy.T
 
     def expand_for_original_player(self):
         options = self.game.get_options_from_state()
@@ -174,13 +172,13 @@ class CFRNode:
             self.children.append((option, CFRNode(game=hypothetical_game, original_player_id=self.original_player_id, parent=self, model=self.model, training=self.training, device=self.device, depth=self.depth+1)))
 
         if self.model:
-            distribution, winning_probabilities = self.model_inference(self.game, options)
+            winning_probabilities = self.model_inference(self.game)
             if not self.training:
                 self.pred_node_value = self.model_reward_weights * winning_probabilities
 
         self.cumulative_regrets = np.zeros(len(self.children))
         self.strategy = np.zeros(len(self.children))
-        self.cumulative_strategy = distribution if self.model else np.zeros(len(self.children))
+        self.cumulative_strategy = np.zeros(len(self.children))
 
 
     def expand_for_opponents(self):
@@ -192,9 +190,9 @@ class CFRNode:
 
         options = hypothetical_game.get_options_from_state()
         if self.model:
-            distribution, winning_probabilities = self.model_inference(hypothetical_game, options)
-        else:
-            distribution = np.ones(len(options)) / len(options)
+            winning_probabilities = self.model_inference(hypothetical_game)
+
+        distribution = np.ones(len(options)) / len(options)
 
         choice_index = np.random.choice(range(len(options)), p=distribution)
         options[choice_index].carry_out(hypothetical_game)
@@ -206,12 +204,10 @@ class CFRNode:
             self.cumulative_regrets = np.append(self.cumulative_regrets, 0)
             self.strategy = np.append(self.strategy, 0)
             if self.model:
-                distribution, winning_probabilities = self.model_inference(self.game)
+                winning_probabilities = self.model_inference(self.game)
                 if not self.training:
                     self.pred_node_value = self.model_reward_weights * winning_probabilities
-                self.cumulative_strategy = distribution
-            else:
-                self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
+            self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
 
 
     def is_terminal(self):
@@ -373,7 +369,7 @@ class CFRNode:
             return [(model_input, options_input, target_node_value, target_decision_dist)]
 
 
-    def model_inference(self, game, options=None):
+    def model_inference_trans(self, game, options=None):
         if options is None:
             options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0).to(self.device)
         else:
@@ -389,4 +385,19 @@ class CFRNode:
         distribution = square_and_normalize(distribution, dim=1).squeeze(0).detach().cpu().numpy()
         winning_probabilities = square_and_normalize(node_value, dim=1).squeeze(0).detach().cpu().numpy()
         return distribution, winning_probabilities
+    
+
+    def model_inference(self, game, options=None):
+        model_input = game.encode_game().unsqueeze(0).to(self.device)
+        
+        if self.device != "cpu" and torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated() < 500 * 1024**2: # 1000 MB
+            raise RanOutOfMemory
+        
+        with torch.no_grad():
+            node_value = self.model(model_input)
+
+        winning_probabilities = square_and_normalize(node_value, dim=1).squeeze(0).detach().cpu().numpy()
+        return winning_probabilities
+
+
 

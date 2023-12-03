@@ -3,7 +3,7 @@ from random import choice, randint
 import torch
 import logging
 from algorithms.deep_mccfr_transformer import CFRNode
-from algorithms.models import VariableInputNN
+from algorithms.models import VariableInputNN, ValueOnlyNN
 from algorithms.train import train_transformer
 from game.game import Game
 from multiprocessing import Pool, cpu_count
@@ -13,7 +13,7 @@ from copy import deepcopy
 import numpy as np
 
 def setup_game():
-    game = Game()
+    game = Game(debug=True)
     game.setup_round()
     winner = False
     tota_options = 0
@@ -34,47 +34,23 @@ def setup_game():
     return almost_won_game
 
 
-def predict_game(model, game):
-
-    targets = []
-    game = None
-    while not game:
-        game = setup_game(500)
-
-    position_root = CFRNode(game, original_player_id=0, model=model if not pretrain else None, training=True, device="cuda:0")
-    position_root.cfr_train(max_iterations=max_iterations)
-    targets += position_root.get_all_targets(usefulness_treshold=usefulness_treshold)
-    print(f"Created {len(targets)} targets for training")
-    print(f"Process {process_index} finished")
-
-    return targets
 
 
-
-model_config = {
-    'game_encoding_size': 478,
-    'fixed_embedding_size': 256,
-    'variable_embedding_size': 256,
-    'vector_input_size': 131,
-    'num_heads': 4,
-    'num_transformer_layers': 2
-}
 
 if __name__ == "__main__":
     print("Starting training")
-    model = VariableInputNN(**model_config)
-    model.load_state_dict(torch.load("train4/best_from_train.pt"))
+    model = ValueOnlyNN(418, hidden_size=512)
+    model.load_state_dict(torch.load("pretrain/best_model.pt"))
     model.eval()
     
     game = setup_game()
     game_input = game.encode_game().unsqueeze(0)
     options = game.get_options_from_state()
-    options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
-    distribution, node_value = model(game_input, options_input)
+    node_value = model(game_input)
     winning_probabilities = square_and_normalize(node_value, dim=1).squeeze(0).detach().numpy()
     print(f"Winning probabilities: {winning_probabilities}")
     
     position_root = CFRNode(game, original_player_id=game.gamestate.player_id, model=None, training=True, device="cuda:0")
-    position_root.cfr_train(max_iterations=10000)
+    position_root.cfr_train(max_iterations=100000)
     print(f"value: {position_root.node_value}, strategy: {position_root.strategy}")
     
