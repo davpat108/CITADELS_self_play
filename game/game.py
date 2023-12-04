@@ -531,8 +531,5 @@ class Game():
 
     def get_options_from_state(self):
         # returns the next actor.get_options() for the next player
-        options, masks = self.players[self.gamestate.player_id].get_options(self)
-        if self.masks:
-            return options, masks
-        else:
-            return [option for option_list in options.values() for option in option_list]
+        options = self.players[self.gamestate.player_id].get_options(self)
+        return options
