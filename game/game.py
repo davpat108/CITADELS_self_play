@@ -6,6 +6,7 @@ import torch.nn.functional as F
 import torch
 
 from game.agent import Agent
+from game.option_functions import get_action_map
 from game.config import (building_cards, role_to_role_id, roles,
                          unique_building_cards)
 from game.deck import Card, Deck
@@ -13,8 +14,7 @@ from game.helper_classes import GameState, RolePropery
 
 
 class Game():
-    def __init__(self, avaible_roles=None, debug=False, config={"masks":False}) -> None:
-        self.masks = config["masks"]
+    def __init__(self, avaible_roles=None, debug=False) -> None:
         if debug:
             # For debug purpuses all the unique cards are used
             self.used_cards = building_cards + unique_building_cards
@@ -135,6 +135,7 @@ class Game():
             }
         
         self.gamestate = GameState()
+        self.action_map = get_action_map()
         self.ending = False
         self.terminal = False
         self.rewards = np.zeros(len(self.players))
