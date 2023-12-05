@@ -2,6 +2,7 @@ import random
 from copy import copy
 from itertools import (combinations, combinations_with_replacement,
                        permutations, product)
+from game.agent_functions import get_option_function, witch_options, emperor_options
 
 import numpy as np
 import torch.nn.functional as F
@@ -59,37 +60,73 @@ class Agent():
 
 
     def get_options(self, game):
-        if game.gamestate.state == 0:
-            return self.pick_role_options(game)
-        # If bewitched role_id is not in role properties
-        if self.role == "Bewitched" or not game.role_properties[role_to_role_id[self.role]].dead:
-            if game.gamestate.state == 1:
-                return self.gold_or_card_options(game)
-            if game.gamestate.state == 2:
-                return self.which_card_to_keep_options(game)
-            if game.gamestate.state == 3:
-                return self.blackmail_response_options(game)
-            if game.gamestate.state == 4: # interrupting
-                return self.reveal_blackmail_as_blackmailer_options(game)
-            if game.gamestate.state == 6: # interrupting
-                return self.graveyard_options(game)
-            if game.gamestate.state == 7: # interrupting
-                return self.reveal_warrant_as_magistrate_options(game)
-            if self.role == "Witch":
-                return self.witch_options(game)
-            if not game.role_properties[role_to_role_id[self.role]].possessed:
-                if game.gamestate.state == 5:
-                    return self.main_round_options(game)
-                if game.gamestate.state == 8:
-                    return self.seer_give_back_card(game)
-                if game.gamestate.state == 9:
-                    return self.scholar_give_back_options(game)
-                if game.gamestate.state == 10:
-                    return self.wizard_take_from_hand_options(game)
-            else:
-                return [option(name="finish_round", perpetrator=self.id, next_witch=True, crown=True if self.role == "King" or self.role == "Patrician" else False)]
+        options_map = get_option_function(self, game)
+        for state, (func, condition) in options_map.items():
+            if game.gamestate.state == state and (condition is None or condition()):
+                return func(self, game)
+
+        if self.role == "Witch":
+            return witch_options(self, game)
         elif self.role == "Emperor" and "character_ability" not in game.gamestate.already_done_moves:
-            return self.emperor_options(game, dead_emperor=True)
+            return emperor_options(self, game, dead_emperor=True)
         else:
             return [option(name="finish_round", perpetrator=self.id, next_witch=False, crown=True if self.role == "King" or self.role == "Patrician" else False)]
 
+    # Helper functions for agent
+    def get_build_limit(self):
+        if self.role == "Architect":
+            build_limit = 3
+        elif self.role == "Scholar":
+            build_limit = 2
+        elif self.role == "Bishop":
+            build_limit = 0
+        elif self.role == "Navigator":
+            build_limit = 0
+        else:
+            build_limit = 1
+        return build_limit
+
+    def substract_from_known_hand_confidences_and_clear_wizard(self):
+        remaining_hand_knowledge = [] # New list to keep track of remaining hand knowledge objects
+        for hand_knowlage in self.known_hands:
+            hand_knowlage.confidence -= 1
+            hand_knowlage.wizard = False
+            hand_knowlage.used = False
+            if hand_knowlage.confidence != 0:
+                remaining_hand_knowledge.append(hand_knowlage) # Add to new list if confidence is not 0
+
+        self.known_hands = remaining_hand_knowledge # Assign new list to self.known_hands
+
+    def reset_known_roles(self):
+        for role_knowlage in self.known_roles:
+            role_knowlage.possible_roles = {}
+            role_knowlage.confirmed = False
+
+    def count_points(self):
+        points = 0
+        for card in self.buildings.cards:
+            points += card.cost
+            if card.type_ID == 18 or card.type_ID == 23:
+                points += 2
+            # Whishing well
+            if Card(**{"suit":"unique", "type_ID":31, "cost": 5}) in self.buildings.cards and card.suit == "unique":
+                points += 1
+
+        if len(self.buildings.cards) >= 7:
+            points += 2
+
+        if self.first_to_7:
+            points += 4
+
+        points += len(self.museum_cards.cards)
+
+        # Imp teasury
+        if Card(**{"suit":"unique", "type_ID":37, "cost": 4}) in self.buildings.cards:
+            points += self.gold
+
+        # Maproom
+        if Card(**{"suit":"unique", "type_ID":39, "cost": 5}) in self.buildings.cards:
+            points += len(self.hand.cards)
+
+
+        return points

@@ -317,7 +317,7 @@ def carry_out_wizard_take_from_hand(option, game):
         wizard_hand_knowlage = next((hand_knowlage for hand_knowlage in game.players[option.attributes['perpetrator']].known_hands if hand_knowlage.wizard), None)
         game.players[option.attributes['perpetrator']].hand.add_card(game.players[option.attributes['target']].hand.get_a_card_like_it(option.attributes['built_card']))
         option.attributes['replica'] = game.players[option.attributes['perpetrator']].buildings.cards.count(option.attributes['built_card'])
-        option.carry_out_building(game)
+        carry_out_building(option, game)
         # It has to be the last one in this position
         wizard_hand_knowlage.hand.get_a_card_like_it(option.attributes['built_card'])
         
@@ -630,3 +630,58 @@ def move_crown(game, target_player_id):
             break
     game.players[target_player_id].crown = True
     troneroom_owner_gold(game)
+    
+    
+def get_action_map():
+    
+    action_map = {
+    "role_pick": carry_out_role_pick,
+    "gold_or_card": carry_out_gold_or_card,
+    "which_card_to_keep": carry_out_put_back_card,
+    "blackmail_response": carry_out_respond_to_blackmail,
+    "reveal_blackmail_as_blackmailer": carry_out_responding_to_blackmail_response,
+    "reveal_warrant_as_magistrate": carry_out_magistrate_reaveal,
+    "build": carry_out_building,
+    "empty_option": carry_out_empty,
+    "finish_round": finish_main_sequnce_actions,
+    "ghost_town_color_choice": carry_out_ghost_town,
+    "smithy_choice": carry_out_smithy,
+    "laboratory_choice": carry_out_laboratory,
+    "magic_school_choice": carry_out_magic_school,
+    "weapon_storage_choice": carry_out_weapon_storage,
+    "lighthouse_choice": carry_out_lighthouse,
+    "museum_choice": carry_out_museum,
+    "graveyard": carry_out_graveyard,
+    "take_gold_for_war": carry_out_take_gold_for_war,
+    "assassination": carry_out_assasination,
+    "magistrate_warrant": carry_out_warranting,
+    "bewitching": carry_out_bewitching,
+    "steal": carry_out_stealing,
+    "blackmail": carry_out_blackmail,
+    "spy": carry_out_spying,
+    "magic_hand_change": carry_out_magicking,
+    "discard_and_draw": carry_out_magicking,
+    "look_at_hand": carry_out_wizard_hand_looking,
+    "take_from_hand": carry_out_wizard_take_from_hand,
+    "seer": carry_out_seer_take_a_card,
+    "give_back_card": carry_out_seer_give_back_cards,
+    "take_crown_king": carry_out_take_crown_king,
+    "give_crown": carry_out_emperor,
+    "take_crown_pat": carry_out_take_crown_patrician,
+    "bishop": carry_out_bishop,
+    "cardinal_exchange": carry_out_cardinal,
+    "abbot_gold_or_card": carry_out_abbot,
+    "abbot_beg": carry_out_abbot_beg,
+    "merchant": carry_out_merchant,
+    "alchemist": carry_out_alchemist,
+    "trader": carry_out_trader,
+    "architect": carry_out_architect,
+    "navigator_gold_card": carry_out_navigator,
+    "scholar": carry_out_scholar_draw,
+    "scholar_card_pick": carry_out_scholar_put_back,
+    "warlord_desctruction": carry_out_warlord,
+    "marshal_steal": carry_out_marshal,
+    "diplomat_exchange": carry_out_diplomat
+    }
+    
+    return action_map

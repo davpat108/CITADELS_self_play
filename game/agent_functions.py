@@ -12,64 +12,6 @@ from game.deck import Card, Deck
 from game.helper_classes import GameState, HandKnowledge, RoleKnowlage
 from game.option import option
 
-# Helper functions for agent
-def get_build_limit(agent):
-    if agent.role == "Architect":
-        build_limit = 3
-    elif agent.role == "Scholar":
-        build_limit = 2
-    elif agent.role == "Bishop":
-        build_limit = 0
-    elif agent.role == "Navigator":
-        build_limit = 0
-    else:
-        build_limit = 1
-    return build_limit
-    
-def substract_from_known_hand_confidences_and_clear_wizard(agent):
-    remaining_hand_knowledge = [] # New list to keep track of remaining hand knowledge objects
-    for hand_knowlage in agent.known_hands:
-        hand_knowlage.confidence -= 1
-        hand_knowlage.wizard = False
-        hand_knowlage.used = False
-        if hand_knowlage.confidence != 0:
-            remaining_hand_knowledge.append(hand_knowlage) # Add to new list if confidence is not 0
-
-    agent.known_hands = remaining_hand_knowledge # Assign new list to agent.known_hands
-
-def reset_known_roles(agent):
-    for role_knowlage in agent.known_roles:
-        role_knowlage.possible_roles = {}
-        role_knowlage.confirmed = False
-
-def count_points(agent):
-    points = 0
-    for card in agent.buildings.cards:
-        points += card.cost
-        if card.type_ID == 18 or card.type_ID == 23:
-            points += 2
-        # Whishing well
-        if Card(**{"suit":"unique", "type_ID":31, "cost": 5}) in agent.buildings.cards and card.suit == "unique":
-            points += 1
-
-    if len(agent.buildings.cards) >= 7:
-        points += 2
-
-    if agent.first_to_7:
-        points += 4
-
-    points += len(agent.museum_cards.cards)
-
-    # Imp teasury
-    if Card(**{"suit":"unique", "type_ID":37, "cost": 4}) in agent.buildings.cards:
-        points += agent.gold
-        
-    # Maproom
-    if Card(**{"suit":"unique", "type_ID":39, "cost": 5}) in agent.buildings.cards:
-        points += len(agent.hand.cards)
-
-
-    return points
 
 # Options from gamestates
 def pick_role_options(agent, game):
@@ -106,7 +48,7 @@ def reveal_warrant_as_magistrate_options(agent, game) -> list:
     return [option(choice="reveal", perpetrator=agent.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate"), option(choice="not_reveal", perpetrator=agent.id, target=game.gamestate.next_gamestate.player_id, name="reveal_warrant_as_magistrate")]
 
 
-def ghost_town_color_choice_options(agent) -> list:
+def ghost_town_color_choice_options(agent, game) -> list:
     # Async
     if Card(**{"suit":"unique", "type_ID":19, "cost": 2}) in agent.buildings.cards:
         return [option(choice="trade", perpetrator=agent.id, name="ghost_town_color_choice"), option(choice="war", perpetrator=agent.id, name="ghost_town_color_choice"),
@@ -185,27 +127,27 @@ def build_options(agent, game):
     build_limit = agent.get_build_limit()
     if agent.role != "Trader":
         if game.gamestate.already_done_moves.count("trade_building") + game.gamestate.already_done_moves.count("non_trade_building") < build_limit:
-            agent.get_builds(options)
+            get_builds(agent, options)
     else:
         if game.gamestate.already_done_moves.count("non_trade_building") < build_limit:
-            agent.get_builds(options)
+            get_builds(agent, options)
     return options
 
 
 def main_round_options(agent, game):
     
-    build_options = agent.build_options(game) # 0
-    character_options = agent.character_options(game) # 1-2
-    smithy_options = agent.smithy_options(game) # 3
-    lab_options = agent.laboratory_options(game) # 4
-    rocks_options = agent.magic_school_options(game) # 5
-    ws_options = agent.weapon_storage_options(game) # 6
-    lh_options = agent.lighthouse_options(game) # 7
-    museum_options = agent.museum_options(game) # 8
+    builds = build_options(agent, game) # 0
+    character = character_options(agent, game) # 1-2
+    smithing = smithy_options(agent, game) # 3
+    lab = laboratory_options(agent, game) # 4
+    rocks = magic_school_options(agent, game) # 5
+    ws_options = weapon_storage_options(agent, game) # 6
+    lh_options = lighthouse_options(agent, game) # 7
+    museum = museum_options(agent, game) # 8
     
     finish_round_option = [option(name="finish_round", perpetrator=agent.id, next_witch=False, crown=False)]
     
-    options = build_options + character_options + smithy_options + lab_options + rocks_options + ws_options + lh_options + museum_options + finish_round_option
+    options = builds + character + smithing + lab + rocks + ws_options + lh_options + museum + finish_round_option
     return options
     
     
@@ -221,51 +163,51 @@ def character_options(agent, game):
     # ID 0
     if "character_ability" not in game.gamestate.already_done_moves:
         role_functions = {
-            "Assassin": agent.assasin_options,
-            "Magistrate": agent.magistrate_options,
+            "Assassin":assasin_options,
+            "Magistrate":magistrate_options,
 
-            "Thief": agent.thief_options,
-            "Blackmailer": agent.blackmail_options,
-            "Spy": agent.spy_options,
+            "Thief": thief_options,
+            "Blackmailer": blackmail_options,
+            "Spy": spy_options,
 
-            "Magician": agent.magician_options,
-            "Wizard": agent.wizard_look_at_hand_options,
-            "Seer": agent.seer_options,
+            "Magician": magician_options,
+            "Wizard": wizard_look_at_hand_options,
+            "Seer": seer_options,
 
-            "King": agent.king_options,
-            "Emperor": agent.emperor_options,
-            "Patrician": agent.patrician_options,
+            "King": king_options,
+            "Emperor": emperor_options,
+            "Patrician": patrician_options,
 
-            "Bishop": agent.bishop_options,
-            "Cardinal": agent.cardinal_options,
-            "Abbot": agent.abbot_options,
+            "Bishop": bishop_options,
+            "Cardinal": cardinal_options,
+            "Abbot": abbot_options,
 
-            "Merchant": agent.merchant_options,
-            "Alchemist": agent.alchemist_options,
-            "Trader": agent.trader_options,
+            "Merchant": merchant_options,
+            "Alchemist": alchemist_options,
+            "Trader": trader_options,
 
-            "Architect": agent.architect_options,
-            "Navigator": agent.navigator_options,
-            "Scholar": agent.scholar_options,
+            "Architect": architect_options,
+            "Navigator": navigator_options,
+            "Scholar": scholar_options,
 
-            "Warlord": agent.warlord_options,
-            "Marshal": agent.marshal_options,
-            "Diplomat": agent.diplomat_options
+            "Warlord": warlord_options,
+            "Marshal": marshal_options,
+            "Diplomat": diplomat_options
         }
             
         if agent.role in role_functions:
-            options = role_functions[agent.role](game)
+            options = role_functions[agent.role](agent, game)
             decisions = options
 
 
     # Handle Abbot's additional options
     if agent.role == "Abbot":
-        options = agent.abbot_beg(game)
+        options = abbot_beg(agent, game)
         decisions += options
 
     # Handle Warlord, Diplomat, and Marshal's additional options
     if agent.role in ["Warlord", "Marshal", "Diplomat"]:
-        options = agent.take_gold_for_war_options(game)
+        options = take_gold_for_war_options(agent, game)
         decisions += options
 
     return decisions
@@ -571,4 +513,20 @@ def take_gold_for_war_options(agent, game):
     return []
 # ID 8 later for more players
 
+def get_option_function(agent, game):
+    options_map = {
+    0: (pick_role_options, None),
+    1: (gold_or_card_options, lambda: agent.role == "Bewitched" or not game.role_properties[role_to_role_id[agent.role]].dead),
+    2: (which_card_to_keep_options, lambda: agent.role == "Bewitched" or not game.role_properties[role_to_role_id[agent.role]].dead),
+    3: (blackmail_response_options, lambda: agent.role == "Bewitched" or not game.role_properties[role_to_role_id[agent.role]].dead),
+    4: (reveal_blackmail_as_blackmailer_options, lambda: agent.role == "Bewitched" or not game.role_properties[role_to_role_id[agent.role]].dead),
+    5: (main_round_options, lambda: not game.role_properties[role_to_role_id[agent.role]].possessed),
+    6: (graveyard_options, lambda: agent.role == "Bewitched" or not game.role_properties[role_to_role_id[agent.role]].dead),
+    7: (reveal_warrant_as_magistrate_options, lambda: agent.role == "Bewitched" or not game.role_properties[role_to_role_id[agent.role]].dead),
+    8: (seer_give_back_card, lambda: not game.role_properties[role_to_role_id[agent.role]].possessed),
+    9: (scholar_give_back_options, lambda: not game.role_properties[role_to_role_id[agent.role]].possessed),
+    10: (wizard_take_from_hand_options, lambda: not game.role_properties[role_to_role_id[agent.role]].possessed)
+    }
+    return options_map
+    
 
