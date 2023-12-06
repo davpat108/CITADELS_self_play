@@ -2,12 +2,10 @@ import pickle
 from random import choice, randint
 import torch
 import logging
-from algorithms.deep_mccfr_transformer import CFRNode
-from algorithms.models import VariableInputNN
-from algorithms.train import train_transformer
+from algorithms.deep_mccfr import CFRNode
+
 from game.game import Game
 from multiprocessing import Pool, cpu_count
-from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, plot_avg_regrets, RanOutOfMemory, square_and_normalize
 import os
 from copy import deepcopy
 import numpy as np
@@ -15,8 +13,6 @@ from tqdm import tqdm
 
 def setup_game(game_index):
     try:
-        #Running the game
-        #print(f"Starting game {game_index}")
         move_stop_num = randint(1, 30)
         game = Game(debug=True)
         game.setup_round()
