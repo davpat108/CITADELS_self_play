@@ -1,6 +1,5 @@
 *.pyc
 *.pt
 *.pkl
-*.png
 *.json
 ignore/
