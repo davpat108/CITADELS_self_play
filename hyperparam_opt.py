@@ -2,7 +2,7 @@ import pickle as pkl
 from random import choice, randint
 import torch
 import logging
-from algorithms.deep_mccfr_transformer import CFRNode
+from algorithms.deep_mccfr import CFRNode
 from algorithms.models import VariableInputNN, ValueOnlyNN
 from algorithms.train import train_transformer, train_node_value_only
 from game.game import Game

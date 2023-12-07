@@ -14,7 +14,7 @@ from tqdm import tqdm
 def setup_game(game_index):
     try:
         move_stop_num = randint(1, 30)
-        game = Game(debug=True)
+        game = Game(debug=False)
         game.setup_round()
         winner = False
         tota_options = 0
@@ -52,7 +52,6 @@ def setup_game(game_index):
         target_decision_dist = torch.tensor(position_root.cumulative_regrets)
         
         # Handle no ragrets, and rolepick
-
         if target_decision_dist.size() == torch.Size([6, 10]):
             target_decision_dist=target_decision_dist[randint(0,5)]
         if torch.sum(target_decision_dist) == 0:
@@ -64,7 +63,7 @@ def setup_game(game_index):
         return []
 
 def parallel_simulations(num_simulations):
-    with Pool(cpu_count()-1) as pool:
+    with Pool(cpu_count()-6) as pool:
         results = pool.starmap(setup_game, [(i,) for i in range(num_simulations)])
     return [item for sublist in results for item in sublist]
 
@@ -72,12 +71,12 @@ def parallel_simulations(num_simulations):
 if __name__ == "__main__":
     val_targets = []
     for _ in tqdm(range(20), desc='Processing Validation Targets'):
-        val_targets += parallel_simulations(33)
+        val_targets += parallel_simulations(30)
     with open(f"validation_targets.pkl", 'wb') as file:
         pickle.dump(val_targets, file)
 
     test_targets = []
     for _ in tqdm(range(20), desc='Processing Test Targets'):
-        test_targets += parallel_simulations(33)
+        test_targets += parallel_simulations(30)
     with open(f"test_targets.pkl", 'wb') as file:
         pickle.dump(test_targets, file)

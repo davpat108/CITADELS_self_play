@@ -67,9 +67,14 @@ class CFRNode:
         """
         Checks if it would only have one children and if yes it would move the game on
         """
+        i=0
         options = self.game.get_options_from_state()
         terminal = False
         while len(options) == 1 and not terminal:
+            i+=1
+            if i > 100:
+                print("Stuck in skip_false_choice")
+                terminal = True
             terminal = options[0].carry_out(self.game)
             options = self.game.get_options_from_state()
             

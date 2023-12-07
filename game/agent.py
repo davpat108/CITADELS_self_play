@@ -2,7 +2,7 @@ import random
 from copy import copy
 from itertools import (combinations, combinations_with_replacement,
                        permutations, product)
-from game.agent_functions import get_option_function, witch_options, emperor_options
+from game.agent_functions import reveal_warrant_as_magistrate_options ,witch_options, pick_role_options, gold_or_card_options, which_card_to_keep_options, blackmail_response_options, reveal_blackmail_as_blackmailer_options, graveyard_options, reveal_warrant_as_magistrate_options, main_round_options, seer_give_back_card, scholar_give_back_options, wizard_take_from_hand_options, emperor_options
 
 import numpy as np
 import torch.nn.functional as F
@@ -60,17 +60,40 @@ class Agent():
 
 
     def get_options(self, game):
-        options_map = get_option_function(self, game)
-        for state, (func, condition) in options_map.items():
-            if game.gamestate.state == state and (condition is None or condition()):
-                return func(self, game)
-
-        if self.role == "Witch":
-            return witch_options(self, game)
+        if game.gamestate.state == 0:
+            return pick_role_options(self, game)
+        # If bewitched role_id is not in role properties
+        if self.role == "Bewitched" or not game.role_properties[role_to_role_id[self.role]].dead:
+            if game.gamestate.state == 1:
+                return gold_or_card_options(self, game)
+            if game.gamestate.state == 2:
+                return which_card_to_keep_options(self, game)
+            if game.gamestate.state == 3:
+                return blackmail_response_options(self, game)
+            if game.gamestate.state == 4: # interrupting
+                return reveal_blackmail_as_blackmailer_options(self, game)
+            if game.gamestate.state == 6: # interrupting
+                return graveyard_options(self, game)
+            if game.gamestate.state == 7: # interrupting
+                return reveal_warrant_as_magistrate_options(self, game)
+            if self.role == "Witch":
+                return witch_options(self, game)
+            if not game.role_properties[role_to_role_id[self.role]].possessed:
+                if game.gamestate.state == 5:
+                    return main_round_options(self, game)
+                if game.gamestate.state == 8:
+                    return seer_give_back_card(self, game)
+                if game.gamestate.state == 9:
+                    return scholar_give_back_options(self, game)
+                if game.gamestate.state == 10:
+                    return wizard_take_from_hand_options(self, game)
+            else:
+                return [option(name="finish_round", perpetrator=self.id, next_witch=True, crown=True if self.role == "King" or self.role == "Patrician" else False)]
         elif self.role == "Emperor" and "character_ability" not in game.gamestate.already_done_moves:
             return emperor_options(self, game, dead_emperor=True)
         else:
             return [option(name="finish_round", perpetrator=self.id, next_witch=False, crown=True if self.role == "King" or self.role == "Patrician" else False)]
+
 
     # Helper functions for agent
     def get_build_limit(self):

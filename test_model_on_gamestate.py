@@ -2,18 +2,15 @@ import pickle
 from random import choice, randint
 import torch
 import logging
-from algorithms.deep_mccfr_transformer import CFRNode
-from algorithms.models import VariableInputNN, ValueOnlyNN
-from algorithms.train import train_transformer
+from algorithms.deep_mccfr import CFRNode
+from algorithms.models import ValueOnlyNN
 from game.game import Game
-from multiprocessing import Pool, cpu_count
-from algorithms.train_utils import draw_eval_results, draw_length_results, get_nodes_with_usefulness_treshold, plot_avg_regrets, RanOutOfMemory, square_and_normalize
-import os
+from algorithms.train_utils import square_and_normalize
 from copy import deepcopy
 import numpy as np
 
 def setup_game():
-    game = Game(debug=True)
+    game = Game(debug=False)
     game.setup_round()
     winner = False
     tota_options = 0

@@ -17,7 +17,7 @@ matplotlib.use('Agg')
 
 def setup_game(max_move_num):
     move_stop_num = randint(1, max_move_num)
-    game = Game(debug=True)
+    game = Game(debug=False)
     game.setup_round()
     games = []
     games.append(deepcopy(game))

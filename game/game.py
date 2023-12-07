@@ -74,7 +74,7 @@ class Game():
             self.players = [self.player1, self.player2, self.player3, self.player4, self.player5, self.player6]
             self.player4.crown = True
 
-            self.roles = {0: "Assassin",
+            self.roles = {0: "Witch",
                      1: "Spy",
                      2: "Wizard",
                      3: "King",
@@ -408,9 +408,13 @@ class Game():
         if original_player == player or (player.id == self.gamestate.player_id and not role_pick_end_sample):
             return
         if self.gamestate.state != 0:
-            player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
-            # Remove the chosen role from all RoleKnowledge objects
-            self.remove_role_from_role_knowledge(player.role, known_roles_by_player)
+            try:
+                player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
+                # Remove the chosen role from all RoleKnowledge objects
+                self.remove_role_from_role_knowledge(player.role, known_roles_by_player)
+            # Band aid for a bug where the player has no possible roles
+            except IndexError:
+                player.role = next((role for role_id, role in self.roles.items() if role_id not in self.used_roles))
 
 
     def remove_role_from_role_knowledge(self, role, role_knowledge_list):

@@ -1,8 +1,7 @@
 from game.game import Game
 
 from random import choice
-from algorithms.deep_mccfr_transformer import CFRNode
-from algorithms.visualization import visualize_cfr_tree
+from algorithms.deep_mccfr import CFRNode
 from algorithms.models import VariableInputNN, ValueOnlyNN
 import torch
 
