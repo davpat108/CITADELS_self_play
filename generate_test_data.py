@@ -14,7 +14,7 @@ from tqdm import tqdm
 def setup_game(game_index):
     try:
         move_stop_num = randint(1, 30)
-        game = Game(debug=False)
+        game = Game(debug=True)
         game.setup_round()
         winner = False
         tota_options = 0

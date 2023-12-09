@@ -17,7 +17,7 @@ matplotlib.use('Agg')
 
 def setup_game(max_move_num):
     move_stop_num = randint(1, max_move_num)
-    game = Game(debug=False)
+    game = Game(debug=True)
     game.setup_round()
     games = []
     games.append(deepcopy(game))
@@ -108,7 +108,7 @@ if __name__ == "__main__":
             model.eval()
             modelname = f"train{u-1}/best_model.pt" if u > 0 else "pretrain/best_model.pt"
             model.load_state_dict(torch.load(modelname))
-            targets = get_mccfr_targets(model, minimum_sufficient_nodes=20000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000)
+            targets = get_mccfr_targets(model, minimum_sufficient_nodes=5000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000)
 
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:
                 pickle.dump(targets, file)

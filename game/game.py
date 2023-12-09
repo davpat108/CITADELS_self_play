@@ -410,8 +410,15 @@ class Game():
         if self.gamestate.state != 0:
             try:
                 player.role = random.choice(list(known_roles_by_player[player.id].possible_roles.values()))
-                # Remove the chosen role from all RoleKnowledge objects
+                all_player_roles = sorted([player.role for player in self.players if player.role != None])
+                #if len(all_player_roles) != len(set(all_player_roles)):
+                #    print("Duplicate roles")
+                #    player.role = next((role for role_id, role in self.roles.items() if role_id not in self.used_roles))
+                ## Remove the chosen role from all RoleKnowledge objects
+                #else:
                 self.remove_role_from_role_knowledge(player.role, known_roles_by_player)
+
+                
             # Band aid for a bug where the player has no possible roles
             except IndexError:
                 player.role = next((role for role_id, role in self.roles.items() if role_id not in self.used_roles))
@@ -421,7 +428,7 @@ class Game():
         for rk in role_knowledge_list:
             if not rk.confirmed:
                 rk.possible_roles = {k: v for k, v in rk.possible_roles.items() if v != role}
-            
+
 
     def remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self, role, known_roles_by_player):
         # Remove the players role whose about to play from the samples, and all the roles that are smaller id

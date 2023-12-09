@@ -72,11 +72,11 @@ class CFRNode:
         terminal = False
         while len(options) == 1 and not terminal:
             i+=1
+            terminal = options[0].carry_out(self.game)
+            options = self.game.get_options_from_state()
             if i > 100:
                 print("Stuck in skip_false_choice")
                 terminal = True
-            terminal = options[0].carry_out(self.game)
-            options = self.game.get_options_from_state()
             
             
 

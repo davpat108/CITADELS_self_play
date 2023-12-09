@@ -357,6 +357,7 @@ def carry_out_take_crown_king(option, game):
     for building in game.players[option.attributes['perpetrator']].buildings.cards:
         if building.suit == "lord":
             game.players[option.attributes['perpetrator']].gold += 1
+            
     if not game.players[option.attributes['perpetrator']].witch:
         move_crown(game, option.attributes['perpetrator'])
     game.gamestate.state = 5

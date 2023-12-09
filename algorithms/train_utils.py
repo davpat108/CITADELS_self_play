@@ -76,7 +76,7 @@ def calculate_means(list_of_lists):
     cat_7_30_lengths = []
     cat_30_plus_lengths = []
     
-    thresholds = range(max_sum, -1, -1)
+    thresholds = range(1000, -1, -1)
 
 
     for threshold in thresholds:
