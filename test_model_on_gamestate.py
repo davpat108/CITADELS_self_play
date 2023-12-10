@@ -10,7 +10,7 @@ from copy import deepcopy
 import numpy as np
 
 def setup_game():
-    game = Game(debug=False)
+    game = Game(debug=True)
     game.setup_round()
     winner = False
     tota_options = 0

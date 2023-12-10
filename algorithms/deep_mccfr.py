@@ -35,7 +35,7 @@ class CFRNode:
         self.winning_probabilities = np.zeros(player_count)
         self.role_pick_node = game.gamestate.state == 0
         self.regret_gradient = float("inf")
-        self.total_gradients = []
+        #self.total_gradients = []
         
         
         
@@ -285,7 +285,7 @@ class CFRNode:
                 self.cumulative_regrets[a] += max_reward - actual_rewards[a]
                 
             self.regret_gradient = np.sum(self.cumulative_regrets) - sum_of_regrets_old
-            self.total_gradients.append(self.regret_gradient)
+            #self.total_gradients.append(self.regret_gradient)
         else:
             actual_rewards = np.array([child[1].winning_probabilities for child in self.children]).T
 
@@ -295,7 +295,7 @@ class CFRNode:
             sum_of_regrets_old = np.sum(self.cumulative_regrets)
             self.cumulative_regrets += regret_values
             self.regret_gradient = np.sum(self.cumulative_regrets) - sum_of_regrets_old
-            self.total_gradients.append(self.regret_gradient)
+            #self.total_gradients.append(self.regret_gradient)
             
 
 
@@ -336,12 +336,22 @@ class CFRNode:
     def update_strategy(self):
 
         if not self.role_pick_node:
-            total_regret = np.sum(self.cumulative_regrets+1)
-            self.strategy = (self.cumulative_regrets+1) / total_regret
+            # Invert the regrets for single player
+            inverted_regrets = -self.cumulative_regrets
+            # Apply exponential transformation and normalize
+            transformed_regrets = np.exp(inverted_regrets)
+            total_transformed_regret = np.sum(transformed_regrets)
+            self.strategy = transformed_regrets / total_transformed_regret
 
         else:
-            total_regrets = np.sum(self.cumulative_regrets+1, axis=0)
-            self.strategy = (self.cumulative_regrets+1) / total_regrets
+            # Invert the regrets for each player in the matrix
+            inverted_regrets = -self.cumulative_regrets
+            # Apply exponential transformation along the appropriate axis
+            transformed_regrets = np.exp(inverted_regrets)
+            total_transformed_regrets = np.sum(transformed_regrets, axis=0)
+            # Normalize for each player's strategy
+            self.strategy = transformed_regrets / total_transformed_regrets
+
 
         self.cumulative_strategy += self.strategy
         self.cumulative_strategy = self.cumulative_strategy / self.cumulative_strategy.sum()

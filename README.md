@@ -5,10 +5,12 @@
 - [Introduction](#introduction)
 - [Structure](#structure)
 - [Usage](#usage)
-- [Methods](#methods)
+- [Training method](#training)
+- [Chellenges](#chellenges)
+
 
 ## Introduction <a name = "introduction"></a>
-This is my hobby project for creating an agent that can play the board game [Citadels](https://www.ultraboardgames.com/citadels/deluxe.php) against itself. The game and the algorithms are both coded from scratch. The goal is to create an agent that can play the game at a high level. I made the simplification that the game is always played by 6 people, and currently only with a set cards and characters.
+This is my hobby project for creating an agent that can play the board game [Citadels](https://www.ultraboardgames.com/citadels/deluxe.php) against itself. The game and the algorithms are both coded from scratch. The goal is to create an agent that can play the game at a high level. I made the simplification that the game is always played by 6 people, and currently only with a set cards and characters. I implemented the deep learning assisted [MCCFR](https://arxiv.org/pdf/1811.00164.pdf).
 
 ## Structure <a name = "structure"></a>
 #### Game
@@ -17,13 +19,39 @@ Game is made out of 3 main classes: 'Game', 'Agent' and 'Option'. Where the game
 
 ---
 #### Algorithms
-Algorithms contains the self-play methods. Currently the only implemented algorithm is the deep learing assisted monte carlo CFR. Due to the complexity of the action space in citadels, the neural network only predicts the value in a given state, while the policy traditionally.
+Algorithms contains the self-play methods. Currently the only implemented algorithm is the deep learing assisted monte carlo CFR. Due to the complexity of the action space in citadels, the neural network only predicts the value in a given state, while the policy is calculated from scratch.
 
 ## Usage <a name = "usage"></a>
-First generate test data with generate_test_data.py, then to start from zero run train_from_scratch.py. Still mostly work in progress, but should work.
+1. Install pytorch, and requirements.txt:
+```python
+pip install torch==2.1.0 torchvision==0.16.0 torchaudio==2.1.0
+pip install -r requirements.txt
+```
+2. Generate test data pickle file
+```python
+python generate_test_data.py
+```
+3. Start training
+```python
+python train_from_scratch.py
+```
+4. Test against random opponent
+```python
+python compare_to_random.py 
+```
+
+## Training method <a name = "training"></a>
+
+#### MCCFR data generation
+For validation I decided to create nodes with well calculated policies and values. I did this by creating games, playing them randomly to completion, then step back 0-20 steps and run the CFR on that state. After this only using the root of the game tree. This ensures that the strategy values settled to a good strategy and node values reflect the reality without being meaningless uniform distributions.
+
+After generating validation data, in a similar fashion I created training data, playing games randomly to completion, then taking 0-100 steps back, and running CFR on that state. The training data is any game node that is backpropagated at least 200 times.
+
+#### Training a neural network to help the algorithm
+In the original deep MCCFR the NN helps by making an initial guess at the node values and strategies. In my version I made attempts to get a sequence to probabilty distribution transformer model to do this but It never managed to learn anything really, so I settled with a linear NN making predictions only at the winning probablities and not the strategies.
 
 
-## Chellenges <a name = "methods"></a>
+## Chellenges <a name = "chellenges"></a>
 As I understand, MCCFR has a hard time to deal with fully private decisions, like picking the roles at the start of each citadel round. The problem is that the decision doesn't change anything about the public information, what it changes is:
 - the picking players role
 - the next players options to chose from
@@ -37,3 +65,7 @@ I treated the whole rolepick phase as a single node where everyone is playing. T
 
 
 The strategy matrices are used by taking their weighted average on their first axis and turning them into a [1, option_num] shaped vector just like the rest. To simulate the advantage of picking sooner, the averaging is weighted [6, 5, 4, 3, 2, 1], where 6 is the weight of the crowned player and 1 is the weight of the last player.
+
+
+
+## Results
