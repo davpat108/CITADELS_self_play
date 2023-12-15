@@ -16,13 +16,28 @@ This is my hobby project for creating an agent that can play the board game [Cit
 
 
 ## Results <a name = "results"></a>
+
 An agent (index 0) with the MCCFR algo with a trained model, an agent (index 1) with only the pure MCCFR algo and no deep learning and 4 agent deciding randomly were made to play against each other. For the first experiment the algos could calculate a gametree for 2000 iterations, which translates to having around 10 secounds to think about each move with my setup. The deep learning assisted MCCFR also calculated the subtree for maximum 100 moves deep before using the model to backpropagate the model guessed node values.  The chart shows the winrates of each agents after playing 100 games.
+
 ![Results](images/2000_step_chart.png)
+
 Its clear that, that while having 10 secounds to think about each decision, the deep learning model is more of a hinderence, altough clearly better than random guessing.
+
 ---
+
 For the next experiement the only difference was that the algos could only calculate the gametree for 200 moves, which translates to around 1 secound. The deep learning assited MCCFR only calculated the subtree for 10 moves deep this time.
+
 ![Results](images/200_step_chart.png)
+
 This time having a random guess for the node values by the model proved to be very useful, while it looks like 200 moves for the regular MCCFR is not really sufficient for anything.
+
+---
+
+For the last part I compared the two different method from before, so the index 0 agent used the model, had 200 iterations to calculate a gametree, and the models node value predictions where used at depth 10. For the index 1 agent used MCCFR with no model, but having 2000 iterations to calculate a gametree, the rest of the agent where random
+
+![Results](images/200_vs_2000_step.png)
+
+This time surprisingly the deep MCCFR won the most games. The results could be skewed by realatively low game count (100) and the fact that the first agent to have the crown in the very first round in each game is always the agent at index 3. Considering everything the deep learning assisted MCCFR is a very effective method to create an AI that plays citadels well.
 
 ## Code Structure <a name = "structure"></a>
 #### Game
