@@ -11,7 +11,7 @@
 
 
 ## Introduction <a name = "introduction"></a>
-This is my hobby project for creating an agent that can play the board game [Citadels](https://www.ultraboardgames.com/citadels/deluxe.php) against itself. The game and the algorithms are both coded from scratch. The goal is to create an agent that can play the game at a high level. I made the simplification that the game is always played by 6 people, and currently only with a set cards and characters. I implemented the deep learning assisted [MCCFR](https://arxiv.org/pdf/1811.00164.pdf).
+This is my hobby project for creating an agent that can play the board game [Citadels](https://www.ultraboardgames.com/citadels/deluxe.php) against itself. The game and the algorithms are both coded from scratch. The goal is to create an agent that can play the game at a high level. I made the simplification that the game is always played by 6 people, and currently only with a set cards, set characters, and the first player is always the player number 4. an I implemented the deep learning assisted [MCCFR](https://arxiv.org/pdf/1811.00164.pdf).
 
 
 
@@ -33,7 +33,7 @@ This time having a random guess for the node values by the model proved to be ve
 
 ---
 
-For the last part I compared the two different method from before, so the index 0 agent used the model, had 200 iterations to calculate a gametree, and the models node value predictions where used at depth 10. For the index 1 agent used MCCFR with no model, but having 2000 iterations to calculate a gametree, the rest of the agent where random
+For the last part I compared the two different method from before, so the index 0 agent used the model, had 200 iterations to calculate a gametree, and the models node value predictions where used at depth 10. For the index 1 agent used MCCFR with no model, but having 2000 iterations to calculate a gametree, the rest of the agents where random
 
 ![Results](images/200_vs_2000_step.png)
 
