@@ -440,7 +440,7 @@ class Game():
 
     def get_option_from_role_preference(self, strategy):
         options = self.get_options_from_state()
-        role_ids = [role_to_role_id[option.choice] for option in options]
+        role_ids = [role_to_role_id[option.attributes['choice']] for option in options]
         substrategy = strategy[role_ids]
         substrategy /= substrategy.sum()
         return np.random.choice(options, p=substrategy)

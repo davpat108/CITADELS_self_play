@@ -13,6 +13,9 @@ class option():
 
     def __eq__(self, other):
         return self.name == other.name and self.attributes == other.attributes
+    
+    def __str__(self):
+        return f"{self.name}, {self.attributes}"
 
     # gamestates:	0 - choose role -> 1
 	#1 2 gold or 2 cards -> 2 or 3

@@ -104,7 +104,7 @@ class CFRNode:
             return self.children[choice_index][1], self.children[choice_index][0]
 
         elif live:
-            return _ , self.game.get_option_from_role_preference(self.strategy[self.game.gamestate.player_id])
+            return None, self.game.get_option_from_role_preference(self.strategy[self.game.gamestate.player_id])
         
         else:
             pick_hierarchy = self.game.turn_orders_for_roles
@@ -257,7 +257,7 @@ class CFRNode:
             node, _ = node.action_choice()
             if node.depth > max_depth and not node.is_terminal():
                 node.expand()
-                node.backpropagate(self.pred_node_value)
+                node.backpropagate(node.pred_node_value)
                 node.update_strategy()
                 node = self
             elif node.is_terminal():
@@ -332,25 +332,30 @@ class CFRNode:
         # Recursively call backpropagate on parent node
         self.parent.backpropagate(reward)
 
-
     def update_strategy(self):
 
         if not self.role_pick_node:
-            # Invert the regrets for single player
             inverted_regrets = -self.cumulative_regrets
-            # Apply exponential transformation and normalize
-            transformed_regrets = np.exp(inverted_regrets)
+            transformed_regrets = np.exp(inverted_regrets * np.log(1.3))
             total_transformed_regret = np.sum(transformed_regrets)
-            self.strategy = transformed_regrets / total_transformed_regret
+            if total_transformed_regret > 0:  # Check to avoid division by zero
+                self.strategy = transformed_regrets / total_transformed_regret
+            else:
+                self.strategy = np.ones_like(transformed_regrets) / len(transformed_regrets)
 
         else:
-            # Invert the regrets for each player in the matrix
             inverted_regrets = -self.cumulative_regrets
-            # Apply exponential transformation along the appropriate axis
-            transformed_regrets = np.exp(inverted_regrets)
+            transformed_regrets = np.exp(inverted_regrets * np.log(1.3))
+            # Calculate the total transformed regrets
             total_transformed_regrets = np.sum(transformed_regrets, axis=0)
-            # Normalize for each player's strategy
-            self.strategy = transformed_regrets / total_transformed_regrets
+            # Check if any element in total_transformed_regrets is zero or close to zero
+            if np.any(total_transformed_regrets <= 1e-8):
+                self.strategy = np.where(total_transformed_regrets > 1e-8,
+                                         transformed_regrets / total_transformed_regrets,
+                                         1.0 / transformed_regrets.shape[0])
+            else:
+                self.strategy = transformed_regrets / total_transformed_regrets
+
 
 
         self.cumulative_strategy += self.strategy
@@ -416,3 +421,7 @@ class CFRNode:
 
 
 
+def safe_exp(values, min_val=-np.inf, max_val=np.inf):
+    # Clamp values to avoid underflow/overflow in exponential
+    values_clamped = np.clip(values, min_val, max_val)
+    return np.exp(values_clamped)
