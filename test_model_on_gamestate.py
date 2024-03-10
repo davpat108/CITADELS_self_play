@@ -1,7 +1,6 @@
-import pickle
-from random import choice, randint
+
+from random import choice
 import torch
-import logging
 from algorithms.deep_mccfr import CFRNode
 from algorithms.models import ValueOnlyNN
 from game.game import Game
@@ -10,7 +9,7 @@ from copy import deepcopy
 import numpy as np
 
 def setup_game():
-    game = Game(debug=True)
+    game = Game(preset=True)
     game.setup_round()
     winner = False
     tota_options = 0

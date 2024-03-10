@@ -1,12 +1,8 @@
 import numpy as np
 from copy import deepcopy
-
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 from algorithms.train_utils import square_and_normalize, RanOutOfMemory
 from random import randint
-from tqdm import tqdm
 
 
 class CFRNode:
@@ -35,7 +31,6 @@ class CFRNode:
         self.winning_probabilities = np.zeros(player_count)
         self.role_pick_node = game.gamestate.state == 0
         self.regret_gradient = float("inf")
-        #self.total_gradients = []
         
         
         
@@ -418,10 +413,3 @@ class CFRNode:
 
         winning_probabilities = square_and_normalize(node_value, dim=1).squeeze(0).detach().cpu().numpy()
         return winning_probabilities
-
-
-
-def safe_exp(values, min_val=-np.inf, max_val=np.inf):
-    # Clamp values to avoid underflow/overflow in exponential
-    values_clamped = np.clip(values, min_val, max_val)
-    return np.exp(values_clamped)

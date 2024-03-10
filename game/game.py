@@ -14,8 +14,8 @@ from game.helper_classes import GameState, RolePropery
 
 
 class Game():
-    def __init__(self, avaible_roles=None, debug=False) -> None:
-        if debug:
+    def __init__(self, avaible_roles=None, preset=False) -> None:
+        if preset:
             # For debug purpuses all the unique cards are used
             self.used_cards = building_cards + unique_building_cards
             self.deck = Deck(used_cards=self.used_cards)

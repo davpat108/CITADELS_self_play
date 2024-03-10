@@ -2,7 +2,6 @@
 import torch
 import seaborn as sns
 import matplotlib.pyplot as plt
-import torch.nn.functional as F
 
 
 def draw_eval_results(results, base_usefullness_treshold, max_usefullness_theshold, name="loss_plot.png"):
@@ -44,6 +43,10 @@ def get_nodes_with_usefulness_treshold(targets, treshold):
 
 
 def calculate_means(list_of_lists):
+    """
+    Method to calculate the regrets for later plotting, categorized by the amount of children a node has.
+    Also using thresholds, as the minimum times the node has to be backpropagated to be considered.
+    """
     # Sum each 3rd and 4th element tensor
     summed_third_elements = torch.tensor([int(lst[2].sum()) for lst in list_of_lists])
     summed_fourth_elements = torch.tensor([lst[3].sum() for lst in list_of_lists])

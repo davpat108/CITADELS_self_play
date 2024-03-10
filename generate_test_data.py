@@ -1,20 +1,17 @@
 import pickle
 from random import choice, randint
 import torch
-import logging
 from algorithms.deep_mccfr import CFRNode
 
 from game.game import Game
 from multiprocessing import Pool, cpu_count
-import os
 from copy import deepcopy
-import numpy as np
 from tqdm import tqdm
 
 def setup_game(game_index):
     try:
         move_stop_num = randint(1, 30)
-        game = Game(debug=True)
+        game = Game(preset=True)
         game.setup_round()
         winner = False
         tota_options = 0
