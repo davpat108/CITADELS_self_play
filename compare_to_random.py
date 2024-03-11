@@ -36,7 +36,6 @@ def play_games(sim_number):
                 options = game.get_options_from_state()
                 chosen_option = choice(options)
                 winner = chosen_option.carry_out(game)
-            print(f"Player {chosen_option.attributes['perpetrator']} chose {chosen_option}")
         print(f"{winner.id} won!")
         winners[winner.id] += 1
 

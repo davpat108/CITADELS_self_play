@@ -1,9 +1,7 @@
-from copy import deepcopy, copy
+from copy import deepcopy
 from game.deck import Deck, Card
-from game.helper_classes import GameState, HandKnowledge, RolePropery, RoleKnowlage
+from game.helper_classes import GameState, HandKnowledge
 from game.config import role_to_role_id
-import numpy as np
-import torch
 
 def carry_out_role_pick(option, game):
     game.players[option.attributes['perpetrator']].role = option.attributes['choice']

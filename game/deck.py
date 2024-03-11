@@ -1,10 +1,7 @@
-import logging
 from copy import deepcopy
-from random import sample, shuffle
+from random import shuffle
 
 import numpy as np
-
-from game.config import building_cards, unique_building_cards
 
 
 class Card:

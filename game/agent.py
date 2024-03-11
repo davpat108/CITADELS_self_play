@@ -1,16 +1,8 @@
-import random
-from copy import copy
-from itertools import (combinations, combinations_with_replacement,
-                       permutations, product)
 from game.agent_functions import reveal_warrant_as_magistrate_options ,witch_options, pick_role_options, gold_or_card_options, which_card_to_keep_options, blackmail_response_options, reveal_blackmail_as_blackmailer_options, graveyard_options, reveal_warrant_as_magistrate_options, main_round_options, seer_give_back_card, scholar_give_back_options, wizard_take_from_hand_options, emperor_options
-
-import numpy as np
-import torch.nn.functional as F
-import torch
 
 from game.config import role_to_role_id
 from game.deck import Card, Deck
-from game.helper_classes import GameState, HandKnowledge, RoleKnowlage
+from game.helper_classes import RoleKnowlage
 from game.option import option
 
 class Agent():
@@ -53,10 +45,6 @@ class Agent():
     #8 seer give back card
     #9 Scholar_give put back cards
     #10 Wizard choose from hand
-
-    #def get_weighted_output(self, game, model):
-    #    encoded_game = game.encode_game(self.id)
-    #    outputs = model(encoded_game)
 
 
     def get_options(self, game):

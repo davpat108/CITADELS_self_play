@@ -1,15 +1,11 @@
 import random
 from copy import copy
-from itertools import (combinations, combinations_with_replacement,
-                       permutations, product)
+from itertools import (combinations, combinations_with_replacement)
 
-import numpy as np
-import torch.nn.functional as F
-import torch
 
 from game.config import role_to_role_id
-from game.deck import Card, Deck
-from game.helper_classes import GameState, HandKnowledge, RoleKnowlage
+from game.deck import Card
+from game.helper_classes import GameState
 from game.option import option
 
 
