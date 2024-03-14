@@ -53,7 +53,6 @@ class Deck:
                 return card
         # Turn off the check, some cards go missing during sampling
         return card_to_get
-        raise KeyError("No card like that in the deck")
 
     def draw_card(self):
         if len(self.cards) == 0:

@@ -115,7 +115,7 @@ def plot_threshold_means(thresholds, means, cat_2_means, cat_3_6_means, cat_7_30
     sns.lineplot(x=thresholds, y=cat_30_plus_means, label='Length > 30')
     plt.xlabel('Threshold')
     plt.ylabel('Mean of Sums')
-    plt.title('Mean of the 4th Element Sums by Threshold and Category')
+    plt.title('Mean of regrets by minimum backprop limit')
     plt.legend()
     plt.savefig(name)
 

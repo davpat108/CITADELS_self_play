@@ -70,7 +70,6 @@ class CFRNode:
             terminal = options[0].carry_out(self.game)
             options = self.game.get_options_from_state()
             if i > 100:
-                print("Stuck in skip_false_choice")
                 terminal = True
             
             
@@ -118,7 +117,6 @@ class CFRNode:
             return self.children[choice_index][1], self.children[choice_index][0]
 
     def expand(self):
-
         if self.game.gamestate.state == 0 and not self.children:
             self.role_pick_node = True
             self.expand_role_pick()
@@ -136,7 +134,6 @@ class CFRNode:
                 options = hypothetical_game.get_options_from_state()
                 distribution = np.ones(len(options)) / len(options)
                 choice_index = np.random.choice(range(len(options)), p=distribution)
-                # last option
                 option_to_carry_out = options[choice_index]
                 options[choice_index].carry_out(hypothetical_game)
         
@@ -217,7 +214,6 @@ class CFRNode:
         return self.game.rewards
 
     def cfr_train(self, max_iterations=100000):
-        # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 
 
@@ -239,10 +235,8 @@ class CFRNode:
 
     
     def cfr_pred(self, max_iterations=2000, max_depth=20):
-        # If the cfr is called from a terminal node, return
         if self.is_terminal():
             return 
-
         self.expand()
         depth = 0
         node = self
@@ -314,10 +308,12 @@ class CFRNode:
 
 
     def backpropagate(self, reward):
+        
         # Update the value of this node
         if self.training or (self.node_value.sum() == 0 or not self.model):
             self.node_value += reward
         self.winning_probabilities = self.node_value / self.node_value.sum()
+        
         # Calculate regret for this node
         if self.children:
             self.update_regrets()

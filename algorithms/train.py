@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
-import random
 import logging
 from algorithms.train_utils import square_and_normalize, log_square_and_normalize
 from algorithms.models import ValueOnlyNN
@@ -32,6 +31,7 @@ def train_node_value_only(train_data, val_data, epochs, lr, hidden_size, gamma, 
     train_losses, eval_losses, learning_rates = [], [], []
     best_eval_loss = float('inf')
     best_train_loss = float('inf')
+    
     for epoch in range(epochs):
         model.train()
         total_train_loss = 0
@@ -39,13 +39,9 @@ def train_node_value_only(train_data, val_data, epochs, lr, hidden_size, gamma, 
 
             optimizer.zero_grad()
             outputs_fixed = model(batch_inputs)
-            #check = square_and_normalize(outputs_fixed)
             labels_pred = square_and_normalize(batch_labels)
             outputs_pred = log_square_and_normalize(outputs_fixed)
-
-
             loss = criterion(outputs_pred, labels_pred)
-            
             loss.backward()
             optimizer.step()
             total_train_loss += loss.item()
@@ -60,10 +56,6 @@ def train_node_value_only(train_data, val_data, epochs, lr, hidden_size, gamma, 
         
         #Evaluation phase
         scheduler.step()
-        
-        
-        
-
         model.eval()
         total_eval_loss = 0
         with torch.no_grad():
@@ -81,7 +73,6 @@ def train_node_value_only(train_data, val_data, epochs, lr, hidden_size, gamma, 
         if avg_eval_loss < best_eval_loss:
             torch.save(model.state_dict(), parent_folder+"/best_model.pt")
             best_eval_loss = avg_eval_loss
-            #logging.info("New best model saved")
         
         if verbose:
             logging.info(f"Epoch {epoch+1}/{epochs} - Eval Loss: {avg_eval_loss:.4f}")
