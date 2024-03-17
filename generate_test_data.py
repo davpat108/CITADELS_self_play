@@ -1,58 +1,26 @@
 import pickle
-from random import choice, randint
 import torch
-from algorithms.deep_mccfr import CFRNode
 
-from game.game import Game
 from multiprocessing import Pool, cpu_count
-from copy import deepcopy
 from tqdm import tqdm
+
+from run_utils import create_game, create_a_close_to_finished_game, run_mccfr, encode_options_from_node, create_target_strategy
 
 def setup_game(game_index):
     try:
-        move_stop_num = randint(1, 30)
-        game = Game(preset=True)
-        game.setup_round()
-        winner = False
-        tota_options = 0
-        games = []
-        games.append(deepcopy(game))
-        while not winner:
-            options = game.get_options_from_state()
-            tota_options += len(options)
-            chosen_option = choice(options)
-            winner = chosen_option.carry_out(game)
-            games.append(deepcopy(game))
+        game = create_game()
+        almost_won_game = create_a_close_to_finished_game(game)
 
-        #Picking a game
-        options = []
-        limit = 0
-        while len(options) < 2 and limit < 100:
-            almost_won_game = games[-move_stop_num]
-            options = almost_won_game.get_options_from_state()
-            move_stop_num -= 1
-            limit += 1
-
-        
-        #Encoding the game
         game_input = almost_won_game.encode_game()
-        position_root = CFRNode(almost_won_game, original_player_id=almost_won_game.gamestate.player_id, model=None, training=True, device="cuda:0")
-        position_root.cfr_train(max_iterations=20000)
+        _, position_root = run_mccfr(game=almost_won_game, max_iterations=20000)
 
-        options = [option for option, _ in position_root.children]
-        if len(options) == 0:
-            return []
-        options_input = torch.cat([option.encode_option() for option in options], dim=0).unsqueeze(0)
+        options_input = encode_options_from_node(position_root)
 
+        # Meaningless gamestate
         if len(position_root.cumulative_regrets) == 0:
             return []
-        target_decision_dist = torch.tensor(position_root.cumulative_regrets)
         
-        # Handle no ragrets, and rolepick
-        if target_decision_dist.size() == torch.Size([6, 10]):
-            target_decision_dist=target_decision_dist[randint(0,5)]
-        if torch.sum(target_decision_dist) == 0:
-            target_decision_dist = torch.ones_like(target_decision_dist)
+        target_decision_dist = create_target_strategy(position_root)
         
         return [(game_input, options_input, torch.tensor(position_root.node_value), target_decision_dist)]
     

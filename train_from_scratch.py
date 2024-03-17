@@ -9,29 +9,14 @@ from game.game import Game
 from multiprocessing import Pool, cpu_count
 from algorithms.train_utils import plot_avg_regrets, RanOutOfMemory
 import os
-from copy import deepcopy
 import sys
 import matplotlib
+from run_utils import setup_model_for_eval, create_game, run_mccfr, create_a_random_game
+
+
 sys.setrecursionlimit(5000)  
 matplotlib.use('Agg') 
 
-def setup_game(max_move_num):
-    move_stop_num = randint(1, max_move_num)
-    game = Game(preset=True)
-    game.setup_round()
-    games = []
-    games.append(deepcopy(game))
-    winner = False
-    while not winner:
-        options = game.get_options_from_state()
-        chosen_option = choice(options)
-        winner = chosen_option.carry_out(game)
-        games.append(deepcopy(game))
-    
-    game = games[-move_stop_num]
-
-
-    return game
 
 
 
@@ -40,10 +25,10 @@ def simulate_game(model, process_index, usefulness_treshold, pretrain=False, max
     targets = []
     game = None
     while not game:
-        game = setup_game(100)
+        game = create_a_random_game(100)
 
-    position_root = CFRNode(game, original_player_id=game.gamestate.player_id, model=model if not pretrain else None, training=True, device="cuda:0")
-    position_root.cfr_train(max_iterations=max_iterations)
+    _, position_root = run_mccfr(game, model=model if not pretrain else None, max_iterations=max_iterations, training=True)
+    
     targets += position_root.get_all_targets(usefulness_treshold=usefulness_treshold)
     print(f"Created {len(targets)} targets for training")
     print(f"Process {process_index} finished")
@@ -60,9 +45,12 @@ def parallel_simulations(num_simulations, model, base_usefullness_treshold, pret
 def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold, pretrain=False, max_iterations=200000):
     """
     args:
-        model: the model to pretrain
-        minimum_sufficient_nodes: the number of nodes to pretrainq
-    Train the model with plain mccfr
+        model: the model to use if not pratraining
+        minimum_sufficient_nodes: the number of nodes to create
+        base_usefullness_treshold: the amount of backprogations a nodes needs to be used
+        pretrain: whether the model is used for decisionmaking in the mccfr run (so the first run is a pretrain)
+        max_iterations: the maximum amount of iterations to run mccfr for
+    Creates targets for the model to train on, attempts to handle memory errors
     """
     targets = []
     while len(targets) < minimum_sufficient_nodes:
@@ -79,15 +67,14 @@ def get_mccfr_targets(model, minimum_sufficient_nodes, base_usefullness_treshold
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    print("Starting training")
     model = ValueOnlyNN(418, hidden_size = 512)
     model.eval()
     usefullness_treshold = 200
-    # pretrain
     if not f"10k_50thresh_pretrain.pkl" in os.listdir():
-        print("Pretraining")
+        print("Model free data generation started")
 
         targets = get_mccfr_targets(model, minimum_sufficient_nodes=20000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000, pretrain=True)
+        
         with open(f"10k_50thresh_pretrain.pkl", 'wb') as file:
             pickle.dump(targets, file)
         
@@ -103,11 +90,8 @@ if __name__ == "__main__":
     for u in range(5):
         usefullness_treshold = 200
         if not f"10k_50thresh_train_{u}.pkl" in os.listdir():
-            print(f"training {u}")
-            model = ValueOnlyNN(418, hidden_size = 512)
-            model.eval()
-            modelname = f"train{u-1}/best_model.pt" if u > 0 else "pretrain/best_model.pt"
-            model.load_state_dict(torch.load(modelname))
+            print(f"Data gen with already trained model nr. {u} started")
+            model = setup_model_for_eval(f"train{u-1}/best_model.pt" if u > 0 else "pretrain/best_model.pt")
             targets = get_mccfr_targets(model, minimum_sufficient_nodes=5000, base_usefullness_treshold=usefullness_treshold, max_iterations=200000)
 
             with open(f"10k_50thresh_train_{u}.pkl", 'wb') as file:

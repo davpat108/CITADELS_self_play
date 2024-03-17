@@ -171,7 +171,9 @@ class Game():
             player.reset_known_roles()
 
     def is_last_round(self, player:Agent):
-        "Sets whether its the games last round or not"
+        """
+        Sets whether its the games last round or not
+        """
         if not self.ending:
             for player in self.players:
                 if len(player.buildings.cards) == 7:
@@ -223,10 +225,12 @@ class Game():
 
         self.sample_deck(player_character, unknown_cards)
         self.sample_warrants_and_blackmails()
+        
         # Settle players
         known_roles_by_player = deepcopy(player_character.known_roles)
         if role_sample:
             self.remove_role_and_smaller_id_roles_from_role_knowledge_if_unconfirmed(self.players[self.gamestate.player_id].role, known_roles_by_player)
+            
         for player in self.players:
             self.sample_cards_for_opponent(player, player_character, unknown_cards)
             if role_sample:
@@ -234,9 +238,6 @@ class Game():
 
         if role_sample:
             self.refresh_roles_after_sampling_roles()
-
-
-        # Replace the game's deck with the remaining unknown cards
 
         self.check_if_all_cards_exist()
 

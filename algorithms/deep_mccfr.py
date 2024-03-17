@@ -34,30 +34,6 @@ class CFRNode:
         
         
         
-    def draw_gradients(self, name="gradients.png"):
-        """
-        Draws the gradients of the node
-        """
-        import seaborn as sns
-        import matplotlib.pyplot as plt
-        sns.set(style="darkgrid")
-
-        # Creating a figure and axis object
-        plt.figure(figsize=(10, 6))
-    
-        # Plotting
-        sns.lineplot(x=range(len(self.total_gradients)), y=self.total_gradients)
-    
-        # Setting the title and labels
-        plt.title("Gradient Plot")
-        plt.xlabel("Index")
-        plt.ylabel("Gradients")
-    
-        # Display the plot
-        plt.savefig(name)
-        plt.close()
-        
-
     def skip_false_choice(self):
         """
         Checks if it would only have one children and if yes it would move the game on
@@ -72,8 +48,6 @@ class CFRNode:
             if i > 100:
                 terminal = True
             
-            
-
     def weighted_average_strategy(self, strategy_matrix, pick_hierarchy):
         """
         strategy_matrix: A numpy array of shape (player_count, len(children)).
@@ -124,7 +98,6 @@ class CFRNode:
             self.expand_for_original_player()
         elif self.current_player_id != self.original_player_id and len(self.children) < 10:
             self.expand_for_opponents()
-
 
     def expand_role_pick(self):
         max_repeat_count = 10
@@ -177,7 +150,6 @@ class CFRNode:
         self.strategy = np.zeros(len(self.children))
         self.cumulative_strategy = np.zeros(len(self.children))
 
-
     def expand_for_opponents(self):
 
         hypothetical_game = deepcopy(self.game)
@@ -206,7 +178,6 @@ class CFRNode:
                     self.pred_node_value = self.model_reward_weights * winning_probabilities
             self.cumulative_strategy = np.append(self.cumulative_strategy, 0)
 
-
     def is_terminal(self):
         return self.game.terminal
 
@@ -233,7 +204,6 @@ class CFRNode:
                 node.expand()
         self.update_strategy()
 
-    
     def cfr_pred(self, max_iterations=2000, max_depth=20):
         if self.is_terminal():
             return 
@@ -257,7 +227,6 @@ class CFRNode:
             else:
                 node.expand()
         self.update_strategy()
-
 
     def update_regrets(self):
         # backprops, checks all the other choices it could have made from the parent and calcs reward
@@ -285,8 +254,6 @@ class CFRNode:
             self.cumulative_regrets += regret_values
             self.regret_gradient = np.sum(self.cumulative_regrets) - sum_of_regrets_old
             #self.total_gradients.append(self.regret_gradient)
-            
-
 
     def get_all_targets(self, usefulness_treshold = 15):
         """
@@ -305,7 +272,6 @@ class CFRNode:
             targets_list += child_node.get_all_targets(usefulness_treshold)
 
         return targets_list
-
 
     def backpropagate(self, reward):
         
@@ -352,7 +318,6 @@ class CFRNode:
         self.cumulative_strategy += self.strategy
         self.cumulative_strategy = self.cumulative_strategy / self.cumulative_strategy.sum()
 
-
     def build_train_targets(self, usefulness_treshold = 15):
         if len(self.children) == 0 or self.node_value.sum() < usefulness_treshold:
             return []
@@ -379,7 +344,6 @@ class CFRNode:
                 
             return [(model_input, options_input, target_node_value, target_decision_dist)]
 
-
     def model_inference_trans(self, game, options=None):
         if options is None:
             options_input = torch.cat([option.encode_option() for option, _ in self.children], dim=0).unsqueeze(0).to(self.device)
@@ -397,7 +361,6 @@ class CFRNode:
         winning_probabilities = square_and_normalize(node_value, dim=1).squeeze(0).detach().cpu().numpy()
         return distribution, winning_probabilities
     
-
     def model_inference(self, game, options=None):
         model_input = game.encode_game().unsqueeze(0).to(self.device)
         

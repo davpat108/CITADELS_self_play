@@ -1,6 +1,10 @@
 import pickle as pkl
 import logging
+
+from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
+
 from algorithms.train import train_node_value_only
+
 logging.basicConfig(level=logging.INFO)
 
 
@@ -11,16 +15,11 @@ with open(f"validation_targets.pkl", 'rb') as file:
     val_targets = pkl.load(file)
 
 
-from hyperopt import fmin, tpe, hp, STATUS_OK, Trials
-
 def objective(params, trial_id):
-    # Unpack your parameters
+    
     lr, hidden_size, gamma = params['lr'], params['hidden_size'], params['gamma']
-
-    # Call your training function
     loss = train_node_value_only(targets, val_targets, lr=lr, hidden_size=hidden_size, gamma=gamma, epochs=1000, parent_folder=f"pretrain_{trial_id}", batch_size=512, verbose=False)
     
-    # Hyperopt tries to minimize the objective, so return the loss
     return {'loss': loss, 'status': STATUS_OK}
 
 # Define the search space for hyperparameters
